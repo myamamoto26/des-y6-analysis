@@ -55,9 +55,9 @@ def main(argv):
     np.savetxt('/data/des70.a/data/masaya/pizza-slice/v2/pizza_i_slice_download.txt', np.array(all_i_files), fmt="%s")
     np.savetxt('/data/des70.a/data/masaya/pizza-slice/v2/pizza_z_slice_download.txt', np.array(all_z_files), fmt="%s")
 
-    os.system('wget --user='+sys.argv[1]+' --password='+sys.argv[2]+' -i /data/des70.a/data/masaya/pizza-slice/v2/pizza_r_slice_download.txt')
-    os.system('wget --user='+sys.argv[1]+' --password='+sys.argv[2]+' -i /data/des70.a/data/masaya/pizza-slice/v2/pizza_i_slice_download.txt')
-    os.system('wget --user='+sys.argv[1]+' --password='+sys.argv[2]+' -i /data/des70.a/data/masaya/pizza-slice/v2/pizza_z_slice_download.txt')
+    os.system('wget -P /data/des70.a/data/masaya/pizza-slice/v2/r_band/ --user='+sys.argv[1]+' --password='+sys.argv[2]+' -i /data/des70.a/data/masaya/pizza-slice/v2/pizza_r_slice_download.txt')
+    os.system('wget -P /data/des70.a/data/masaya/pizza-slice/v2/i_band/ --user='+sys.argv[1]+' --password='+sys.argv[2]+' -i /data/des70.a/data/masaya/pizza-slice/v2/pizza_i_slice_download.txt')
+    os.system('wget -P /data/des70.a/data/masaya/pizza-slice/v2/z_band/ --user='+sys.argv[1]+' --password='+sys.argv[2]+' -i /data/des70.a/data/masaya/pizza-slice/v2/pizza_z_slice_download.txt')
 
 
 if __name__ == "__main__":
