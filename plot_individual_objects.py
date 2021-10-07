@@ -8,7 +8,7 @@ work = '/data/des70.a/data/masaya/'
 tilenames = ['DES2208-5123', 'DES0234-0207', 'DES0326-2041']
 mdet_obj = fio.read(os.path.join(work, 'metadetect/v2/mdet_test_all_v2.fits'))
 
-coadd_fnames = fio.read(os.path.join('/data/des70.a/data/masaya/pizza-slice', 'pizza_slices_coadd_v2.fits'))
+coadd_fnames = fio.read(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2', 'pizza_slices_coadd_v2.fits'))
 # coadd = fio.FITS(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2/r_band/', pizza_f))
 # r_epochs = coadd['epochs_info'].read()
 # r_image_info = coadd['image_info'].read()
