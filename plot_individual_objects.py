@@ -19,6 +19,7 @@ outliers = {}
 for t in tilenames:
     mdet = mdet_obj[mdet_obj['TILENAME']==t]
     coadd_f = coadd_fnames[((tilenames==t) & (coadd_fnames['BAND']=='r'))]['FILENAME']
+    print(coadd_f)
     m = meds.MEDS(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2/r_band/', coadd_f))
     for obj in mdet:
         if obj['MDET_T'] > 1.8:
