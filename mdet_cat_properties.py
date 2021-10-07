@@ -1,5 +1,6 @@
 
 
+from re import T
 import fitsio as fio
 import numpy as np
 from matplotlib import pyplot as plt
@@ -289,62 +290,62 @@ def categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x, ccd_y, x, y):
         raise ValueError
     return str(CCD).zfill(2)+'_'+str(piece).zfill(3)
 
-def spatial_variations(ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, band):
+def spatial_variations(mdet_obj, coadd_files, ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, bands):
 
     ## collect info (id, ra, dec, CCD coord, mean property values), save it, and plot later. 
-    mdet_cat = fio.read(os.path.join(PATH, 'metadetect/'+t+'_metadetect-v3_mdetcat_part0000.fits'))
-    try:
-        coadd = fio.FITS(os.path.join(PATH, 'pizza-slice/'+band+'_band/'+t+'_r5227p01_'+band+'_pizza-cutter-slices.fits.fz'))
-    except:
-        coadd = fio.FITS(os.path.join(PATH, 'pizza-slice/'+band+'_band/'+t+'_r5227p03_'+band+'_pizza-cutter-slices.fits.fz'))
-    r_epochs = coadd['epochs_info'].read()
-    r_image_info = coadd['image_info'].read()
-
+    # mdet_cat = fio.read(os.path.join(PATH, 'metadetect/'+t+'_metadetect-v3_mdetcat_part0000.fits'))
     
-    #################################################
-    ## ONLY A FEW OBJECTS FOR PARALLELIZATION TEST. #
-    #################################################
-    # mdet_cat = mdet_cat[:10]
+    for pizza_f,band in zip(coadd_files, bands):
+        coadd = fio.FITS(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2/'+band+'_band/', pizza_f))
+        r_epochs = coadd['epochs_info'].read()
+        r_image_info = coadd['image_info'].read()
+        
+        #################################################
+        ## ONLY A FEW OBJECTS FOR PARALLELIZATION TEST. #
+        #################################################
+        # mdet_cat = mdet_cat[:10]
 
-    # For each metadetect object, find the slice and single epochs that it is in, 
-    # and get the wcs the object is in, and convert the object's ra/dec into CCD coordinates.
-    # After that, accumulate objects on each CCD, cut the CCD into smaller pieces, 
-    # and compute the response in those pieces. 
-    piece_ccd_tile = {l:[] for l in ccd_list}
-    outside_ccd_obj = 0
-    for obj in range(len(mdet_cat)):
-        ra_obj = mdet_cat['ra'][obj]
-        dec_obj = mdet_cat['dec'][obj]
+        # For each metadetect object, find the slice and single epochs that it is in, 
+        # and get the wcs the object is in, and convert the object's ra/dec into CCD coordinates.
+        # After that, accumulate objects on each CCD, cut the CCD into smaller pieces, 
+        # and compute the response in those pieces. 
+        piece_ccd_tile = {l:[] for l in ccd_list}
+        outside_ccd_obj = 0
+        for obj in range(len(mdet_obj)):
+            ra_obj = mdet_obj['ra'][obj]
+            dec_obj = mdet_obj['dec'][obj]
 
-        slice_id = mdet_cat['slice_id'][obj]
-        single_epochs = r_epochs[r_epochs['id']==slice_id]
-        file_id = single_epochs[single_epochs['flags']==0]['file_id']
+            slice_id = mdet_obj['slice_id'][obj]
+            single_epochs = r_epochs[r_epochs['id']==slice_id]
+            file_id = single_epochs[single_epochs['flags']==0]['image_id']
 
-        for f in file_id:
-            wcs = eu.wcsutil.WCS(json.loads(r_image_info['wcs'][f]))
-            position_offset = r_image_info['position_offset'][f]
-            #ra, dec = wcs.image2sky(x+position_offset, y+position_offset)
-            pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj)
-            pos_x = pos_x - position_offset
-            pos_y = pos_y - position_offset
-            CCD = r_image_info['image_path'][f][-28:-26]
+            for f in file_id:
+                if f == -1:
+                    continue
+                wcs = eu.wcsutil.WCS(json.loads(r_image_info['wcs'][f]))
+                position_offset = r_image_info['position_offset'][f]
+                #ra, dec = wcs.image2sky(x+position_offset, y+position_offset)
+                pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj)
+                pos_x = pos_x - position_offset
+                pos_y = pos_y - position_offset
+                CCD = r_image_info['image_path'][f][-28:-26]
 
-            if (pos_x > ccd_x) or (pos_y > ccd_y):
-                outside_ccd_obj += 1
-                print(obj, ra_obj, dec_obj, pos_x, pos_y)
-                continue
-            if (pos_x < 0) or (pos_y < 0):
-                outside_ccd_obj += 1
-                print(obj, ra_obj, dec_obj, pos_x, pos_y)
-                continue
-            
-            CCD = int(CCD)
-            piece_CCD = categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x, ccd_y, pos_x, pos_y)
-            piece_ccd_tile[piece_CCD].append(mdet_cat[obj])
-    print(outside_ccd_obj)
+                if (pos_x > ccd_x) or (pos_y > ccd_y):
+                    outside_ccd_obj += 1
+                    print(obj, ra_obj, dec_obj, pos_x, pos_y)
+                    continue
+                if (pos_x < 0) or (pos_y < 0):
+                    outside_ccd_obj += 1
+                    print(obj, ra_obj, dec_obj, pos_x, pos_y)
+                    continue
+                
+                CCD = int(CCD)
+                piece_CCD = categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x, ccd_y, pos_x, pos_y)
+                piece_ccd_tile[piece_CCD].append(mdet_obj[obj])
+        print(outside_ccd_obj)
     return piece_ccd_tile
 
-def calculate_tile_response(ccd_list, piece_ccd_tile, band, save=True):
+def calculate_tile_response(ccd_list, piece_ccd_tile, ver, save=True):
     mean_shear_divisions = {l:[] for l in ccd_list}
     for div in ccd_list:
         div_data = piece_ccd_tile[div]
@@ -361,7 +362,7 @@ def calculate_tile_response(ccd_list, piece_ccd_tile, band, save=True):
             mean_shear_divisions[div].append(gerr_mean[0]/R[0])
             mean_shear_divisions[div].append(gerr_mean[1]/R[1])
     if save:
-        with open('/data/des70.a/data/masaya/mdet_'+band+'_shear_variations_focal_plane.pickle', 'wb') as handle:
+        with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_variations_focal_plane.pickle', 'wb') as handle:
             pickle.dump(mean_shear_divisions, handle, protocol=pickle.HIGHEST_PROTOCOL) 
     return mean_shear_divisions
 
@@ -550,12 +551,13 @@ def main(argv):
         # mdet_shear_pairs_plotting(d, 4000000)
         mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
-        just_plot = True
+        just_plot = False
         plotting = True
+        work = '/data/des70.a/data/masaya'
         ccd_x = 2048
         ccd_y = 4096
         piece_side = 128
-        band = 'r'
+        ver = 'v2'
         x_side = ccd_x//piece_side
         y_side = ccd_y//piece_side
         pieces = x_side * y_side
@@ -563,26 +565,23 @@ def main(argv):
         div_tiles = np.resize(np.array([k for k in range(1,pieces+1)]), (y_side, x_side))
 
         if not just_plot:
-            f = open('/home/s1/masaya/des-y6-analysis/tiles.txt', 'r')
-            tilenames = f.read().split('\n')[:-1]
+            f = fio.read(os.path.join(work, 'metadetect/'+ver+'/mdet_test_all_v2.fits'))
+            coadd_f = fio.read(os.path.join(work, 'pizza-slice/'+ver+'/pizza_slices_coadd_v2.fits'))
+            tilenames = np.unique(f['TILENAME'])
+            coadd_files = {t: [] for t in tilenames}
+            bands = {t: [] for t in tilenames}
+            for coa in coadd_f:
+                tname = coa['FILENAME'][:12]
+                coadd_files[tname].append(coa['FILENAME'])
+                bands[tname].append(coa['BAND'])
             
             ccd_list = []
             for c in range(1,num_ccd+1):
                 for div in range(1,pieces+1):
                     ccd_list.append(str(c).zfill(2)+'_'+str(div).zfill(3))
 
-            tilename_delete_list = []
-            for i,t in enumerate(tilenames):
-                if not os.path.exists(os.path.join(PATH, 'pizza-slice/'+band+'_band/'+t+'_r5227p01_'+band+'_pizza-cutter-slices.fits.fz')) and not os.path.exists(os.path.join(PATH, 'pizza-slice/'+band+'_band/'+t+'_r5227p03_'+band+'_pizza-cutter-slices.fits.fz')):
-                    tilename_delete_list.append(i)
-                else:
-                    if not os.path.exists(os.path.join(PATH, 'metadetect/'+t+'_metadetect-v3_mdetcat_part0000.fits')):
-                        tilename_delete_list.append(i)
-
-            tilenames = np.delete(tilenames, tilename_delete_list)
-            print('tile list, ', tilenames)
             jobs = [
-                delayed(spatial_variations)(ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, band)
+                delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, bands[t])
                 for t in tilenames
             ]
             t0 = time.time()
@@ -600,13 +599,13 @@ def main(argv):
                             ref[k].extend(div_dict[k])
                             num_obj += len(ref[k])
             print(num_obj)
-            all_pieces_response = calculate_tile_response(ccd_list, ref, band, save=True)
+            all_pieces_response = calculate_tile_response(ccd_list, ref, ver, save=True)
 
             ## starting from the middle. ##
             if plotting:
                 print('Plotting...')
                 #if just_plot:
-                with open('/data/des70.a/data/masaya/mdet_'+band+'_shear_variations_focal_plane.pickle', 'rb') as handle:
+                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_variations_focal_plane.pickle', 'rb') as handle:
                     all_pieces_response = pickle.load(handle)
                 plot_shear_vaiations_ccd(x_side, y_side, all_pieces_response, div_tiles, num_ccd)
             
@@ -615,7 +614,7 @@ def main(argv):
         else:
             print('Plotting...')
             #with open('./DarkEnergySurvey/des-y6-analysis/mdet_shear_variations_focal_plane.pickle', 'rb') as handle:
-            with open('/data/des70.a/data/masaya/mdet_'+band+'_shear_variations_focal_plane.pickle', 'rb') as handle:
+            with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_variations_focal_plane.pickle', 'rb') as handle:
                 all_pieces_response = pickle.load(handle)
 
             plot_shear_vaiations_ccd(x_side, y_side, all_pieces_response, div_tiles, num_ccd)
