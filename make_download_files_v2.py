@@ -41,14 +41,14 @@ def main(argv):
     all_r_files = []
     all_i_files = []
     all_z_files = []
-    for f in range(len(all_r_files)):
-        fname_r_pizza = os.path.join('https://desar2.cosmology.illinois.edu/DESFiles/desarchive/', r_files['PATH'], r_files['FILENAME'])
+    for f in range(len(r_files)):
+        fname_r_pizza = os.path.join('https://desar2.cosmology.illinois.edu/DESFiles/desarchive/', r_files['PATH'][f], r_files['FILENAME'][f])
         all_r_files.append(fname_r_pizza)
-    for f in range(len(all_i_files)):
-        fname_i_pizza = os.path.join('https://desar2.cosmology.illinois.edu/DESFiles/desarchive/', i_files['PATH'], i_files['FILENAME'])
+    for f in range(len(i_files)):
+        fname_i_pizza = os.path.join('https://desar2.cosmology.illinois.edu/DESFiles/desarchive/', i_files['PATH'][f], i_files['FILENAME'][f])
         all_i_files.append(fname_i_pizza)
-    for f in range(len(all_z_files)):
-        fname_z_pizza = os.path.join('https://desar2.cosmology.illinois.edu/DESFiles/desarchive/', z_files['PATH'], z_files['FILENAME'])
+    for f in range(len(z_files)):
+        fname_z_pizza = os.path.join('https://desar2.cosmology.illinois.edu/DESFiles/desarchive/', z_files['PATH'][f], z_files['FILENAME'][f])
         all_z_files.append(fname_z_pizza)
 
     np.savetxt('/data/des70.a/data/masaya/pizza-slice/v2/pizza_r_slice_download.txt', np.array(all_r_files), fmt="%s")
