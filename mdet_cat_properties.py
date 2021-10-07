@@ -572,9 +572,10 @@ def main(argv):
             bands = {t: [] for t in tilenames}
             for coa in coadd_f:
                 tname = coa['FILENAME'][:12]
-                coadd_files[tname].append(coa['FILENAME'])
-                bands[tname].append(coa['BAND'])
-            
+                if coa['BAND'] == 'r':
+                    coadd_files[tname].append(coa['FILENAME'])
+                    bands[tname].append(coa['BAND'])
+            print('1')
             ccd_list = []
             for c in range(1,num_ccd+1):
                 for div in range(1,pieces+1):
@@ -584,6 +585,7 @@ def main(argv):
                 delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, bands[t])
                 for t in tilenames
             ]
+            print('2')
             t0 = time.time()
             print('Parallelizing jobs...')
             res = Parallel(n_jobs=-1, verbose=0)(jobs)
