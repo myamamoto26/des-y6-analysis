@@ -176,7 +176,7 @@ def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
     for q,ax in enumerate(axs.ravel()):
         T_max = np.percentile(d[cut_quantity], perc[q], axis=0)
         T_mask = (d[cut_quantity] < T_max)
-        Tr = d[cut_quantity][T_mask]
+        Tr = d['MDET_T_RATIO'][T_mask]
         hist = stat.histogram(Tr, nperbin=3000000, more=True)
         bin_num = len(hist['hist'])
         g_obs = np.zeros(bin_num)
