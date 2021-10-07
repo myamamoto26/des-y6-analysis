@@ -31,7 +31,8 @@ def main(argv):
                 and d1.filetype = 'coadd_pizza_cutter';
             """
     out_fname = '/data/des70.a/data/masaya/pizza-slice/v2/pizza_slices_coadd_v2.fits'
-    get_coaddtile_geom('desoper', query, out_fname)
+    if not os.path.exists(out_fname):
+        get_coaddtile_geom('desoper', query, out_fname)
     pizza_filepaths = fio.read('/data/des70.a/data/masaya/pizza-slice/v2/pizza_slices_coadd_v2.fits')
 
     r_files = pizza_filepaths[pizza_filepaths['BAND'] == 'r']
@@ -54,9 +55,9 @@ def main(argv):
     np.savetxt('/data/des70.a/data/masaya/pizza-slice/v2/pizza_i_slice_download.txt', np.array(all_i_files), fmt="%s")
     np.savetxt('/data/des70.a/data/masaya/pizza-slice/v2/pizza_z_slice_download.txt', np.array(all_z_files), fmt="%s")
 
-    os.system('wget -i --user='+sys.argv[1]+' --password='+sys.argv[2]+' /data/des70.a/data/masaya/pizza-slice/v2/pizza_r_slice_download.txt')
-    os.system('wget -i --user='+sys.argv[1]+' --password='+sys.argv[2]+' /data/des70.a/data/masaya/pizza-slice/v2/pizza_i_slice_download.txt')
-    os.system('wget -i --user='+sys.argv[1]+' --password='+sys.argv[2]+' /data/des70.a/data/masaya/pizza-slice/v2/pizza_z_slice_download.txt')
+    os.system('wget --user='+sys.argv[1]+' --password='+sys.argv[2]+' -i /data/des70.a/data/masaya/pizza-slice/v2/pizza_r_slice_download.txt')
+    os.system('wget --user='+sys.argv[1]+' --password='+sys.argv[2]+' -i /data/des70.a/data/masaya/pizza-slice/v2/pizza_i_slice_download.txt')
+    os.system('wget --user='+sys.argv[1]+' --password='+sys.argv[2]+' -i /data/des70.a/data/masaya/pizza-slice/v2/pizza_z_slice_download.txt')
 
 
 if __name__ == "__main__":
