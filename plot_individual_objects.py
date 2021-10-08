@@ -35,7 +35,7 @@ for t in tqdm(np.unique(tilenames)):
         fig, ax = plt.subplots(figsize=(10,10))
         ax.imshow(coadd_image)
         for i in range(len(outliers[s])):
-            ax.scatter(outliers[s][0], outliers[s][1], color='r')
+            ax.scatter(outliers[s][i][0], outliers[s][i][1], color='r')
         plt.savefig('/data/des70.a/data/masaya/pizza-slice/coadd_image/'+str(slice_id)+'_coadd.png')
         plt.clf()
     print('tile done')
