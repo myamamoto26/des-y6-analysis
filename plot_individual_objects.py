@@ -5,6 +5,7 @@ import os, sys
 import meds
 from matplotlib import pyplot as plt
 from tqdm import tqdm
+import matplotlib
 
 work = '/data/des70.a/data/masaya/'
 # tilenames = ['DES2208-5123', 'DES0234-0207', 'DES0326-2041']
@@ -33,10 +34,10 @@ for t in tqdm(np.unique(tilenames)):
     for s in list(outliers.keys()):
         coadd_image = m.get_cutout(s, 0)
         fig, ax = plt.subplots(figsize=(10,10))
-        ax.imshow(coadd_image)
+        ax.imshow(coadd_image, norm=matplotlib.colors.Normalize())
         for i in range(len(outliers[s])):
-            ax.scatter(outliers[s][i][0], outliers[s][i][1], color='r', s=0.0001)
-        plt.savefig('/data/des70.a/data/masaya/pizza-slice/coadd_image/slice_'+str(slice_id)+'_coadd.png')
+            ax.scatter(outliers[s][i][0], outliers[s][i][1], color='r', s=0.01)
+        plt.savefig('/data/des70.a/data/masaya/pizza-slice/coadd_image/slice_'+str(s)+'_coadd.png')
         plt.close()
     print('tile done')
     sys.exit()
