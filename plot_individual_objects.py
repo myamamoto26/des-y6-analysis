@@ -34,7 +34,6 @@ for t in tqdm(np.unique(tilenames)):
         coadd_image = m.get_cutout(s, 0)
         fig, ax = plt.subplots(figsize=(10,10))
         ax.imshow(coadd_image)
-        plt.colorbar()
         for i in range(len(outliers[s])):
             ax.scatter(outliers[s][0], outliers[s][1], color='r')
         plt.savefig('/data/des70.a/data/masaya/pizza-slice/coadd_image/'+str(slice_id)+'_coadd.png')
