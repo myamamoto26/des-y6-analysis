@@ -7,24 +7,23 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 work = '/data/des70.a/data/masaya/'
-tilenames = ['DES2208-5123', 'DES0234-0207', 'DES0326-2041']
+# tilenames = ['DES2208-5123', 'DES0234-0207', 'DES0326-2041']
 mdet_obj = fio.read(os.path.join(work, 'metadetect/v2/mdet_test_all_v2.fits'))
 
 coadd_fnames = fio.read(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2', 'pizza_slices_coadd_v2.fits'))
-tilenames = np.array([f['FILENAME'][:12] for f in coadd_fnames])
+tilenames = np.unique([f['FILENAME'][:12] for f in coadd_fnames])
 # coadd = fio.FITS(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2/r_band/', pizza_f))
 # r_epochs = coadd['epochs_info'].read()
 # r_image_info = coadd['image_info'].read()
 
 outliers = {}
-for t in tilenames:
+for t in tqdm(tilenames):
     mdet = mdet_obj[mdet_obj['TILENAME']==t]
     mask = ((tilenames==t) & (coadd_fnames['BAND']=='r'))
     coadd_f = coadd_fnames[mask]['FILENAME'][0]
     m = meds.MEDS(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2/r_band/', coadd_f))
-    print(mdet)
-    for obj in tqdm(mdet):
-        if obj['MDET_T'] > 1.8:
+    for obj in mdet:
+        if obj['MDET_T_RATIO'] > 1.8:
             slice_id = obj['SLICE_ID']
             if slice_id not in list(outliers.keys()):
                 outliers[slice_id] = [(obj['SLICE_ROW'], obj['SLICE_COL'])]
