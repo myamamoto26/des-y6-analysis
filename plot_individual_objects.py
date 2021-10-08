@@ -27,9 +27,9 @@ for t in tqdm(np.unique(tilenames)):
         if obj['MDET_T_RATIO'] > 1.8:
             slice_id = obj['SLICE_ID']
             if slice_id not in list(outliers.keys()):
-                outliers[slice_id] = [(obj['SLICE_ROW'], obj['SLICE_COL'])]
+                outliers[slice_id] = [(obj['SLICE_COL'], obj['SLICE_ROW'])]
             else:
-                outliers[slice_id].append((obj['SLICE_ROW'], obj['SLICE_COL']))
+                outliers[slice_id].append((obj['SLICE_COL'], obj['SLICE_ROW']))
     print(outliers)
     for s in list(outliers.keys()):
         coadd_image = m.get_cutout(s, 0)
