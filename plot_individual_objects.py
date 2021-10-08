@@ -22,6 +22,7 @@ for t in tilenames:
     mask = ((tilenames==t) & (coadd_fnames['BAND']=='r'))
     coadd_f = coadd_fnames[mask]['FILENAME'][0]
     m = meds.MEDS(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2/r_band/', coadd_f))
+    print(mdet)
     for obj in tqdm(mdet):
         if obj['MDET_T'] > 1.8:
             slice_id = obj['SLICE_ID']
@@ -40,5 +41,6 @@ for t in tilenames:
             ax.scatter(outliers[s][0], outliers[s][1], color='r')
         plt.savefig('/data/des70.a/data/masaya/pizza-slice/coadd_image/'+str(slice_id)+'_coadd.png')
         plt.clf()
+    print('tile done')
             
 # fio.write('/data/des70.a/data/masaya/pizza-slice/coadd_image/'+str(slice_id)+'_coadd.fits', coadd_image)
