@@ -32,8 +32,7 @@ for t in tqdm(np.unique(tilenames)):
     print(outliers)
     for s in list(outliers.keys()):
         coadd_image = m.get_cutout(s, 0)
-        print(coadd_image)
-        fig, ax = plt.subplots(10,10)
+        fig, ax = plt.subplots(figsize=(10,10))
         ax.imshow(coadd_image)
         plt.colorbar()
         for i in range(len(outliers[s])):
