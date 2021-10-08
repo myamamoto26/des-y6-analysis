@@ -32,7 +32,7 @@ for t in tqdm(np.unique(tilenames)):
     print(outliers)
     for s in list(outliers.keys()):
         coadd_image = m.get_cutout(s, 0)
-    
+        print(coadd_image)
         fig, ax = plt.subplots(10,10)
         ax.imshow(coadd_image)
         plt.colorbar()
@@ -41,5 +41,6 @@ for t in tqdm(np.unique(tilenames)):
         plt.savefig('/data/des70.a/data/masaya/pizza-slice/coadd_image/'+str(slice_id)+'_coadd.png')
         plt.clf()
     print('tile done')
+    sys.exit()
             
 # fio.write('/data/des70.a/data/masaya/pizza-slice/coadd_image/'+str(slice_id)+'_coadd.fits', coadd_image)
