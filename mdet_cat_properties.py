@@ -575,21 +575,23 @@ def main(argv):
                 if coa['BAND'] == 'r':
                     coadd_files[tname].append(coa['FILENAME'])
                     bands[tname].append(coa['BAND'])
-            print('1')
+            
             ccd_list = []
             for c in range(1,num_ccd+1):
                 for div in range(1,pieces+1):
                     ccd_list.append(str(c).zfill(2)+'_'+str(div).zfill(3))
 
+            ## TEST
+            tilenames = np.random.choice(tilenames, size=100)
             jobs = [
                 delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, bands[t])
                 for t in tilenames
             ]
-            print('2')
             t0 = time.time()
             print('Parallelizing jobs...')
             res = Parallel(n_jobs=-1, verbose=0)(jobs)
             print('Jobs are done. Time to concatenate the dict. ')
+            exit()
             ## Combine the dictionaries into one dict. 
             num_obj = 0
             for ind, div_dict in enumerate(res):
