@@ -172,8 +172,7 @@ def exclude_gold_mask_objects(d):
     exclude_pix = np.unique(gold_mask['PIXEL'])
     mask = []
     for obj in d:
-        print(obj['RA']*galsim.degrees, obj['DEC']*galsim.degrees)
-        hpix = hp.ang2pix(4096, obj['RA']*galsim.degrees, obj['DEC']*galsim.degrees, nest=True)
+        hpix = hp.ang2pix(4096, obj['DEC']*galsim.degrees+(np.pi/2), obj['RA']*galsim.degrees, nest=True)
         if hpix in exclude_pix:
             mask.append(True)
     
