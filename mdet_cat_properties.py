@@ -312,10 +312,10 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x, ccd_y, piece_side, t, div_t
         piece_ccd_tile = {l:[] for l in ccd_list}
         outside_ccd_obj = 0
         for obj in range(len(mdet_obj)):
-            ra_obj = mdet_obj['ra'][obj]
-            dec_obj = mdet_obj['dec'][obj]
+            ra_obj = mdet_obj['RA'][obj]
+            dec_obj = mdet_obj['DEC'][obj]
 
-            slice_id = mdet_obj['slice_id'][obj]
+            slice_id = mdet_obj['SLICE_ID'][obj]
             single_epochs = r_epochs[r_epochs['id']==slice_id]
             file_id = single_epochs[single_epochs['flags']==0]['image_id']
 
