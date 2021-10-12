@@ -33,6 +33,8 @@ for t in tqdm(np.unique(tilenames)):
     print(outliers)
     for s in list(outliers.keys()):
         coadd_image = m.get_cutout(s, 0)
+        if s==2507:
+            fio.write('/data/des70.a/data/masaya/pizza-slice/coadd_image/test.fits', coadd_image)
         fig, ax = plt.subplots(figsize=(10,10))
         ax.imshow(coadd_image, norm=matplotlib.colors.Normalize())
         for i in range(len(outliers[s])):
