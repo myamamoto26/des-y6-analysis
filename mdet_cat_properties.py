@@ -3,6 +3,7 @@
 from re import T
 import fitsio as fio
 import numpy as np
+import galsim
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 import os, sys
@@ -163,6 +164,21 @@ def bootstrap_sampling_error(N, data1, data2):
     
     return [cov1, cov2]
 
+def exclude_gold_mask_objects(d):
+
+    import healpy as hp
+
+    gold_mask = fio.read('/data/des70.a/data/masaya/gold/y6a2_foreground_mask_v1.1.fits')
+    exclude_pix = np.unique(gold_mask['PIXEL'])
+    mask = []
+    for obj in d:
+        hpix = hp.ang2pix(4096, obj['RA']*galsim.degrees, obj['DEC']*galsim.degrees, nest=True)
+        if hpix in exclude_pix:
+            mask.append(True)
+    
+    return d[np.array(mask)]
+
+
 def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
 
     ## for linear fit
@@ -208,19 +224,11 @@ def mdet_shear_pairs_plotting(d, nperbin):
     ## for linear fit
     def func(x,m,n):
         return m*x+n
-
-    ## histogram of cuts properties. 
-    # def_mask = (
-    #         (d['flags'] == 0)
-    #         & (d['mdet_s2n'] > 10)
-    #         & (d['mdet_T_ratio'] > 1.2)
-    #         & (d['mfrac'] < 0.1))
-    # print(max(d['mdet_T_ratio'][def_mask]), max(d['mdet_T'][def_mask]))
-    # print(len(d['mdet_T_ratio'][d['mdet_T_ratio']>3]))
-    # print(len(d['mdet_T'][d['mdet_T']>0.8]))
     
     ## psf shape/area vs mean shear. 
     fig,axs = plt.subplots(3,2,figsize=(22,12))
+    # exclude objects in healpix which is the same as the gold. 
+    d = exclude_gold_mask_objects(d)
     for q,ax in enumerate(axs.ravel()):
         if q==0 or q==1:
             psf_ = d['PSFREC_G_'+str(q+1)]
@@ -231,12 +239,6 @@ def mdet_shear_pairs_plotting(d, nperbin):
             hist = stat.histogram(Tpsf, nperbin=nperbin, more=True)
             bin_num = len(hist['hist'])
         elif q==4 or q==5:
-            # Tr_cut_min = 1.2
-            # Tr_cut_max = 3
-            # Tr_mask = (d['mdet_T_ratio'] > Tr_cut_min) & (d['mdet_T_ratio'] < Tr_cut_max)
-            # Tr = d['mdet_T_ratio'][Tr_mask]
-            # T_max = np.percentile(d['mdet_T'], 95)
-            # T_mask = (d['mdet_T'] < T_max)
             Tr = d['MDET_T_RATIO'] # d['mdet_T'][T_mask]
             hist = stat.histogram(Tr, nperbin=2000000, more=True)
             bin_num = len(hist['hist'])
@@ -271,7 +273,7 @@ def mdet_shear_pairs_plotting(d, nperbin):
         ax.set_ylabel('<e'+str(q%2 + 1)+'>')
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     axs[0,0].legend(loc='upper right')
-    plt.savefig('mdet_psf_vs_shear_fit_v2.png')
+    plt.savefig('mdet_psf_vs_shear_fit_v2_goldmaskpix.png')
 
 def categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x, ccd_y, x, y):
 
@@ -548,8 +550,8 @@ def main(argv):
 
         # simple_properties()
         # mdet_shear_pairs(40, 1000)
-        # mdet_shear_pairs_plotting(d, 4000000)
-        mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
+        mdet_shear_pairs_plotting(d, 4000000)
+        # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
         just_plot = False
         plotting = True
