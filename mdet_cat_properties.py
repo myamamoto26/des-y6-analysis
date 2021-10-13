@@ -170,13 +170,10 @@ def exclude_gold_mask_objects(d):
 
     gold_mask = fio.read('/data/des70.a/data/masaya/gold/y6a2_foreground_mask_v1.1.fits')
     exclude_pix = np.unique(gold_mask['PIXEL'])
-    mask = []
-    for obj in tqdm(d):
-        hpix = hp.ang2pix(4096, np.radians(obj['DEC'])+np.pi/2, np.radians(obj['RA']), nest=True)
-        if hpix in exclude_pix:
-            mask.append(True)
+    hpix = hp.ang2pix(4096, np.radians(d['DEC'])+np.pi/2, np.radians(d['RA']), nest=True)
+    mask = np.in1d(hpix, exclude_pix, invert=True)
     
-    return d[np.array(mask)]
+    return d[mask]
 
 
 def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
