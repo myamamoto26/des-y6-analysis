@@ -344,7 +344,7 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x, ccd_y, piece_side, t, div_t
         print(outside_ccd_obj)
     return piece_ccd_tile
 
-def calculate_tile_response(ccd_list, piece_ccd_tile, ver, save=True):
+def calculate_tile_response(ccd_list, piece_ccd_tile, ver, batch, save=True):
     mean_shear_divisions = {l:[] for l in ccd_list}
     for div in ccd_list:
         div_data = piece_ccd_tile[div]
@@ -361,7 +361,7 @@ def calculate_tile_response(ccd_list, piece_ccd_tile, ver, save=True):
             mean_shear_divisions[div].append(gerr_mean[0]/R[0])
             mean_shear_divisions[div].append(gerr_mean[1]/R[1])
     if save:
-        with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_variations_focal_plane.pickle', 'wb') as handle:
+        with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_variations_focal_plane_'+str(batch)+'.pickle', 'wb') as handle:
             pickle.dump(mean_shear_divisions, handle, protocol=pickle.HIGHEST_PROTOCOL) 
     return mean_shear_divisions
 
@@ -551,7 +551,7 @@ def main(argv):
         # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
         just_plot = False
-        plotting = True
+        plotting = False
         work = '/data/des70.a/data/masaya'
         ccd_x = 2048
         ccd_y = 4096
@@ -571,38 +571,38 @@ def main(argv):
             bands = {t: [] for t in tilenames}
             for coa in coadd_f:
                 tname = coa['FILENAME'][:12]
-                if coa['BAND'] == 'r':
-                    coadd_files[tname].append(coa['FILENAME'])
-                    bands[tname].append(coa['BAND'])
+                coadd_files[tname].append(coa['FILENAME'])
+                bands[tname].append(coa['BAND'])
             
             ccd_list = []
             for c in range(1,num_ccd+1):
                 for div in range(1,pieces+1):
                     ccd_list.append(str(c).zfill(2)+'_'+str(div).zfill(3))
 
-            ## TEST
-            tilenames = np.random.choice(tilenames, size=100)
-            jobs = [
-                delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, bands[t])
-                for t in tilenames
-            ]
-            t0 = time.time()
-            print('Parallelizing jobs...')
-            res = Parallel(n_jobs=-1, verbose=0)(jobs)
-            print('Jobs are done. Time to concatenate the dict. ')
-            exit()
-            ## Combine the dictionaries into one dict. 
-            num_obj = 0
-            for ind, div_dict in enumerate(res):
-                if ind == 0:
-                    ref = div_dict
-                else:
-                    for k in ref.keys():
-                        if len(div_dict[k]) != 0:
-                            ref[k].extend(div_dict[k])
-                            num_obj += len(ref[k])
-            print(num_obj)
-            all_pieces_response = calculate_tile_response(ccd_list, ref, ver, save=True)
+            array_split = 5
+            for i,tnames in enumerate(np.array_split(tilenames, array_split)):
+                print('Processing the '+str(i)+' batch...')
+                jobs = [
+                    delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, bands[t])
+                    for t in tnames
+                ]
+                t0 = time.time()
+                print('Parallelizing jobs...')
+                res = Parallel(n_jobs=-1, verbose=0)(jobs)
+                print('Jobs are done. Time to concatenate the dict. ')
+                
+                ## Combine the dictionaries into one dict. 
+                num_obj = 0
+                for ind, div_dict in enumerate(res):
+                    if ind == 0:
+                        ref = div_dict
+                    else:
+                        for k in ref.keys():
+                            if len(div_dict[k]) != 0:
+                                ref[k].extend(div_dict[k])
+                                num_obj += len(ref[k])
+                print(num_obj)
+                all_pieces_response = calculate_tile_response(ccd_list, ref, ver, i, save=True)
 
             ## starting from the middle. ##
             if plotting:
