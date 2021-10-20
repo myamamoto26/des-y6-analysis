@@ -341,7 +341,7 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x, ccd_y, piece_side, t, div_t
                 CCD = int(CCD)
                 piece_CCD = categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x, ccd_y, pos_x, pos_y)
                 piece_ccd_tile[piece_CCD].append(mdet_obj[obj])
-        print(outside_ccd_obj)
+        # print(outside_ccd_obj)
     return piece_ccd_tile
 
 def calculate_tile_response(ccd_list, piece_ccd_tile, ver, batch, save=True):
@@ -580,29 +580,30 @@ def main(argv):
                     ccd_list.append(str(c).zfill(2)+'_'+str(div).zfill(3))
 
             array_split = 5
-            for i,tnames in enumerate(np.array_split(tilenames, array_split)):
-                print('Processing the '+str(i)+' batch...')
-                jobs = [
-                    delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, bands[t])
-                    for t in tnames
-                ]
-                t0 = time.time()
-                print('Parallelizing jobs...')
-                res = Parallel(n_jobs=-1, verbose=0)(jobs)
-                print('Jobs are done. Time to concatenate the dict. ')
-                
-                ## Combine the dictionaries into one dict. 
-                num_obj = 0
-                for ind, div_dict in enumerate(res):
-                    if ind == 0:
-                        ref = div_dict
-                    else:
-                        for k in ref.keys():
-                            if len(div_dict[k]) != 0:
-                                ref[k].extend(div_dict[k])
-                                num_obj += len(ref[k])
-                print(num_obj)
-                all_pieces_response = calculate_tile_response(ccd_list, ref, ver, i, save=True)
+            ii = int(sys.argv[2])
+            split_tilenames = np.array_split(tilenames, array_split)[ii]
+            print('Processing the '+str(ii)+' batch...')
+            jobs = [
+                delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, bands[t])
+                for t in split_tilenames
+            ]
+            t0 = time.time()
+            print('Parallelizing jobs...')
+            res = Parallel(n_jobs=-1, verbose=0)(jobs)
+            print('Jobs are done. Time to concatenate the dict. ')
+            
+            ## Combine the dictionaries into one dict. 
+            num_obj = 0
+            for ind, div_dict in enumerate(res):
+                if ind == 0:
+                    ref = div_dict
+                else:
+                    for k in ref.keys():
+                        if len(div_dict[k]) != 0:
+                            ref[k].extend(div_dict[k])
+                            num_obj += len(ref[k])
+            print(num_obj)
+            all_pieces_response = calculate_tile_response(ccd_list, ref, ver, ii, save=True)
 
             ## starting from the middle. ##
             if plotting:
