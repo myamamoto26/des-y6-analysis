@@ -919,10 +919,10 @@ def piff_model_qa_cuts_hist(basic_piff_models):
 
 def main(argv):
 
-    f = open('/home/s1/masaya/des-y6-analysis/tiles.txt', 'r')
-    tilenames = f.read().split('\n')[:-1]
-    tilename_delete_list = ['DES0031+0001']
-    tilenames.remove('DES0031+0001')
+    # f = open('/home/s1/masaya/des-y6-analysis/tiles.txt', 'r')
+    # tilenames = f.read().split('\n')[:-1]
+    # tilename_delete_list = ['DES0031+0001']
+    # tilenames.remove('DES0031+0001')
     work_mdet = os.path.join('/data/des70.a/data/masaya/', 'metadetect/v2')
     work_pizza = os.path.join('/data/des70.a/data/masaya/', 'pizza-slice')
     work_piff = os.path.join('/data/des70.a/data/masaya/', 'piff_models')
