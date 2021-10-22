@@ -278,7 +278,7 @@ def figure4(steps, mdet_cat):
     ax.set_xticklabels(np.array([r'1.2 x $10^{0}$','','','','','',r'2 x $10^{0}$',r'3 x $10^{0}$']))
     plt.tight_layout()
     plt.subplots_adjust(hspace=0.03)
-    plt.savefig('count_response_ellip_SNR_Tr.png')
+    plt.savefig('count_response_ellip_SNR_Tr_v2.png')
 
 
 def bin_exposures_quartile(good_piff_models, par):
@@ -923,12 +923,12 @@ def main(argv):
     tilenames = f.read().split('\n')[:-1]
     tilename_delete_list = ['DES0031+0001']
     tilenames.remove('DES0031+0001')
-    work_mdet = os.path.join('/data/des70.a/data/masaya/', 'metadetect')
+    work_mdet = os.path.join('/data/des70.a/data/masaya/', 'metadetect/v2')
     work_pizza = os.path.join('/data/des70.a/data/masaya/', 'pizza-slice')
     work_piff = os.path.join('/data/des70.a/data/masaya/', 'piff_models')
     work_gold = os.path.join('/data/des70.a/data/masaya/', 'gold')
 
-    mdet_cat = os.path.join(work_mdet, 'mdet_test_all.fits')
+    mdet_cat = os.path.join(work_mdet, 'mdet_test_all_v2.fits')
     gold_cat = os.path.join(work_gold, 'y6_gold_2_0_magnitudes.fits')
     good_piff_models = os.path.join(work_piff, 'good_piffs_newcuts_query_test_v2.fits')
     basic_piff_models = os.path.join(work_piff, 'basic_piffs_query_test_v2.fits')
@@ -939,8 +939,8 @@ def main(argv):
 
     # combine_piff(['r', 'i', 'z'], work_piff, tilenames)
     # combine_gold(32, work_gold)
-    # figure4(20, mdet_cat)
-    figure6(gold_cat, piff_cat_r, piff_cat_i, piff_cat_z)
+    figure4(20, mdet_cat)
+    # figure6(gold_cat, piff_cat_r, piff_cat_i, piff_cat_z)
     # figure7(gold_cat, piff_cat_r, piff_cat_i, piff_cat_z)
     # figure11(mdet_cat, piff_all_cat)
     # figure14() -> modify the input and output. 
