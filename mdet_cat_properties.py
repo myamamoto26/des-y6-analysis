@@ -308,7 +308,7 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x, ccd_y, piece_side, t, div_t
         # and get the wcs the object is in, and convert the object's ra/dec into CCD coordinates.
         # After that, accumulate objects on each CCD, cut the CCD into smaller pieces, 
         # and compute the response in those pieces. 
-        piece_ccd_tile = {l:[] for l in ccd_list}
+        piece_ccd_tile = {l:{'object_location': [], 'shear_info':[]} for l in ccd_list}
         outside_ccd_obj = 0
         for obj in range(len(mdet_obj)):
             ra_obj = mdet_obj['RA'][obj]
@@ -327,7 +327,7 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x, ccd_y, piece_side, t, div_t
                 pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj)
                 pos_x = pos_x - position_offset
                 pos_y = pos_y - position_offset
-                CCD = r_image_info['image_path'][f][-28:-26]
+                CCD = int(r_image_info['image_path'][f][-28:-26])
 
                 if (pos_x > ccd_x) or (pos_y > ccd_y):
                     outside_ccd_obj += 1
@@ -338,9 +338,9 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x, ccd_y, piece_side, t, div_t
                     print(obj, ra_obj, dec_obj, pos_x, pos_y)
                     continue
                 
-                CCD = int(CCD)
                 piece_CCD = categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x, ccd_y, pos_x, pos_y)
-                piece_ccd_tile[piece_CCD].append(mdet_obj[obj])
+                piece_ccd_tile[piece_CCD]['object_location'].append((pos_x, pos_y))
+                piece_ccd_tile[piece_CCD]['shear_info'].append(mdet_obj[obj])
         # print(outside_ccd_obj)
     return piece_ccd_tile
 
@@ -439,7 +439,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, mean_shear_divisions, div_tiles, nu
         plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
 
         ## stack this 16x32 CCD in 10 bins along the x or y directions.
-        bin_num = 8
+        bin_num = 16
         ccd_coordinates = np.linspace(1,bin_num,bin_num)
         x_reduced = block_reduce(np.nan_to_num(stacked_mean_shear), block_size=(32//bin_num,1), func=np.sum)
         y_reduced = block_reduce(np.nan_to_num(stacked_mean_shear), block_size=(1,16//bin_num), func=np.sum)
@@ -457,7 +457,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, mean_shear_divisions, div_tiles, nu
         ax1[1].set_ylabel('<e>')
         ax1[1].set_xticks([])
         plt.legend(fontsize='large')
-        plt.savefig('mdet_shear_variations_focal_plane_stacked.png')
+        plt.savefig('mdet_shear_variations_focal_plane_stacked_v2.pdf')
         return
 
 
@@ -500,7 +500,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, mean_shear_divisions, div_tiles, nu
             shear_e2 = shear2[division]
             piece_side = 128
             X, Y = np.meshgrid(np.linspace(x1, x2, (2048//piece_side)+1), np.linspace(y1, y2, (4096//piece_side)+1))
-            mesh = ax.pcolormesh(X,Y,shear_e1, vmin=-0.1, vmax=0.1, snap=True)
+            mesh = ax.pcolormesh(X,Y,shear_e1, vmin=-0.05, vmax=0.05, snap=True)
             #ax.imshow(shear_e1, origin='lower', extent=[x1,x2,y1,y2])
             if label:
                 ax.text(0.5 * (x2 + x1), 0.5 * (y2 + y1), "CCD%s" %
@@ -512,11 +512,11 @@ def plot_shear_vaiations_ccd(x_side, y_side, mean_shear_divisions, div_tiles, nu
         ax.set_aspect(1)
         plt.tight_layout()
         plt.colorbar(mesh, ax=ax)
-        plt.savefig('mdet_shear_variations_focal_plane.png')
+        plt.savefig('mdet_shear_variations_focal_plane_v2.pdf')
         return
 
-    drawDECamCCDs_Plot(x0,y0,ccd_mesh_e1,ccd_mesh_e2,rotate=False,label=False,color='k',lw=0.5,ls='-')
-    # stack_CCDs(ccd_mesh_e1,ccd_mesh_e2)
+    # drawDECamCCDs_Plot(x0,y0,ccd_mesh_e1,ccd_mesh_e2,rotate=False,label=False,color='k',lw=0.5,ls='-')
+    stack_CCDs(ccd_mesh_e1,ccd_mesh_e2)
     print('saved figure...')
 
 
@@ -552,6 +552,7 @@ def main(argv):
     elif sys.argv[1] == 'shear_spatial':
         just_plot = False
         plotting = False
+        save_raw = True
         work = '/data/des70.a/data/masaya'
         ccd_x = 2048
         ccd_y = 4096
@@ -592,17 +593,23 @@ def main(argv):
             res = Parallel(n_jobs=-1, verbose=0)(jobs)
             print('Jobs are done. Time to concatenate the dict. ')
             
-            ## Combine the dictionaries into one dict. 
+            ## Combine the dictionaries into one dict. Careful that res has two keys in it. 
             num_obj = 0
             for ind, div_dict in enumerate(res):
                 if ind == 0:
                     ref = div_dict
                 else:
                     for k in ref.keys():
-                        if len(div_dict[k]) != 0:
-                            ref[k].extend(div_dict[k])
-                            num_obj += len(ref[k])
+                        if len(div_dict[k]['shear_info']) != 0:
+                            ref[k]['object_location'].append(div_dict[k]['object_location'])
+                            ref[k]['shear_info'].extend(div_dict[k]['shear_info'])
+                            num_obj += len(ref[k]['shear_info'])
             print(num_obj)
+            if save_raw:
+                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shearinfo_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
+                    pickle.dump(ref, raw, protocol=pickle.HIGHEST_PROTOCOL)
+                    sys.exit()
+
             all_pieces_response = calculate_tile_response(ccd_list, ref, ver, ii, save=True)
 
             ## starting from the middle. ##
@@ -617,8 +624,8 @@ def main(argv):
         
         else:
             print('Plotting...')
-            #with open('./DarkEnergySurvey/des-y6-analysis/mdet_shear_variations_focal_plane.pickle', 'rb') as handle:
-            with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_variations_focal_plane.pickle', 'rb') as handle:
+            # with open('./DarkEnergySurvey/des-y6-analysis/mdet_shear_variations_focal_plane_v2.pickle', 'rb') as handle:
+            with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_variations_focal_plane_'+ver+'.pickle', 'rb') as handle:
                 all_pieces_response = pickle.load(handle)
 
             plot_shear_vaiations_ccd(x_side, y_side, all_pieces_response, div_tiles, num_ccd)
