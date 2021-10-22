@@ -160,9 +160,9 @@ def figure4(steps, mdet_cat):
 
     def find_assign_grid(d, mdet_step, snmin, snmax, steps, sizemin, sizemax):
 
-        mask = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_T_ratio'] > 1.2) & (d['mfrac'] < 0.1) & (d['mdet_step'] == mdet_step))
-        mastercat_snr = d[mask]['mdet_s2n']
-        mastercat_Tr = d[mask]['mdet_T_ratio']
+        mask = ((d['FLAGS'] == 0) & (d['MDET_S2N'] > 10) & (d['MDET_T_RATIO'] > 1.2) & (d['MFRAC'] < 0.1) & (d['MDET_STEP'] == mdet_step))
+        mastercat_snr = d[mask]['MDET_S2N']
+        mastercat_Tr = d[mask]['MDET_T_RATIO']
         new_indexx,new_indexy = assign_loggrid(mastercat_snr, mastercat_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
         
         return new_indexx, new_indexy, mask
@@ -196,10 +196,10 @@ def figure4(steps, mdet_cat):
         g_1m = np.zeros((steps, steps))
         g_2p = np.zeros((steps, steps))
         g_2m = np.zeros((steps, steps))
-        np.add.at(g_1p, (g1p_indexx, g1p_indexy), d[mask_1p]['mdet_g'][:,0])
-        np.add.at(g_1m, (g1m_indexx, g1m_indexy), d[mask_1m]['mdet_g'][:,0])
-        np.add.at(g_2p, (g2p_indexx, g2p_indexy), d[mask_2p]['mdet_g'][:,1])
-        np.add.at(g_2m, (g2m_indexx, g2m_indexy), d[mask_2m]['mdet_g'][:,1])
+        np.add.at(g_1p, (g1p_indexx, g1p_indexy), d[mask_1p]['MDET_G_1'])
+        np.add.at(g_1m, (g1m_indexx, g1m_indexy), d[mask_1m]['MDET_G_1'])
+        np.add.at(g_2p, (g2p_indexx, g2p_indexy), d[mask_2p]['MDET_G_2'])
+        np.add.at(g_2m, (g2m_indexx, g2m_indexy), d[mask_2m]['MDET_G_2'])
         g_1p /= g1p_count
         g_1m /= g1m_count
         g_2p /= g2p_count
@@ -212,11 +212,11 @@ def figure4(steps, mdet_cat):
         return new_response
     
     d = fio.read(mdet_cat)
-    mask_noshear = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_T_ratio'] > 1.2) & (d['mfrac'] < 0.1) & (d['mdet_step'] == 'noshear'))
-    mastercat_noshear_snr = d[mask_noshear]['mdet_s2n']
-    mastercat_noshear_Tr = d[mask_noshear]['mdet_T_ratio']
-    new_e1 = d[mask_noshear]['mdet_g'][:,0]
-    new_e2 = d[mask_noshear]['mdet_g'][:,1]
+    mask_noshear = ((d['FLAGS'] == 0) & (d['MDET_S2N'] > 10) & (d['MDET_T_RATIO'] > 1.2) & (d['MFRAC'] < 0.1) & (d['MDET_STEP'] == 'noshear'))
+    mastercat_noshear_snr = d[mask_noshear]['MDET_S2N']
+    mastercat_noshear_Tr = d[mask_noshear]['MDET_T_RATIO']
+    new_e1 = d[mask_noshear]['MDET_G_1']
+    new_e2 = d[mask_noshear]['MDET_G_2']
 
     snmin=10
     snmax=300
