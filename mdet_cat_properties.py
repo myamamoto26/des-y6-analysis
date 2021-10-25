@@ -272,10 +272,10 @@ def mdet_shear_pairs_plotting(d, nperbin):
     axs[0,0].legend(loc='upper right')
     plt.savefig('mdet_psf_vs_shear_fit_v2_goldmaskpix.png')
 
-def categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x, ccd_y, x, y):
+def categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min, ccd_y_min, x, y):
 
-    div_x = [1+(piece_side*dv) for dv in range(ccd_x//piece_side + 1)]
-    div_y = [1+(piece_side*dv) for dv in range(ccd_y//piece_side + 1)]
+    div_x = [ccd_x_min+(piece_side*dv) for dv in range(x_side + 1)]
+    div_y = [ccd_y_min+(piece_side*dv) for dv in range(y_side + 1)]
     for i in range(len(div_x)-1):
         if (x >= div_x[i]) and (x < div_x[i+1]):
             piece_x = i
@@ -289,7 +289,7 @@ def categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x, ccd_y, x, y):
         raise ValueError
     return str(CCD).zfill(2)+'_'+str(piece).zfill(3)
 
-def spatial_variations(mdet_obj, coadd_files, ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, bands):
+def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands):
 
     ## collect info (id, ra, dec, CCD coord, mean property values), save it, and plot later. 
     # mdet_cat = fio.read(os.path.join(PATH, 'metadetect/'+t+'_metadetect-v3_mdetcat_part0000.fits'))
@@ -330,16 +330,16 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x, ccd_y, piece_side, t, div_t
                 pos_y = pos_y - position_offset
                 CCD = int(r_image_info['image_path'][f][-28:-26])
 
-                if (pos_x > ccd_x) or (pos_y > ccd_y):
+                if (pos_x > 2000) or (pos_y > 4048):
                     outside_ccd_obj += 1
                     print(obj, ra_obj, dec_obj, pos_x, pos_y)
                     continue
-                if (pos_x < 0) or (pos_y < 0):
+                if (pos_x < 48) or (pos_y < 48):
                     outside_ccd_obj += 1
                     print(obj, ra_obj, dec_obj, pos_x, pos_y)
                     continue
                 test.append((pos_x, pos_y))
-                piece_CCD = categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x, ccd_y, pos_x, pos_y)
+                piece_CCD = categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min, ccd_y_min, pos_x, pos_y)
                 piece_ccd_tile[piece_CCD]['object_location'].append((pos_x, pos_y))
                 piece_ccd_tile[piece_CCD]['shear_info'].append(mdet_obj[obj])
         print('x', min(np.array(test)[:,0]), max(np.array(test)[:,0]))
@@ -556,12 +556,14 @@ def main(argv):
         plotting = False
         save_raw = True
         work = '/data/des70.a/data/masaya'
-        ccd_x = 2048
-        ccd_y = 4096
-        piece_side = 128
+        ccd_x_min = 48
+        ccd_x_max = 2000
+        ccd_y_min = 48
+        ccd_y_max = 4048
+        piece_side = 122
         ver = 'v2'
-        x_side = ccd_x//piece_side
-        y_side = ccd_y//piece_side
+        x_side = int(np.ceil((ccd_x_max - ccd_x_min)//piece_side))
+        y_side = int(np.ceil((ccd_y_max - ccd_y_min)//piece_side))
         pieces = x_side * y_side
         num_ccd = 62
         div_tiles = np.resize(np.array([k for k in range(1,pieces+1)]), (y_side, x_side))
@@ -587,7 +589,7 @@ def main(argv):
             split_tilenames = np.array_split(tilenames, array_split)[ii]
             print('Processing the '+str(ii)+' batch...')
             jobs = [
-                delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x, ccd_y, piece_side, t, div_tiles, ccd_list, bands[t])
+                delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands[t])
                 for t in split_tilenames
             ]
             t0 = time.time()
