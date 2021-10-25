@@ -279,9 +279,11 @@ def categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min,
     for i in range(len(div_x)-1):
         if (x >= div_x[i]) and (x < div_x[i+1]):
             piece_x = i
+            break
     for j in range(len(div_y)-1):
         if (y >= div_y[j]) and (y < div_y[j+1]):
             piece_y = j
+            break
     try:
         piece = div_tiles[piece_y, piece_x]
     except:
@@ -562,8 +564,8 @@ def main(argv):
         ccd_y_max = 4048
         piece_side = 122
         ver = 'v2'
-        x_side = int(np.ceil((ccd_x_max - ccd_x_min)//piece_side))
-        y_side = int(np.ceil((ccd_y_max - ccd_y_min)//piece_side))
+        x_side = int(np.ceil((ccd_x_max - ccd_x_min)/piece_side))
+        y_side = int(np.ceil((ccd_y_max - ccd_y_min)/piece_side))
         pieces = x_side * y_side
         num_ccd = 62
         div_tiles = np.resize(np.array([k for k in range(1,pieces+1)]), (y_side, x_side))
