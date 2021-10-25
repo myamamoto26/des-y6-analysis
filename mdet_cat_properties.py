@@ -310,6 +310,7 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x, ccd_y, piece_side, t, div_t
         # and compute the response in those pieces. 
         piece_ccd_tile = {l:{'object_location': [], 'shear_info':[]} for l in ccd_list}
         outside_ccd_obj = 0
+        test = []
         for obj in range(len(mdet_obj)):
             ra_obj = mdet_obj['RA'][obj]
             dec_obj = mdet_obj['DEC'][obj]
@@ -337,11 +338,12 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x, ccd_y, piece_side, t, div_t
                     outside_ccd_obj += 1
                     print(obj, ra_obj, dec_obj, pos_x, pos_y)
                     continue
-                
+                test.append((pos_x, pos_y))
                 piece_CCD = categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x, ccd_y, pos_x, pos_y)
                 piece_ccd_tile[piece_CCD]['object_location'].append((pos_x, pos_y))
                 piece_ccd_tile[piece_CCD]['shear_info'].append(mdet_obj[obj])
-        # print(outside_ccd_obj)
+        print('x', min(np.array(test)[:,0]), max(np.array(test)[:,0]))
+        print('y', min(np.array(test)[:,1]), max(np.array(test)[:,1]))
     return piece_ccd_tile
 
 def calculate_tile_response(ccd_list, piece_ccd_tile, ver, batch, save=True):
