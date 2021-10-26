@@ -310,9 +310,9 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
         # and get the wcs the object is in, and convert the object's ra/dec into CCD coordinates.
         # After that, accumulate objects on each CCD, cut the CCD into smaller pieces, 
         # and compute the response in those pieces. 
-        piece_ccd_tile = {l:{'object_location': [], 'shear_info':[]} for l in ccd_list}
+        piece_ccd_tile = {l:[] for l in ccd_list}
         outside_ccd_obj = 0
-        test = []
+        
         for obj in range(len(mdet_obj)):
             ra_obj = mdet_obj['RA'][obj]
             dec_obj = mdet_obj['DEC'][obj]
@@ -340,12 +340,10 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
                     outside_ccd_obj += 1
                     print(obj, ra_obj, dec_obj, pos_x, pos_y)
                     continue
-                test.append((pos_x, pos_y))
+                
                 piece_CCD = categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min, ccd_y_min, pos_x, pos_y)
-                piece_ccd_tile[piece_CCD]['object_location'].append((pos_x, pos_y))
-                piece_ccd_tile[piece_CCD]['shear_info'].append(mdet_obj[obj])
-        print('x', min(np.array(test)[:,0]), max(np.array(test)[:,0]))
-        print('y', min(np.array(test)[:,1]), max(np.array(test)[:,1]))
+                piece_ccd_tile[piece_CCD].append(mdet_obj[obj])
+
     return piece_ccd_tile
 
 def calculate_tile_response(ccd_list, piece_ccd_tile, ver, batch, save=True):
@@ -606,10 +604,10 @@ def main(argv):
                     ref = div_dict
                 else:
                     for k in ref.keys():
-                        if len(div_dict[k]['shear_info']) != 0:
-                            ref[k]['object_location'].append(div_dict[k]['object_location'])
-                            ref[k]['shear_info'].extend(div_dict[k]['shear_info'])
-                            num_obj += len(ref[k]['shear_info'])
+                        if len(div_dict[k]) != 0:
+                            # ref[k]['object_location'].append(div_dict[k]['object_location'])
+                            ref[k].extend(div_dict[k])
+                            num_obj += len(ref[k])
             print(num_obj)
             if save_raw:
                 with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shearinfo_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
