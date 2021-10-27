@@ -612,7 +612,7 @@ def main(argv):
                             num_obj += len(ref[k])
             ## Concatenate all numpy arrays in each cell.
             for cell in list(ref.keys()):
-                if len(ref[call]) != 0:
+                if len(ref[cell]) != 0:
                     ref[cell] = np.concatenate(ref[cell], axis=0)
             print(num_obj)
             if save_raw:
