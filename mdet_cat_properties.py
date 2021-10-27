@@ -612,7 +612,8 @@ def main(argv):
                             num_obj += len(ref[k])
             ## Concatenate all numpy arrays in each cell.
             for cell in list(ref.keys()):
-                ref[cell] = np.concatenate(ref[cell], axis=0)
+                if len(ref[call]) != 0:
+                    ref[cell] = np.concatenate(ref[cell], axis=0)
             print(num_obj)
             if save_raw:
                 with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
