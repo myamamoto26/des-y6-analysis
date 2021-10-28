@@ -275,14 +275,12 @@ def mdet_shear_pairs_plotting(d, nperbin):
 def categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min, ccd_y_min, x, y):
 
     print(x)
-    piece_x = int(np.ceil((x-piece_side)/piece_side))
-    piece_y = int(np.ceil((y-piece_side)/piece_side))
-    try:
-        piece = div_tiles[piece_y, piece_x]
-    except:
-        print(x, y)
-        raise ValueError
-    return str(CCD).zfill(2)+'_'+str(piece).zfill(3)
+    piece_x = np.ceil((x-piece_side)/piece_side).astype('int')
+    piece_y = np.ceil((y-piece_side)/piece_side).astype('int')
+
+    piece_list = [str(CCD).zfill(2)+'_'+str(div_tiles[y_, x_]).zfill(3) for y_, x_ in zip(piece_y, piece_x)]
+
+    return piece_list
 
 def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands):
 
@@ -329,17 +327,18 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
                 wcs = cache_wcs['wcs'][f]
                 position_offset = cache_wcs['offset'][f]
                 #ra, dec = wcs.image2sky(x+position_offset, y+position_offset)
-                pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj, find=False)
+                pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj)
                 pos_x = pos_x - position_offset
                 pos_y = pos_y - position_offset
                 CCD = int(image_info['image_path'][f][-28:-26])
                 
-                piece_CCD = categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min, ccd_y_min, pos_x, pos_y)
+                piece_CCD_list = categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min, ccd_y_min, pos_x, pos_y)
                 obj_info = np.zeros((n,), dtype=[('MDET_STEP',np.unicode_, 40), ('MDET_G_1',float), ('MDET_G_2',float)])
                 obj_info['MDET_STEP'] = objects['MDET_STEP']
                 obj_info['MDET_G_1'] = objects['MDET_G_1']
                 obj_info['MDET_G_2'] = objects['MDET_G_2']
-                piece_ccd_tile[piece_CCD].append(obj_info)
+                for piece in piece_CCD_list:
+                    piece_ccd_tile[piece].append(obj_info)
 
     return piece_ccd_tile
 
