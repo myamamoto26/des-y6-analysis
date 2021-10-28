@@ -275,7 +275,6 @@ def mdet_shear_pairs_plotting(d, nperbin):
 
 def categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x_min, ccd_y_min, x, y):
 
-    print(x)
     piece_x = np.ceil((x-piece_side-ccd_x_min)/piece_side).astype('int')
     piece_y = np.ceil((y-piece_side-ccd_y_min)/piece_side).astype('int')
 
@@ -331,10 +330,11 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
                 position_offset = cache_wcs['offset'][f]
                 #ra, dec = wcs.image2sky(x+position_offset, y+position_offset)
                 pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj)
+                print(pos_x, pos_y, position_offset)
                 pos_x = pos_x - position_offset
                 pos_y = pos_y - position_offset
                 CCD = int(image_info['image_path'][f][-28:-26])
-                
+
                 piece_CCD_list = categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x_min, ccd_y_min, pos_x, pos_y)
                 obj_info = np.zeros((n,), dtype=[('MDET_STEP',np.unicode_, 40), ('MDET_G_1',float), ('MDET_G_2',float)])
                 obj_info['MDET_STEP'] = objects['MDET_STEP']
