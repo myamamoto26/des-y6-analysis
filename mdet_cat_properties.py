@@ -7,6 +7,7 @@ import galsim
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 import os, sys
+import time
 from numpy.core.shape_base import stack
 from numpy.lib.function_base import flip
 from numpy.lib.twodim_base import tril_indices
@@ -272,11 +273,11 @@ def mdet_shear_pairs_plotting(d, nperbin):
     axs[0,0].legend(loc='upper right')
     plt.savefig('mdet_psf_vs_shear_fit_v2_goldmaskpix.png')
 
-def categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min, ccd_y_min, x, y):
+def categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x_min, ccd_y_min, x, y):
 
     print(x)
-    piece_x = np.ceil((x-piece_side)/piece_side).astype('int')
-    piece_y = np.ceil((y-piece_side)/piece_side).astype('int')
+    piece_x = np.ceil((x-piece_side-ccd_x_min)/piece_side).astype('int')
+    piece_y = np.ceil((y-piece_side-ccd_y_min)/piece_side).astype('int')
 
     piece_list = [str(CCD).zfill(2)+'_'+str(div_tiles[y_, x_]).zfill(3) for y_, x_ in zip(piece_y, piece_x)]
 
@@ -324,6 +325,8 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
             dec_obj = objects['DEC']
 
             for f in fid:
+                if f == -1:
+                    continue
                 wcs = cache_wcs['wcs'][f]
                 position_offset = cache_wcs['offset'][f]
                 #ra, dec = wcs.image2sky(x+position_offset, y+position_offset)
@@ -332,7 +335,7 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
                 pos_y = pos_y - position_offset
                 CCD = int(image_info['image_path'][f][-28:-26])
                 
-                piece_CCD_list = categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min, ccd_y_min, pos_x, pos_y)
+                piece_CCD_list = categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x_min, ccd_y_min, pos_x, pos_y)
                 obj_info = np.zeros((n,), dtype=[('MDET_STEP',np.unicode_, 40), ('MDET_G_1',float), ('MDET_G_2',float)])
                 obj_info['MDET_STEP'] = objects['MDET_STEP']
                 obj_info['MDET_G_1'] = objects['MDET_G_1']
@@ -563,6 +566,7 @@ def main(argv):
         pieces = x_side * y_side
         num_ccd = 62
         div_tiles = np.resize(np.array([k for k in range(1,pieces+1)]), (y_side, x_side))
+        t0 = time.time()
 
         if not just_plot:
             f = fio.read(os.path.join(work, 'metadetect/'+ver+'/mdet_test_all_v2.fits'))
@@ -609,6 +613,7 @@ def main(argv):
                 if len(ref[cell]) != 0:
                     ref[cell] = np.concatenate(ref[cell], axis=0)
             print(num_obj)
+            print('time it took, ', time.time()-t0)
             if save_raw:
                 with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
                     pickle.dump(ref, raw, protocol=pickle.HIGHEST_PROTOCOL)
