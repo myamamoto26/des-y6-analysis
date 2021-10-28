@@ -319,7 +319,7 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
 
             single_epochs = epochs[epochs['id']==slice_id]
             fid = single_epochs[single_epochs['flags']==0]['image_id']
-            objects = mdet_obj[np.in1d(slice_id, mdet_obj['SLICE_ID'])][0]
+            objects = mdet_obj[np.isin(slice_id, mdet_obj['SLICE_ID'])][0]
             n = len(objects)
             ra_obj = objects['RA']
             dec_obj = objects['DEC']
