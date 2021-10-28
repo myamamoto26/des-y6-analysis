@@ -274,16 +274,8 @@ def mdet_shear_pairs_plotting(d, nperbin):
 
 def categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min, ccd_y_min, x, y):
 
-    div_x = [ccd_x_min+(piece_side*dv) for dv in range(x_side + 1)]
-    div_y = [ccd_y_min+(piece_side*dv) for dv in range(y_side + 1)]
-    for i in range(len(div_x)-1):
-        if (x >= div_x[i]) and (x < div_x[i+1]):
-            piece_x = i
-            break
-    for j in range(len(div_y)-1):
-        if (y >= div_y[j]) and (y < div_y[j+1]):
-            piece_y = j
-            break
+    piece_x = int(np.ceil((x-piece_side)/piece_side))
+    piece_y = int(np.ceil((y-piece_side)/piece_side))
     try:
         piece = div_tiles[piece_y, piece_x]
     except:
@@ -298,8 +290,8 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
     
     for pizza_f,band in zip(coadd_files, bands):
         coadd = fio.FITS(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2/'+band+'_band/', pizza_f))
-        r_epochs = coadd['epochs_info'].read()
-        r_image_info = coadd['image_info'].read()
+        epochs = coadd['epochs_info'].read()
+        image_info = coadd['image_info'].read()
         
         #################################################
         ## ONLY A FEW OBJECTS FOR PARALLELIZATION TEST. #
@@ -312,39 +304,41 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
         # and compute the response in those pieces. 
         piece_ccd_tile = {l:[] for l in ccd_list}
         outside_ccd_obj = 0
-        
-        for obj in range(len(mdet_obj)):
-            ra_obj = mdet_obj['RA'][obj]
-            dec_obj = mdet_obj['DEC'][obj]
 
-            slice_id = mdet_obj['SLICE_ID'][obj]
-            single_epochs = r_epochs[r_epochs['id']==slice_id]
-            file_id = single_epochs[single_epochs['flags']==0]['image_id']
+        cache_wcs = {'wcs':{}, 'offset':{}}
+        file_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
+        file_id = file_id[file_id != -1]
+        for f in file_id:
+            wcs = eu.wcsutil.WCS(json.loads(image_info['wcs'][f]))
+            position_offset = image_info['position_offset'][f]
+            cache_wcs['wcs'][f] = wcs
+            cache_wcs['offset'][f] = position_offset
 
-            for f in file_id:
-                if f == -1:
-                    continue
-                wcs = eu.wcsutil.WCS(json.loads(r_image_info['wcs'][f]))
-                position_offset = r_image_info['position_offset'][f]
+        unique_slice_id = np.unique(mdet_obj['SLICE_ID'])
+        for slice_id in tqdm(unique_slice_id):
+
+            single_epochs = epochs[epochs['id']==slice_id]
+            fid = single_epochs[single_epochs['flags']==0]['image_id']
+            objects = mdet_obj[np.in1d(slice_id, mdet_obj['SLICE_ID'])][0]
+            n = len(objects)
+            ra_obj = objects['RA']
+            dec_obj = objects['DEC']
+
+            for f in fid:
+                wcs = cache_wcs['wcs'][f]
+                position_offset = cache_wcs['offset'][f]
                 #ra, dec = wcs.image2sky(x+position_offset, y+position_offset)
-                pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj)
+                pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj, find=False)
                 pos_x = pos_x - position_offset
                 pos_y = pos_y - position_offset
-                CCD = int(r_image_info['image_path'][f][-28:-26])
-
-                if (pos_x > 2000) or (pos_y > 4048):
-                    outside_ccd_obj += 1
-                    print(obj, ra_obj, dec_obj, pos_x, pos_y)
-                    continue
-                if (pos_x < 48) or (pos_y < 48):
-                    outside_ccd_obj += 1
-                    print(obj, ra_obj, dec_obj, pos_x, pos_y)
-                    continue
+                CCD = int(image_info['image_path'][f][-28:-26])
                 
-                single_obj = np.ndarray(1, dtype=[('MDET_STEP',np.unicode_, 40), ('MDET_G_1',float), ('MDET_G_2',float)])
-                single_obj[0] = (mdet_obj['MDET_STEP'][obj], mdet_obj['MDET_G_1'][obj], mdet_obj['MDET_G_2'][obj])
                 piece_CCD = categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min, ccd_y_min, pos_x, pos_y)
-                piece_ccd_tile[piece_CCD].append(single_obj)
+                obj_info = np.zeros((n,), dtype=[('MDET_STEP',np.unicode_, 40), ('MDET_G_1',float), ('MDET_G_2',float)])
+                obj_info['MDET_STEP'] = objects['MDET_STEP']
+                obj_info['MDET_G_1'] = objects['MDET_G_1']
+                obj_info['MDET_G_2'] = objects['MDET_G_2']
+                piece_ccd_tile[piece_CCD].append(obj_info)
 
     return piece_ccd_tile
 
@@ -562,7 +556,7 @@ def main(argv):
         ccd_x_max = 2000
         ccd_y_min = 48
         ccd_y_max = 4048
-        piece_side = 122
+        piece_side = 32
         ver = 'v2'
         x_side = int(np.ceil((ccd_x_max - ccd_x_min)/piece_side))
         y_side = int(np.ceil((ccd_y_max - ccd_y_min)/piece_side))
@@ -572,7 +566,7 @@ def main(argv):
 
         if not just_plot:
             f = fio.read(os.path.join(work, 'metadetect/'+ver+'/mdet_test_all_v2.fits'))
-            coadd_f = fio.read(os.path.join(work, 'pizza-slice/'+ver+'/pizza_slices_coadd_v2.fits'))
+            coadd_f = fio.read(os.path.join(work, 'pizza-slice/'+ver+'/pizza_slices_coadd_v2.fits')) # Made from make_download_files_v2.py
             tilenames = np.unique(f['TILENAME'])
             coadd_files = {t: [] for t in tilenames}
             bands = {t: [] for t in tilenames}
