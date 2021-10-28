@@ -274,6 +274,7 @@ def mdet_shear_pairs_plotting(d, nperbin):
 
 def categorize_obj_in_CCD(div_tiles, x_side, y_side, piece_side, CCD, ccd_x_min, ccd_y_min, x, y):
 
+    print(x)
     piece_x = int(np.ceil((x-piece_side)/piece_side))
     piece_y = int(np.ceil((y-piece_side)/piece_side))
     try:
