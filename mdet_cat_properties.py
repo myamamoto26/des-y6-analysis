@@ -312,9 +312,10 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
             position_offset = image_info['position_offset'][f]
             cache_wcs['wcs'][f] = wcs
             cache_wcs['offset'][f] = position_offset
-
+        print(cache_wcs)
+        sys.exit()
         unique_slice_id = np.unique(mdet_obj['SLICE_ID'])
-        for slice_id in tqdm(unique_slice_id):
+        for slice_id in unique_slice_id:
 
             single_epochs = epochs[epochs['id']==slice_id]
             fid = single_epochs[single_epochs['flags']==0]['image_id']
