@@ -322,6 +322,9 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
             n = len(objects)
             ra_obj = objects['RA']
             dec_obj = objects['DEC']
+            print('fid', fid)
+            print('cache_wcs', cache_wcs['wcs'].keys())
+            sys.exit()
 
             for f in fid:
                 if f == 0:
