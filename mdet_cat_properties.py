@@ -309,8 +309,8 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
         file_id = file_id[file_id != 0]
         for f in file_id:
             m = np.where(image_info['image_id'] == f)
-            wcs = eu.wcsutil.WCS(json.loads(image_info[m]['wcs']))
-            position_offset = image_info[m]['position_offset']
+            wcs = eu.wcsutil.WCS(json.loads(image_info[m]['wcs'][0]))
+            position_offset = image_info[m]['position_offset'][0]
             cache_wcs['wcs'][f] = wcs
             cache_wcs['offset'][f] = position_offset
         
