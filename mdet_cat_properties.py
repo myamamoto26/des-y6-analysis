@@ -306,26 +306,25 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
 
         cache_wcs = {'wcs':{}, 'offset':{}}
         file_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
-        file_id = file_id[file_id != -1]
+        file_id = file_id[file_id != 0]
         for f in file_id:
-            m = (image_info['image_id'] == f)
-            wcs = eu.wcsutil.WCS(json.loads(image_info[m]['wcs'][0]))
-            position_offset = image_info[m]['position_offset'][0]
+            m = np.where(image_info['image_id'] == f)
+            wcs = eu.wcsutil.WCS(json.loads(image_info[m]['wcs']))
+            position_offset = image_info[m]['position_offset']
             cache_wcs['wcs'][f] = wcs
             cache_wcs['offset'][f] = position_offset
         
         unique_slice_id = np.unique(mdet_obj['SLICE_ID'])
         for slice_id in unique_slice_id:
 
-            single_epochs = epochs[epochs['id']==slice_id]
-            fid = single_epochs[single_epochs['flags']==0]['image_id']
+            fid = epochs[((epochs['flags']==0) & (epochs['id']==slice_id))]['image_id']
             objects = mdet_obj[np.isin(slice_id, mdet_obj['SLICE_ID'])][0]
             n = len(objects)
             ra_obj = objects['RA']
             dec_obj = objects['DEC']
 
             for f in fid:
-                if f == -1:
+                if f == 0:
                     continue
                 wcs = cache_wcs['wcs'][f]
                 position_offset = cache_wcs['offset'][f]
