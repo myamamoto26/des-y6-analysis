@@ -308,12 +308,12 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
         file_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
         file_id = file_id[file_id != -1]
         for f in file_id:
-            wcs = eu.wcsutil.WCS(json.loads(image_info['wcs'][f]))
-            position_offset = image_info['position_offset'][f]
+            m = (image_info['image_id'] == f)
+            wcs = eu.wcsutil.WCS(json.loads(image_info[m]['wcs']))
+            position_offset = image_info[m]['position_offset']
             cache_wcs['wcs'][f] = wcs
             cache_wcs['offset'][f] = position_offset
-        print(cache_wcs)
-        sys.exit()
+        
         unique_slice_id = np.unique(mdet_obj['SLICE_ID'])
         for slice_id in unique_slice_id:
 
