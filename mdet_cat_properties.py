@@ -325,9 +325,9 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
         image_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
         image_id = image_id[image_id != 0]
         for iid in image_id:
-            msk_im = np.where(image_info['image_id'] == iid)[0]
-            gs_wcs = galsim.FitsWCS(header=json.loads(image_info['wcs'][msk_im]))
-            position_offset = image_info['position_offset'][msk_im]
+            msk_im = np.where(image_info['image_id'] == iid)
+            gs_wcs = galsim.FitsWCS(header=json.loads(image_info['wcs'][msk_im][0]))
+            position_offset = image_info['position_offset'][msk_im][0]
 
             msk = ((epochs['flags'] == 0) & (epochs['image_id']==iid) & (epochs['weights'] > 0))
             if msk == 0:
@@ -611,13 +611,17 @@ def main(argv):
             ii = int(sys.argv[2])
             split_tilenames = np.array_split(tilenames, array_split)[ii]
             print('Processing the '+str(ii)+' batch...')
-            jobs = [
-                delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands[t])
-                for t in split_tilenames
-            ]
+            # jobs = [
+            #     delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands[t])
+            #     for t in split_tilenames
+            # ]
             t0 = time.time()
-            print('Parallelizing jobs...')
-            res = Parallel(n_jobs=-1, verbose=0)(jobs)
+            # print('Parallelizing jobs...')
+            # res = Parallel(n_jobs=-1, verbose=0)(jobs)
+            for t in tqdm(split_tilenames):
+                res = spatial_variations(f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands[t])
+            print('time it took, ', time.time()-t0)
+            sys.exit()
             print('Jobs are done. Time to concatenate the dict. ')
             
             ## Combine the dictionaries into one dict. Careful that res has two keys in it. 
