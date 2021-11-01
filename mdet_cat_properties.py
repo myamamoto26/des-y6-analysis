@@ -273,19 +273,39 @@ def mdet_shear_pairs_plotting(d, nperbin):
     axs[0,0].legend(loc='upper right')
     plt.savefig('mdet_psf_vs_shear_fit_v2_goldmaskpix.png')
 
-def categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x_min, ccd_y_min, x, y):
+def categorize_obj_in_ccd(div_tiles, piece_side, ccdnum, ccd_x_min, ccd_y_min, x, y):
 
-    piece_x = np.ceil((x-piece_side-ccd_x_min)/piece_side).astype('int')
-    piece_y = np.ceil((y-piece_side-ccd_y_min)/piece_side).astype('int')
+    piece_x = np.floor((x-ccd_x_min + 0.5)/piece_side).astype(int)
+    piece_y = np.floor((y-ccd_y_min + 0.5)/piece_side).astype(int)
 
-    piece_list = [str(CCD).zfill(2)+'_'+str(div_tiles[y_, x_]).zfill(3) for y_, x_ in zip(piece_y, piece_x)]
+    piece_list = [str(ccdnum).zfill(2)+'_'+str(div_tiles[y_, x_]).zfill(3) for y_, x_ in zip(piece_y, piece_x)]
 
     return piece_list
+
 
 def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands):
 
     ## collect info (id, ra, dec, CCD coord, mean property values), save it, and plot later. 
     # mdet_cat = fio.read(os.path.join(PATH, 'metadetect/'+t+'_metadetect-v3_mdetcat_part0000.fits'))
+    def _get_ccd_num(image_path):
+        return int(image_path.split('/')[1].split('_')[2][1:])
+
+    def _accum_shear(ccdres, ccdnum, cname, shear, mdet_step, xind, yind, g, x_side, y_side):
+        msk_s = (mdet_step == shear)
+        ccdres[ccdnum][cname] = np.zeros((y_side, x_side))
+        ccdres[ccdnum]["num_" + cname] = np.zeros((y_side, x_side))
+        if np.any(msk_s):
+            # see https://numpy.org/doc/stable/reference/generated/numpy.ufunc.at.html#numpy.ufunc.at
+            np.add.at(
+                ccdres[ccdnum][cname], 
+                (yind[msk_s], xind[msk_s]), 
+                g[msk_s],
+            )
+            np.add.at(
+                ccdres[ccdnum]["num_" + cname], 
+                (yind[msk_s], xind[msk_s]), 
+                np.ones_like(g[msk_s]),
+            )
     
     for pizza_f,band in zip(coadd_files, bands):
         coadd = fio.FITS(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2/'+band+'_band/', pizza_f))
@@ -302,49 +322,49 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
         # After that, accumulate objects on each CCD, cut the CCD into smaller pieces, 
         # and compute the response in those pieces. 
         piece_ccd_tile = {l:[] for l in ccd_list}
-        outside_ccd_obj = 0
+        image_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
+        image_id = image_id[image_id != 0]
+        for iid in image_id:
+            msk_im = np.where(image_info['image_id'] == iid)[0]
+            gs_wcs = galsim.FitsWCS(header=json.loads(image_info['wcs'][msk_im]))
+            position_offset = image_info['position_offset'][msk_im]
 
-        cache_wcs = {'wcs':{}, 'offset':{}}
-        file_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
-        file_id = file_id[file_id != 0]
-        for f in file_id:
-            m = np.where(image_info['image_id'] == f)
-            wcs = eu.wcsutil.WCS(json.loads(image_info[m]['wcs'][0]))
-            position_offset = image_info[m]['position_offset'][0]
-            cache_wcs['wcs'][f] = wcs
-            cache_wcs['offset'][f] = position_offset
+            msk = ((epochs['flags'] == 0) & (epochs['image_id']==iid) & (epochs['weights'] > 0))
+            if msk == 0:
+                continue
+            unique_slices = np.unique(epochs['id'][msk])
+
+            msk_obj = np.where(np.in1d(mdet_obj['SLICE_ID'], unique_slices))[0]
+            if msk_obj == 0:
+                continue
         
-        unique_slice_id = np.unique(mdet_obj['SLICE_ID'])
-        for slice_id in unique_slice_id:
+            n = len(msk_obj)
+            ra_obj = mdet_obj['RA'][msk_obj]
+            dec_obj = mdet_obj['DEC'][msk_obj]
 
-            fid = epochs[((epochs['flags']==0) & (epochs['id']==slice_id))]['image_id']
-            objects = mdet_obj[np.isin(slice_id, mdet_obj['SLICE_ID'])][0]
-            n = len(objects)
-            ra_obj = objects['RA']
-            dec_obj = objects['DEC']
-            print('fid', fid)
-            print('cache_wcs', cache_wcs['wcs'].keys())
-            sys.exit()
+            # pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj)
+            pos_x, pos_y = gs_wcs.radecToxy(ra_obj, dec_obj, units="degrees")
+            print(pos_x, pos_y, position_offset)
+            pos_x = pos_x - position_offset
+            pos_y = pos_y - position_offset
+            ccdnum = _get_ccd_num(image_info['image_path'][msk_im])
 
-            for f in fid:
-                if f == 0:
-                    continue
-                wcs = cache_wcs['wcs'][f]
-                position_offset = cache_wcs['offset'][f]
-                #ra, dec = wcs.image2sky(x+position_offset, y+position_offset)
-                pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj)
-                print(pos_x, pos_y, position_offset)
-                pos_x = pos_x - position_offset
-                pos_y = pos_y - position_offset
-                CCD = int(image_info['image_path'][f][-28:-26])
+            # ccdres[ccdnum] = {}
+            # mdet_step = d["mdet_step"][msk_d]
+            # _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, d["mdet_g_1"][msk_d])
+            # _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, d["mdet_g_2"][msk_d])
+            # _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, d["mdet_g_1"][msk_d])
+            # _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, d["mdet_g_1"][msk_d])
+            # _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, d["mdet_g_2"][msk_d])
+            # _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, d["mdet_g_2"][msk_d])
 
-                piece_CCD_list = categorize_obj_in_CCD(div_tiles, piece_side, CCD, ccd_x_min, ccd_y_min, pos_x, pos_y)
-                obj_info = np.zeros((n,), dtype=[('MDET_STEP',np.unicode_, 40), ('MDET_G_1',float), ('MDET_G_2',float)])
-                obj_info['MDET_STEP'] = objects['MDET_STEP']
-                obj_info['MDET_G_1'] = objects['MDET_G_1']
-                obj_info['MDET_G_2'] = objects['MDET_G_2']
-                for piece in piece_CCD_list:
-                    piece_ccd_tile[piece].append(obj_info)
+            piece_ccd_list = categorize_obj_in_ccd(div_tiles, piece_side, ccdnum, ccd_x_min, ccd_y_min, pos_x, pos_y)
+            obj_info = np.zeros((n,), dtype=[('MDET_STEP',np.unicode_, 40), ('MDET_G_1',float), ('MDET_G_2',float)])
+            obj_info['MDET_STEP'] = mdet_obj['MDET_STEP'][msk_obj]
+            obj_info['MDET_G_1'] = mdet_obj['MDET_G_1'][msk_obj]
+            obj_info['MDET_G_2'] = mdet_obj['MDET_G_2'][msk_obj]
+            for cell in piece_ccd_list:
+                piece_ccd_tile[cell].append(obj_info)
 
     return piece_ccd_tile
 
