@@ -344,10 +344,8 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
 
             # pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj)
             pos_x, pos_y = gs_wcs.radecToxy(ra_obj, dec_obj, units="degrees")
-            print(pos_x, pos_y, position_offset)
             pos_x = pos_x - position_offset
             pos_y = pos_y - position_offset
-            print(image_info['image_path'][msk_im])
             ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
 
             # ccdres[ccdnum] = {}
@@ -619,10 +617,23 @@ def main(argv):
             t0 = time.time()
             # print('Parallelizing jobs...')
             # res = Parallel(n_jobs=-1, verbose=0)(jobs)
-            for t in tqdm(split_tilenames):
+            for ind,t in tqdm(enumerate(split_tilenames)):
                 res = spatial_variations(f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands[t])
+                if ind == 0:
+                    ref = res
+                else:
+                    for k in ref.keys():
+                        if len(res[k]) != 0:
+                            ref[k].extend(res[k])
+            ## Concatenate all numpy arrays in each cell.
+            for cell in list(ref.keys()):
+                if len(ref[cell]) != 0:
+                    ref[cell] = np.concatenate(ref[cell], axis=0)
+            if save_raw:
+                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
+                    pickle.dump(res, raw, protocol=pickle.HIGHEST_PROTOCOL)
+                    sys.exit()
             print('time it took, ', time.time()-t0)
-            sys.exit()
             print('Jobs are done. Time to concatenate the dict. ')
             
             ## Combine the dictionaries into one dict. Careful that res has two keys in it. 
