@@ -347,7 +347,8 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
             print(pos_x, pos_y, position_offset)
             pos_x = pos_x - position_offset
             pos_y = pos_y - position_offset
-            ccdnum = _get_ccd_num(image_info['image_path'][msk_im])
+            print(image_info['image_path'][msk_im])
+            ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
 
             # ccdres[ccdnum] = {}
             # mdet_step = d["mdet_step"][msk_d]
