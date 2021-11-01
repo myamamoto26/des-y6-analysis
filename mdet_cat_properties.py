@@ -330,7 +330,7 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
             position_offset = image_info['position_offset'][msk_im][0]
 
             msk = ((epochs['flags'] == 0) & (epochs['image_id']==iid) & (epochs['weight'] > 0))
-            if msk == 0:
+            if not np.any(msk):
                 continue
             unique_slices = np.unique(epochs['id'][msk])
 
