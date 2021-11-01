@@ -335,7 +335,7 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
             unique_slices = np.unique(epochs['id'][msk])
 
             msk_obj = np.where(np.in1d(mdet_obj['SLICE_ID'], unique_slices))[0]
-            if msk_obj == 0:
+            if len(msk_obj) == 0:
                 continue
         
             n = len(msk_obj)
