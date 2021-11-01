@@ -324,7 +324,7 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
         piece_ccd_tile = {l:[] for l in ccd_list}
         image_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
         image_id = image_id[image_id != 0]
-        for iid in tqdm(image_id):
+        for iid in image_id:
             msk_im = np.where(image_info['image_id'] == iid)
             gs_wcs = galsim.FitsWCS(header=json.loads(image_info['wcs'][msk_im][0]))
             position_offset = image_info['position_offset'][msk_im][0]
