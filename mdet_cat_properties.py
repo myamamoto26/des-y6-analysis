@@ -355,7 +355,7 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
             xind, yind = categorize_obj_in_ccd(div_tiles, piece_side, ccdnum, ccd_x_min, ccd_y_min, pos_x, pos_y)
             # piece_ccd_list = categorize_obj_in_ccd(div_tiles, piece_side, ccdnum, ccd_x_min, ccd_y_min, pos_x, pos_y)
 
-            if len(ccdres[ccdnum]) == 0:
+            if ccdnum not in list(ccdres.keys()):
                 ccdres[ccdnum] = {}
             mdet_step = mdet_obj["mdet_step"][msk_obj]
             ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g_1"][msk_obj])
