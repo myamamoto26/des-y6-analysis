@@ -16,6 +16,7 @@ from scipy import stats
 import meds
 from esutil import stat
 import esutil as eu
+from esutil.pbar import PBar
 from scipy.optimize import curve_fit
 from tqdm import tqdm
 import json
@@ -623,9 +624,9 @@ def main(argv):
             #     for t in split_tilenames
             # ]
             t0 = time.time()
-            # print('Parallelizing jobs...')
+            # print('Parallelizing jobs...')    
             # res = Parallel(n_jobs=-1, verbose=0)(jobs)
-            for ind,t in tqdm(enumerate(split_tilenames)):
+            for ind,t in PBar(enumerate(tilenames)):
                 ccdres = spatial_variations(ccdres, f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands[t])
                 # if ind == 0:
                 #     ref = ccdres
@@ -638,7 +639,8 @@ def main(argv):
             #     if len(ref[cell]) != 0:
             #         ref[cell] = np.concatenate(ref[cell], axis=0)
             if save_raw:
-                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
+                # with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
+                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
                     pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
                     sys.exit()
             print('time it took, ', time.time()-t0)
