@@ -358,12 +358,12 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
             if ccdnum not in list(ccdres.keys()):
                 ccdres[ccdnum] = {}
             mdet_step = mdet_obj["MDET_STEP"][msk_obj]
-            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj["MDET_G_1"][msk_obj])
-            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj["MDET_G_2"][msk_obj])
-            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj["MDET_G_1"][msk_obj])
-            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj["MDET_G_1"][msk_obj])
-            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj["MDET_G_2"][msk_obj])
-            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj["MDET_G_2"][msk_obj])
+            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj["MDET_G_1"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj["MDET_G_2"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj["MDET_G_1"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj["MDET_G_1"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj["MDET_G_2"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj["MDET_G_2"][msk_obj], x_side, y_side)
 
             # obj_info = np.zeros((n,), dtype=[('MDET_STEP',np.unicode_, 40), ('MDET_G_1',float), ('MDET_G_2',float)])
             # obj_info['MDET_STEP'] = mdet_obj['MDET_STEP'][msk_obj]
