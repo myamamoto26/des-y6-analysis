@@ -278,12 +278,13 @@ def categorize_obj_in_ccd(div_tiles, piece_side, ccdnum, ccd_x_min, ccd_y_min, x
     piece_x = np.floor((x-ccd_x_min + 0.5)/piece_side).astype(int)
     piece_y = np.floor((y-ccd_y_min + 0.5)/piece_side).astype(int)
 
-    piece_list = [str(ccdnum).zfill(2)+'_'+str(div_tiles[y_, x_]).zfill(3) for y_, x_ in zip(piece_y, piece_x)]
+    # piece_list = [str(ccdnum).zfill(2)+'_'+str(div_tiles[y_, x_]).zfill(3) for y_, x_ in zip(piece_y, piece_x)]
 
-    return piece_list
+    # return piece_list
+    return piece_x, piece_y
 
 
-def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands):
+def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands):
 
     ## collect info (id, ra, dec, CCD coord, mean property values), save it, and plot later. 
     # mdet_cat = fio.read(os.path.join(PATH, 'metadetect/'+t+'_metadetect-v3_mdetcat_part0000.fits'))
@@ -292,8 +293,10 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
 
     def _accum_shear(ccdres, ccdnum, cname, shear, mdet_step, xind, yind, g, x_side, y_side):
         msk_s = (mdet_step == shear)
-        ccdres[ccdnum][cname] = np.zeros((y_side, x_side))
-        ccdres[ccdnum]["num_" + cname] = np.zeros((y_side, x_side))
+        if not np.any(ccdres[ccdnum][cname]):
+            ccdres[ccdnum][cname] = np.zeros((y_side, x_side))
+            ccdres[ccdnum]["num_" + cname] = np.zeros((y_side, x_side))
+        
         if np.any(msk_s):
             # see https://numpy.org/doc/stable/reference/generated/numpy.ufunc.at.html#numpy.ufunc.at
             np.add.at(
@@ -306,6 +309,8 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
                 (yind[msk_s], xind[msk_s]), 
                 np.ones_like(g[msk_s]),
             )
+
+        return ccdres
     
     for pizza_f,band in zip(coadd_files, bands):
         coadd = fio.FITS(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2/'+band+'_band/', pizza_f))
@@ -347,25 +352,27 @@ def spatial_variations(mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_si
             pos_x = pos_x - position_offset
             pos_y = pos_y - position_offset
             ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
+            xind, yind = categorize_obj_in_ccd(div_tiles, piece_side, ccdnum, ccd_x_min, ccd_y_min, pos_x, pos_y)
+            # piece_ccd_list = categorize_obj_in_ccd(div_tiles, piece_side, ccdnum, ccd_x_min, ccd_y_min, pos_x, pos_y)
 
-            # ccdres[ccdnum] = {}
-            # mdet_step = d["mdet_step"][msk_d]
-            # _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, d["mdet_g_1"][msk_d])
-            # _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, d["mdet_g_2"][msk_d])
-            # _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, d["mdet_g_1"][msk_d])
-            # _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, d["mdet_g_1"][msk_d])
-            # _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, d["mdet_g_2"][msk_d])
-            # _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, d["mdet_g_2"][msk_d])
+            if len(ccdres[ccdnum]) == 0:
+                ccdres[ccdnum] = {}
+            mdet_step = mdet_obj["mdet_step"][msk_obj]
+            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g_1"][msk_obj])
+            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g_2"][msk_obj])
+            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj["mdet_g_1"][msk_obj])
+            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj["mdet_g_1"][msk_obj])
+            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj["mdet_g_2"][msk_obj])
+            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj["mdet_g_2"][msk_obj])
 
-            piece_ccd_list = categorize_obj_in_ccd(div_tiles, piece_side, ccdnum, ccd_x_min, ccd_y_min, pos_x, pos_y)
-            obj_info = np.zeros((n,), dtype=[('MDET_STEP',np.unicode_, 40), ('MDET_G_1',float), ('MDET_G_2',float)])
-            obj_info['MDET_STEP'] = mdet_obj['MDET_STEP'][msk_obj]
-            obj_info['MDET_G_1'] = mdet_obj['MDET_G_1'][msk_obj]
-            obj_info['MDET_G_2'] = mdet_obj['MDET_G_2'][msk_obj]
-            for cell in piece_ccd_list:
-                piece_ccd_tile[cell].append(obj_info)
+            # obj_info = np.zeros((n,), dtype=[('MDET_STEP',np.unicode_, 40), ('MDET_G_1',float), ('MDET_G_2',float)])
+            # obj_info['MDET_STEP'] = mdet_obj['MDET_STEP'][msk_obj]
+            # obj_info['MDET_G_1'] = mdet_obj['MDET_G_1'][msk_obj]
+            # obj_info['MDET_G_2'] = mdet_obj['MDET_G_2'][msk_obj]
+            # for cell in piece_ccd_list:
+            #     piece_ccd_tile[cell].append(obj_info)
 
-    return piece_ccd_tile
+    return ccdres # piece_ccd_tile
 
 def calculate_tile_response(ccd_list, piece_ccd_tile, ver, batch, save=True):
     mean_shear_divisions = {l:[] for l in ccd_list}
@@ -588,6 +595,7 @@ def main(argv):
         pieces = x_side * y_side
         num_ccd = 62
         div_tiles = np.resize(np.array([k for k in range(1,pieces+1)]), (y_side, x_side))
+        ccdres = {}
         t0 = time.time()
 
         if not just_plot:
@@ -618,20 +626,20 @@ def main(argv):
             # print('Parallelizing jobs...')
             # res = Parallel(n_jobs=-1, verbose=0)(jobs)
             for ind,t in tqdm(enumerate(split_tilenames)):
-                res = spatial_variations(f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands[t])
-                if ind == 0:
-                    ref = res
-                else:
-                    for k in ref.keys():
-                        if len(res[k]) != 0:
-                            ref[k].extend(res[k])
+                ccdres = spatial_variations(ccdres, f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands[t])
+                # if ind == 0:
+                #     ref = ccdres
+                # else:
+                #     for k in ref.keys():
+                #         if len(ccdres[k]) != 0:
+                #             ref[k].extend(ccdres[k])
             ## Concatenate all numpy arrays in each cell.
-            for cell in list(ref.keys()):
-                if len(ref[cell]) != 0:
-                    ref[cell] = np.concatenate(ref[cell], axis=0)
+            # for cell in list(ref.keys()):
+            #     if len(ref[cell]) != 0:
+            #         ref[cell] = np.concatenate(ref[cell], axis=0)
             if save_raw:
                 with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
-                    pickle.dump(res, raw, protocol=pickle.HIGHEST_PROTOCOL)
+                    pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
                     sys.exit()
             print('time it took, ', time.time()-t0)
             print('Jobs are done. Time to concatenate the dict. ')
