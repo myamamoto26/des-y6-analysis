@@ -293,7 +293,7 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
 
     def _accum_shear(ccdres, ccdnum, cname, shear, mdet_step, xind, yind, g, x_side, y_side):
         msk_s = (mdet_step == shear)
-        if not np.any(ccdres[ccdnum][cname]):
+        if cname not in list(ccdres[ccdnum].keys()):
             ccdres[ccdnum][cname] = np.zeros((y_side, x_side))
             ccdres[ccdnum]["num_" + cname] = np.zeros((y_side, x_side))
         
