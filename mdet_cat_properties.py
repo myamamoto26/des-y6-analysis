@@ -626,7 +626,7 @@ def main(argv):
             t0 = time.time()
             # print('Parallelizing jobs...')    
             # res = Parallel(n_jobs=-1, verbose=0)(jobs)
-            for ind,t in PBar(enumerate(tilenames)):
+            for ind,t in tqdm(enumerate(tilenames)):
                 ccdres = spatial_variations(ccdres, f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands[t])
                 # if ind == 0:
                 #     ref = ccdres
