@@ -278,7 +278,7 @@ def categorize_obj_in_ccd(piece_side, ccdnum, ccd_x_min, ccd_y_min, x, y):
 
     piece_x = np.floor((x-ccd_x_min + 0.5)/piece_side).astype(int)
     piece_y = np.floor((y-ccd_y_min + 0.5)/piece_side).astype(int)
-    
+
     return piece_x, piece_y
 
 
@@ -528,7 +528,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         ax.set_aspect(1)
         plt.tight_layout()
         plt.colorbar(mesh, ax=ax)
-        plt.savefig('mdet_shear_variations_focal_plane_all.pdf')
+        plt.savefig('mdet_shear_variations_focal_plane_all.png')
         return
 
     drawDECamCCDs_Plot(x0,y0,ccdres,rotate=False,label=False,color='k',lw=0.5,ls='-')
