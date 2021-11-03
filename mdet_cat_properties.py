@@ -274,18 +274,15 @@ def mdet_shear_pairs_plotting(d, nperbin):
     axs[0,0].legend(loc='upper right')
     plt.savefig('mdet_psf_vs_shear_fit_v2_goldmaskpix.png')
 
-def categorize_obj_in_ccd(div_tiles, piece_side, ccdnum, ccd_x_min, ccd_y_min, x, y):
+def categorize_obj_in_ccd(piece_side, ccdnum, ccd_x_min, ccd_y_min, x, y):
 
     piece_x = np.floor((x-ccd_x_min + 0.5)/piece_side).astype(int)
     piece_y = np.floor((y-ccd_y_min + 0.5)/piece_side).astype(int)
-
-    # piece_list = [str(ccdnum).zfill(2)+'_'+str(div_tiles[y_, x_]).zfill(3) for y_, x_ in zip(piece_y, piece_x)]
-
-    # return piece_list
+    
     return piece_x, piece_y
 
 
-def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands):
+def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands):
 
     ## collect info (id, ra, dec, CCD coord, mean property values), save it, and plot later. 
     # mdet_cat = fio.read(os.path.join(PATH, 'metadetect/'+t+'_metadetect-v3_mdetcat_part0000.fits'))
@@ -327,7 +324,6 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
         # and get the wcs the object is in, and convert the object's ra/dec into CCD coordinates.
         # After that, accumulate objects on each CCD, cut the CCD into smaller pieces, 
         # and compute the response in those pieces. 
-        piece_ccd_tile = {l:[] for l in ccd_list}
         image_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
         image_id = image_id[image_id != 0]
         for iid in image_id:
@@ -353,8 +349,7 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
             pos_x = pos_x - position_offset
             pos_y = pos_y - position_offset
             ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
-            xind, yind = categorize_obj_in_ccd(div_tiles, piece_side, ccdnum, ccd_x_min, ccd_y_min, pos_x, pos_y)
-            # piece_ccd_list = categorize_obj_in_ccd(div_tiles, piece_side, ccdnum, ccd_x_min, ccd_y_min, pos_x, pos_y)
+            xind, yind = categorize_obj_in_ccd(piece_side, ccdnum, ccd_x_min, ccd_y_min, pos_x, pos_y)
 
             if ccdnum not in list(ccdres.keys()):
                 ccdres[ccdnum] = {}
@@ -366,14 +361,20 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
             ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj["MDET_G_2"][msk_obj], x_side, y_side)
             ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj["MDET_G_2"][msk_obj], x_side, y_side)
 
-            # obj_info = np.zeros((n,), dtype=[('MDET_STEP',np.unicode_, 40), ('MDET_G_1',float), ('MDET_G_2',float)])
-            # obj_info['MDET_STEP'] = mdet_obj['MDET_STEP'][msk_obj]
-            # obj_info['MDET_G_1'] = mdet_obj['MDET_G_1'][msk_obj]
-            # obj_info['MDET_G_2'] = mdet_obj['MDET_G_2'][msk_obj]
-            # for cell in piece_ccd_list:
-            #     piece_ccd_tile[cell].append(obj_info)
+    return ccdres
 
-    return ccdres # piece_ccd_tile
+def _compute_g1_g2(ccdres, ccdnum):
+    g1 = ccdres[ccdnum]["g1"] / ccdres[ccdnum]["num_g1"]
+    g1p = ccdres[ccdnum]["g1p"] / ccdres[ccdnum]["num_g1p"]
+    g1m = ccdres[ccdnum]["g1m"] / ccdres[ccdnum]["num_g1m"]
+    R11 = (g1p - g1m) / 2 / 0.01
+
+    g2 = ccdres[ccdnum]["g2"] / ccdres[ccdnum]["num_g2"]
+    g2p = ccdres[ccdnum]["g2p"] / ccdres[ccdnum]["num_g2p"]
+    g2m = ccdres[ccdnum]["g2m"] / ccdres[ccdnum]["num_g2m"]
+    R22 = (g2p - g2m) / 2 / 0.01
+    
+    return g1/R11, g2/R22
 
 def calculate_tile_response(ccd_list, piece_ccd_tile, ver, batch, save=True):
     mean_shear_divisions = {l:[] for l in ccd_list}
@@ -396,30 +397,10 @@ def calculate_tile_response(ccd_list, piece_ccd_tile, ver, batch, save=True):
             pickle.dump(mean_shear_divisions, handle, protocol=pickle.HIGHEST_PROTOCOL) 
     return mean_shear_divisions
 
-def plot_shear_vaiations_ccd(x_side, y_side, mean_shear_divisions, div_tiles, num_ccd):
+def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
 
     x0 = dDECam.CCDSECTION_X0
     y0 = dDECam.CCDSECTION_Y0
-
-    ccd_mesh_e1 = []
-    ccd_mesh_e2 = []
-    l_ccd_shear = np.array([int(ccd[:2]) for ccd in list(mean_shear_divisions.keys())])
-    for c in range(1, num_ccd+1):
-        idx_ccd = np.where(l_ccd_shear == c)
-        each_ccd_e1 = np.zeros((y_side, x_side))
-        each_ccd_e2 = np.zeros((y_side, x_side))
-        for p in idx_ccd[0]:
-            piece_num = int(list(mean_shear_divisions.keys())[p][-3:])
-            idx_piece = np.argwhere(div_tiles == piece_num)[0]
-            response_data = mean_shear_divisions[str(c).zfill(2)+'_'+str(piece_num).zfill(3)]
-            if len(response_data) == 0:
-                each_ccd_e1[idx_piece[0], idx_piece[1]] = 0
-                each_ccd_e2[idx_piece[0], idx_piece[1]] = 0
-            else:
-                each_ccd_e1[idx_piece[0], idx_piece[1]] = response_data[0]
-                each_ccd_e2[idx_piece[0], idx_piece[1]] = response_data[1]
-        ccd_mesh_e1.append(each_ccd_e1)
-        ccd_mesh_e2.append(each_ccd_e2)
 
     plt.figure(1,figsize=(12,9))
     plt.style.use('default')
@@ -457,12 +438,14 @@ def plot_shear_vaiations_ccd(x_side, y_side, mean_shear_divisions, div_tiles, nu
         
         # ax = plt.gca()
         fig, ax1 = plt.subplots(2,1,figsize=(8,8))
+        cmap = plt.get_cmap('bwr')
+        cmap.set_bad(color = 'black')
         piece_side = 128
         # X, Y = np.meshgrid(np.linspace(1, 2049, (2048//piece_side)+1), np.linspace(1, 4097, (4096//piece_side)+1))
         # mesh = ax1[0].pcolormesh(X,Y,stacked_mean_shear, vmin=-0.01, vmax=0.01)
         X, Y = np.meshgrid(np.linspace(1, 4097, (4096//piece_side)+1), np.linspace(1, 2049, (2048//piece_side)+1))
         mean_shear_reshape = np.rot90(stacked_mean_shear)
-        mesh = ax1[0].pcolormesh(X,Y,mean_shear_reshape, vmin=-0.01, vmax=0.01)
+        mesh = ax1[0].pcolormesh(X,Y,mean_shear_reshape, vmin=-0.01, vmax=0.01, cmap=cmap)
         ax1[0].set_aspect(1)
         ax1[0].set_title('<e1>')
         ax1[0].set_xticks([])
@@ -492,7 +475,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, mean_shear_divisions, div_tiles, nu
         return
 
 
-    def drawDECamCCDs_Plot(x0, y0, shear1, shear2, trim=False, rotate=True, label=False, **kwargs):
+    def drawDECamCCDs_Plot(x0, y0, ccdres, trim=False, rotate=True, label=False, **kwargs):
         """
         Draws DECam CCDs shapes using matplotlib Plot function on the current plot
         """
@@ -511,7 +494,6 @@ def plot_shear_vaiations_ccd(x_side, y_side, mean_shear_divisions, div_tiles, nu
         else:
             SECTIONS = dDECam.CCDSECTIONS
 
-        division = 0
         for k, v in list(SECTIONS.items()):
             (x1, x2, y1, y2) = v
             # if rotate:
@@ -520,34 +502,38 @@ def plot_shear_vaiations_ccd(x_side, y_side, mean_shear_divisions, div_tiles, nu
             # else:
             #     x1, y1 = rotate_xy(x1, y1, theta=0, x0=x0, y0=y0)
             #     x2, y2 = rotate_xy(x2, y2, theta=0, x0=x0, y0=y0)
-
+            if k in list(ccdres):
+                g1, g2 = _compute_g1_g2(ccdres, k)
+            else:
+                continue
             # Into numpy arrays
             x = np.array([x1, x2, x2, x1, x1])
             y = np.array([y1, y1, y2, y2, y1])
             # ax.plot(x, y, **kwargs)
             ## divide CCD into pieces. 
-            shear_e1 = shear1[division]
-            shear_e1 = np.nan_to_num(shear_e1)
-            shear_e2 = shear2[division]
-            piece_side = 128
-            X, Y = np.meshgrid(np.linspace(x1, x2, (2048//piece_side)+1), np.linspace(y1, y2, (4096//piece_side)+1))
-            mesh = ax.pcolormesh(X,Y,shear_e1, vmin=-0.05, vmax=0.05, snap=True)
+            # shear_e1 = shear1[division]
+            # shear_e1 = np.nan_to_num(shear_e1)
+            # shear_e2 = shear2[division]
+            cmap = plt.get_cmap('viridis')
+            # cmap.set_bad(color='black', alpha=1.)
+            X, Y = np.meshgrid(np.linspace(x1+48, x2-48, x_side+1), np.linspace(y1+48, y2-48, y_side+1))
+            mesh = ax.pcolormesh(X, Y, g1, vmin=-0.05, vmax=0.05, snap=True, cmap=cmap)
             #ax.imshow(shear_e1, origin='lower', extent=[x1,x2,y1,y2])
             if label:
                 ax.text(0.5 * (x2 + x1), 0.5 * (y2 + y1), "CCD%s" %
                         k, ha='center', va='center')
-            division += 1
         
         ax.set_xlim(-2000,32000)
         ax.set_ylim(-2000,32000)
         ax.set_aspect(1)
         plt.tight_layout()
         plt.colorbar(mesh, ax=ax)
-        plt.savefig('mdet_shear_variations_focal_plane_v2.pdf')
+        plt.savefig('mdet_shear_variations_focal_plane_all.pdf')
         return
 
+    drawDECamCCDs_Plot(x0,y0,ccdres,rotate=False,label=False,color='k',lw=0.5,ls='-')
     # drawDECamCCDs_Plot(x0,y0,ccd_mesh_e1,ccd_mesh_e2,rotate=False,label=False,color='k',lw=0.5,ls='-')
-    stack_CCDs(ccd_mesh_e1,ccd_mesh_e2)
+    # stack_CCDs(ccd_mesh_e1,ccd_mesh_e2)
     print('saved figure...')
 
 
@@ -581,7 +567,7 @@ def main(argv):
         mdet_shear_pairs_plotting(d, 4000000)
         # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
-        just_plot = False
+        just_plot = True
         plotting = False
         save_raw = True
         work = '/data/des70.a/data/masaya'
@@ -609,84 +595,38 @@ def main(argv):
                 tname = coa['FILENAME'][:12]
                 coadd_files[tname].append(coa['FILENAME'])
                 bands[tname].append(coa['BAND'])
-            
-            ccd_list = []
-            for c in range(1,num_ccd+1):
-                for div in range(1,pieces+1):
-                    ccd_list.append(str(c).zfill(2)+'_'+str(div).zfill(3))
 
-            array_split = 5
-            ii = int(sys.argv[2])
-            split_tilenames = np.array_split(tilenames, array_split)[ii]
-            print('Processing the '+str(ii)+' batch...')
-            # jobs = [
-            #     delayed(spatial_variations)(f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands[t])
-            #     for t in split_tilenames
-            # ]
+            # array_split = 5
+            # ii = int(sys.argv[2])
+            # split_tilenames = np.array_split(tilenames, array_split)[ii]
+            # print('Processing the '+str(ii)+' batch...')
+
             t0 = time.time()
-            # print('Parallelizing jobs...')    
-            # res = Parallel(n_jobs=-1, verbose=0)(jobs)
-            for ind,t in tqdm(enumerate(tilenames)):
-                ccdres = spatial_variations(ccdres, f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, div_tiles, ccd_list, bands[t])
-                # if ind == 0:
-                #     ref = ccdres
-                # else:
-                #     for k in ref.keys():
-                #         if len(ccdres[k]) != 0:
-                #             ref[k].extend(ccdres[k])
-            ## Concatenate all numpy arrays in each cell.
-            # for cell in list(ref.keys()):
-            #     if len(ref[cell]) != 0:
-            #         ref[cell] = np.concatenate(ref[cell], axis=0)
+            for t in tqdm(tilenames):
+                ccdres = spatial_variations(ccdres, f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
+
             if save_raw:
                 # with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
                 with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
                     pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
-                    sys.exit()
-            print('time it took, ', time.time()-t0)
-            print('Jobs are done. Time to concatenate the dict. ')
-            
-            ## Combine the dictionaries into one dict. Careful that res has two keys in it. 
-            num_obj = 0
-            for ind, div_dict in enumerate(res):
-                if ind == 0:
-                    ref = div_dict
-                else:
-                    for k in ref.keys():
-                        if len(div_dict[k]) != 0:
-                            # ref[k]['object_location'].append(div_dict[k]['object_location'])
-                            ref[k].extend(div_dict[k])
-                            num_obj += len(ref[k])
-            ## Concatenate all numpy arrays in each cell.
-            for cell in list(ref.keys()):
-                if len(ref[cell]) != 0:
-                    ref[cell] = np.concatenate(ref[cell], axis=0)
-            print(num_obj)
-            print('time it took, ', time.time()-t0)
-            if save_raw:
-                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
-                    pickle.dump(ref, raw, protocol=pickle.HIGHEST_PROTOCOL)
-                    sys.exit()
-
-            all_pieces_response = calculate_tile_response(ccd_list, ref, ver, ii, save=True)
+                    print('saving dict to a file...')
 
             ## starting from the middle. ##
             if plotting:
                 print('Plotting...')
                 #if just_plot:
                 with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_variations_focal_plane.pickle', 'rb') as handle:
-                    all_pieces_response = pickle.load(handle)
-                plot_shear_vaiations_ccd(x_side, y_side, all_pieces_response, div_tiles, num_ccd)
+                    ccdres = pickle.load(handle)
+                plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd)
             
-            print('To perform all the processes it took, ', time.time()-t0)
+            print('time it took, ', time.time()-t0)
         
         else:
             print('Plotting...')
-            # with open('./DarkEnergySurvey/des-y6-analysis/mdet_shear_variations_focal_plane_v2.pickle', 'rb') as handle:
-            with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_variations_focal_plane_'+ver+'.pickle', 'rb') as handle:
-                all_pieces_response = pickle.load(handle)
-
-            plot_shear_vaiations_ccd(x_side, y_side, all_pieces_response, div_tiles, num_ccd)
+            # with open('./binshear_test/mdet_shear_focal_plane_0.pickle', 'rb') as handle:
+            with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
+                ccdres = pickle.load(handle)
+            plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd)
 
 if __name__ == "__main__":
     main(sys.argv)
