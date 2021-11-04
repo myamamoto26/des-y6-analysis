@@ -530,6 +530,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         plt.tight_layout()
         plt.colorbar(mesh, ax=ax)
         plt.savefig('mdet_shear_variations_focal_plane_'+name+'.pdf')
+        plt.clf()
         return
 
     drawDECamCCDs_Plot(x0,y0,ccdres,'e1',rotate=False,label=False,color='k',lw=0.5,ls='-')
