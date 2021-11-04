@@ -587,7 +587,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
 
     # drawDECamCCDs_Plot(x0,y0,ccdres,'e1',rotate=False,label=False,color='k',lw=0.5,ls='-')
     # drawDECamCCDs_Plot(x0,y0,ccdres,'e2',rotate=False,label=False,color='k',lw=0.5,ls='-')
-    stack_CCDs(ccdres, 'e1e2', x_side, y_side)
+    stack_CCDs(ccdres, 'test', x_side, y_side)
     print('saved figure...')
 
 
@@ -679,7 +679,7 @@ def main(argv):
         else:
             print('Plotting...')
             # with open('./binshear_test/mdet_shear_focal_plane_0.pickle', 'rb') as handle:
-            with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
+            with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_test.pickle', 'rb') as handle:
                 ccdres = pickle.load(handle)
             plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd)
 
