@@ -452,7 +452,8 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
                 np.add.at(num_g2, (rows, cols), 1)
         mean_g1 = np.rot90(stack_g1/num_g1)
         mean_g2 = np.rot90(stack_g2/num_g2)
-        
+        print(np.min(mean_g1), np.max(mean_g1), np.mean(mean_g1))
+        print(np.min(mean_g2), np.max(mean_g2), np.mean(mean_g2))
         # ax = plt.gca()
         fig, ax1 = plt.subplots(2,2,figsize=(20,20))
         cmap = plt.get_cmap('viridis')
@@ -461,19 +462,19 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         # mesh = ax1[0].pcolormesh(X,Y,stacked_mean_shear, vmin=-0.01, vmax=0.01)
         X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
         
-        mesh = ax1[0,0].pcolormesh(X,Y,mean_g1, vmin=-0.01, vmax=0.01, cmap=cmap)
+        mesh = ax1[0,0].pcolormesh(X,Y,mean_g1, vmin=-0.1, vmax=0.1, cmap=cmap)
         ax1[0,0].set_aspect(1)
         ax1[0,0].set_title('<e1>', fontsize=20)
         ax1[0,0].set_xticks([])
         ax1[0,0].set_yticks([])
         plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
 
-        mesh = ax1[0,1].pcolormesh(X,Y,mean_g2, vmin=-0.01, vmax=0.01, cmap=cmap)
+        mesh = ax1[0,1].pcolormesh(X,Y,mean_g2, vmin=-0.1, vmax=0.1, cmap=cmap)
         ax1[0,1].set_aspect(1)
-        ax1[0,1].set_title('<e1>', fontsize=20)
+        ax1[0,1].set_title('<e2>', fontsize=20)
         ax1[0,1].set_xticks([])
         ax1[0,1].set_yticks([])
-        plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
+        # plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
 
         ## stack this 16x32 CCD in 10 bins along the x or y directions.
         # xbin_num = 25
