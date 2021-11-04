@@ -274,12 +274,25 @@ def mdet_shear_pairs_plotting(d, nperbin):
     axs[0,0].legend(loc='upper right')
     plt.savefig('mdet_psf_vs_shear_fit_v2_goldmaskpix.png')
 
-def categorize_obj_in_ccd(piece_side, ccdnum, ccd_x_min, ccd_y_min, x, y):
+def categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_obj):
 
-    piece_x = np.floor((x-ccd_x_min + 0.5)/piece_side).astype(int)
-    piece_y = np.floor((y-ccd_y_min + 0.5)/piece_side).astype(int)
+    xind = np.floor((x-ccd_x_min + 0.5)/piece_side).astype(int)
+    yind = np.floor((y-ccd_y_min + 0.5)/piece_side).astype(int)
 
-    return piece_x, piece_y
+    msk_cut = np.where(
+        (xind >= 0)
+        & (xind < nx)
+        & (yind >= 0)
+        & (yind < ny)
+    )[0]
+    if len(msk_cut) == 0:
+        return None
+
+    msk_obj = msk_obj[msk_cut]
+    xind = xind[msk_cut]
+    yind = yind[msk_cut]
+
+    return xind, yind, msk_obj
 
 
 def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands):
@@ -349,11 +362,7 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
             pos_x = pos_x - position_offset
             pos_y = pos_y - position_offset
             ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
-            xind, yind = categorize_obj_in_ccd(piece_side, ccdnum, ccd_x_min, ccd_y_min, pos_x, pos_y)
-            ## TEST
-            msk_out = ((pos_x >= 48) & (pos_x < 80))
-            if len(msk_out) != 0:
-                print(pos_x[msk_out], xind[msk_out])
+            xind, yind, msk_obj = categorize_obj_in_ccd(piece_side, x_side, y_side, ccd_x_min, ccd_y_min, pos_x, pos_y, msk_obj)
 
             if ccdnum not in list(ccdres):
                 ccdres[ccdnum] = {}
@@ -641,20 +650,21 @@ def main(argv):
                 coadd_files[tname].append(coa['FILENAME'])
                 bands[tname].append(coa['BAND'])
 
-            # array_split = 5
-            # ii = int(sys.argv[2])
-            # split_tilenames = np.array_split(tilenames, array_split)[ii]
+            array_split = 5
+            ii = int(sys.argv[2])
+            split_tilenames = np.array_split(tilenames, array_split)[ii]
             # print('Processing the '+str(ii)+' batch...')
 
             t0 = time.time()
-            for t in tqdm(tilenames):
+            for t in tqdm(split_tilenames):
                 ccdres = spatial_variations(ccdres, f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
-            sys.exit()
+            
             if save_raw:
                 # with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
-                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
+                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_test.pickle', 'wb') as raw:
                     pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
                     print('saving dict to a file...')
+            sys.exit()
 
             ## starting from the middle. ##
             if plotting:
