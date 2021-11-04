@@ -291,7 +291,7 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
 
     def _accum_shear(ccdres, ccdnum, cname, shear, mdet_step, xind, yind, g, x_side, y_side):
         msk_s = (mdet_step == shear)
-        if cname not in list(ccdres[ccdnum].keys()):
+        if cname not in list(ccdres[ccdnum]):
             ccdres[ccdnum][cname] = np.zeros((y_side, x_side))
             ccdres[ccdnum]["num_" + cname] = np.zeros((y_side, x_side))
         
@@ -350,8 +350,12 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
             pos_y = pos_y - position_offset
             ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
             xind, yind = categorize_obj_in_ccd(piece_side, ccdnum, ccd_x_min, ccd_y_min, pos_x, pos_y)
+            ## TEST
+            msk_out = ((pos_x >= 48) & (pos_x < 80))
+            if len(msk_out) != 0:
+                print(pos_x[msk_out], xind[msk_out])
 
-            if ccdnum not in list(ccdres.keys()):
+            if ccdnum not in list(ccdres):
                 ccdres[ccdnum] = {}
             mdet_step = mdet_obj["MDET_STEP"][msk_obj]
             ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj["MDET_G_1"][msk_obj], x_side, y_side)
@@ -608,7 +612,7 @@ def main(argv):
         mdet_shear_pairs_plotting(d, 4000000)
         # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
-        just_plot = True
+        just_plot = False
         plotting = False
         save_raw = True
         work = '/data/des70.a/data/masaya'
@@ -645,7 +649,7 @@ def main(argv):
             t0 = time.time()
             for t in tqdm(tilenames):
                 ccdres = spatial_variations(ccdres, f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
-
+            sys.exit()
             if save_raw:
                 # with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
                 with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
