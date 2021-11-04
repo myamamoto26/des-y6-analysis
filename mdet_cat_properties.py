@@ -416,7 +416,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         y_new = (x - x0) * math.sin(theta) + (y - y0) * math.cos(theta)
         return x_new, y_new
 
-    def stack_CCDs(shear1, shear2):
+    def stack_CCDs(ccdres):
         
         ## stack all the CCDs to find any non-trivial trend in focal plane. ##
         ## Need to flip CCD 32-62 about x-axis. ##
@@ -475,7 +475,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         return
 
 
-    def drawDECamCCDs_Plot(x0, y0, ccdres, trim=False, rotate=True, label=False, **kwargs):
+    def drawDECamCCDs_Plot(x0, y0, ccdres, name, trim=False, rotate=True, label=False, **kwargs):
         """
         Draws DECam CCDs shapes using matplotlib Plot function on the current plot
         """
@@ -510,14 +510,14 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
             x = np.array([x1, x2, x2, x1, x1])
             y = np.array([y1, y1, y2, y2, y1])
             # ax.plot(x, y, **kwargs)
-            ## divide CCD into pieces. 
-            # shear_e1 = shear1[division]
-            # shear_e1 = np.nan_to_num(shear_e1)
-            # shear_e2 = shear2[division]
+
             cmap = plt.get_cmap('viridis')
             # cmap.set_bad(color='black', alpha=1.)
             X, Y = np.meshgrid(np.linspace(x1+48, x2-48, x_side+1), np.linspace(y1+48, y2-48, y_side+1))
-            mesh = ax.pcolormesh(X, Y, g2, vmin=-0.05, vmax=0.05, snap=True, cmap=cmap)
+            if name == 'e1':
+                mesh = ax.pcolormesh(X, Y, g1, vmin=-0.05, vmax=0.05, snap=True, cmap=cmap)
+            elif name == 'e2':
+                mesh = ax.pcolormesh(X, Y, g2, vmin=-0.05, vmax=0.05, snap=True, cmap=cmap)
             #ax.imshow(shear_e1, origin='lower', extent=[x1,x2,y1,y2])
             if label:
                 ax.text(0.5 * (x2 + x1), 0.5 * (y2 + y1), "CCD%s" %
@@ -526,14 +526,16 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         ax.set_xlim(-2000,32000)
         ax.set_ylim(-2000,32000)
         ax.set_aspect(1)
+        ax.set_title(name, fontsize=20)
         plt.tight_layout()
         plt.colorbar(mesh, ax=ax)
-        plt.savefig('mdet_shear_variations_focal_plane_e2.pdf')
+        plt.savefig('mdet_shear_variations_focal_plane_'+name+'.pdf')
         return
 
-    drawDECamCCDs_Plot(x0,y0,ccdres,rotate=False,label=False,color='k',lw=0.5,ls='-')
-    # drawDECamCCDs_Plot(x0,y0,ccd_mesh_e1,ccd_mesh_e2,rotate=False,label=False,color='k',lw=0.5,ls='-')
-    # stack_CCDs(ccd_mesh_e1,ccd_mesh_e2)
+    drawDECamCCDs_Plot(x0,y0,ccdres,'e1',rotate=False,label=False,color='k',lw=0.5,ls='-')
+    drawDECamCCDs_Plot(x0,y0,ccdres,'e2',rotate=False,label=False,color='k',lw=0.5,ls='-')
+    # stack_CCDs(ccdres, 'e1')
+    # stack_CCDs(ccdres, 'e2')
     print('saved figure...')
 
 
