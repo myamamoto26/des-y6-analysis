@@ -517,7 +517,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
             cmap = plt.get_cmap('viridis')
             # cmap.set_bad(color='black', alpha=1.)
             X, Y = np.meshgrid(np.linspace(x1+48, x2-48, x_side+1), np.linspace(y1+48, y2-48, y_side+1))
-            mesh = ax.pcolormesh(X, Y, g1, vmin=-0.05, vmax=0.05, snap=True, cmap=cmap)
+            mesh = ax.pcolormesh(X, Y, g2, vmin=-0.05, vmax=0.05, snap=True, cmap=cmap)
             #ax.imshow(shear_e1, origin='lower', extent=[x1,x2,y1,y2])
             if label:
                 ax.text(0.5 * (x2 + x1), 0.5 * (y2 + y1), "CCD%s" %
@@ -528,7 +528,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         ax.set_aspect(1)
         plt.tight_layout()
         plt.colorbar(mesh, ax=ax)
-        plt.savefig('mdet_shear_variations_focal_plane_all.png')
+        plt.savefig('mdet_shear_variations_focal_plane_e2.pdf')
         return
 
     drawDECamCCDs_Plot(x0,y0,ccdres,rotate=False,label=False,color='k',lw=0.5,ls='-')
