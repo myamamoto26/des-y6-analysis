@@ -621,7 +621,7 @@ def main(argv):
         mdet_shear_pairs_plotting(d, 4000000)
         # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
-        just_plot = True
+        just_plot = False
         plotting = False
         save_raw = True
         work = '/data/des70.a/data/masaya'
@@ -650,21 +650,21 @@ def main(argv):
                 coadd_files[tname].append(coa['FILENAME'])
                 bands[tname].append(coa['BAND'])
 
-            array_split = 5
-            ii = int(sys.argv[2])
-            split_tilenames = np.array_split(tilenames, array_split)[ii]
+            # array_split = 5
+            # ii = int(sys.argv[2])
+            # split_tilenames = np.array_split(tilenames, array_split)[ii]
             # print('Processing the '+str(ii)+' batch...')
 
             t0 = time.time()
-            for t in tqdm(split_tilenames):
+            for t in tqdm(tilenames):
                 ccdres = spatial_variations(ccdres, f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
             
             if save_raw:
                 # with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
-                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_test.pickle', 'wb') as raw:
+                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
                     pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
                     print('saving dict to a file...')
-            sys.exit()
+                sys.exit()
 
             ## starting from the middle. ##
             if plotting:
