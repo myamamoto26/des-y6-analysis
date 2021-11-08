@@ -26,6 +26,7 @@ import pickle
 import math
 from skimage.measure import block_reduce
 import drawDECam.drawDECam as dDECam
+import matplotlib
 
 sns.set()
 mdet_pars = ['noshear', '1p', '1m', '2p' ,'2m']
@@ -420,8 +421,6 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
     x0 = dDECam.CCDSECTION_X0
     y0 = dDECam.CCDSECTION_Y0
 
-    plt.figure(1,figsize=(12,9))
-    plt.style.use('default')
     # Draw DECam CCDs using Plot function (Unrotated)
     def rotate_xy(x, y, theta, x0=0, y0=0, units='degrees'):
         """
@@ -473,6 +472,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         print(mean_g1, mean_g2)
         # ax = plt.gca()
         fig, ax1 = plt.subplots(2,2,figsize=(35,18))
+        matplotlib.rcParams.update({'font.size': 28})
         cmap = plt.get_cmap('viridis')
         cmap.set_bad(color='k', alpha=1.)
         piece_side = 32
@@ -497,8 +497,8 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         ## stack this 61x125 CCD in 10 bins along the x or y directions.
         xbin_num = 25
         ybin_num = 15
-        x_reduced = block_reduce(mean_g1, block_size=(1, y_side//xbin_num), func=np.nansum)
-        y_reduced = block_reduce(mean_g1, block_size=(x_side//ybin_num, 1), func=np.nansum)
+        x_reduced = block_reduce(mean_g1, block_size=(1, y_side//xbin_num), func=np.nanmean)
+        y_reduced = block_reduce(mean_g1, block_size=(x_side//ybin_num, 1), func=np.nanmean)
         x_stacked = np.nanmean(x_reduced, axis=0)
         y_stacked = np.nanmean(y_reduced, axis=1)
         x_stacked_std = np.nanstd(x_reduced, axis=0)
@@ -510,6 +510,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         ax1[1,0].errorbar(x_, x_stacked, yerr=x_stacked_std, c='b')
         ax1[1,0].plot(y_, y_stacked, c='r', label='y-stacked')
         ax1[1,0].errorbar(y_, y_stacked, yerr=y_stacked_std, c='r')
+        ax1[1,0].set_ylim(-0.5,0.5)
         ax1[1,0].set_xlabel('CCD coordinates')
         ax1[1,0].set_ylabel('<e1>')
         ax1[1,0].set_xticks([])
@@ -525,6 +526,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         ax1[1,1].errorbar(x_, x_stacked, yerr=x_stacked_std, c='b')
         ax1[1,1].plot(y_, y_stacked, c='r', label='y-stacked')
         ax1[1,1].errorbar(y_, y_stacked, yerr=y_stacked_std, c='r')
+        ax1[1,1].set_ylim(-0.5,0.5)
         ax1[1,1].set_xlabel('CCD coordinates')
         ax1[1,1].set_ylabel('<e2>')
         ax1[1,1].set_xticks([])
@@ -538,6 +540,9 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         """
         Draws DECam CCDs shapes using matplotlib Plot function on the current plot
         """
+        plt.figure(1,figsize=(20,20))
+        matplotlib.rcParams.update({'font.size': 28})
+        plt.style.use('default')
         ax = plt.gca()
         if trim:
             TRIM_CCDSECTIONS = dDECam.CCDSECTIONS.copy()
