@@ -497,12 +497,12 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         ## stack this 61x125 CCD in 10 bins along the x or y directions.
         xbin_num = 25
         ybin_num = 15
-        x_reduced = block_reduce(mean_g1, block_size=(1, y_side//xbin_num), func=np.sum)
-        y_reduced = block_reduce(mean_g1, block_size=(x_side//ybin_num, 1), func=np.sum)
-        x_stacked = np.mean(x_reduced, axis=0)
-        y_stacked = np.mean(y_reduced, axis=1)
-        x_stacked_std = np.std(x_reduced, axis=0)
-        y_stacked_std = np.std(y_reduced, axis=1)
+        x_reduced = block_reduce(mean_g1, block_size=(1, y_side//xbin_num), func=np.nansum)
+        y_reduced = block_reduce(mean_g1, block_size=(x_side//ybin_num, 1), func=np.nansum)
+        x_stacked = np.nanmean(x_reduced, axis=0)
+        y_stacked = np.nanmean(y_reduced, axis=1)
+        x_stacked_std = np.nanstd(x_reduced, axis=0)
+        y_stacked_std = np.nanstd(y_reduced, axis=1)
         
         ax1[1,0].plot(np.arange(len(x_stacked)), x_stacked, c='b', label='x-stacked')
         ax1[1,0].errorbar(np.arange(len(x_stacked)), x_stacked, yerr=x_stacked_std, c='b')
