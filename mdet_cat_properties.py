@@ -513,7 +513,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         ax1[1,0].set_xticks([])
 
         x_reduced = block_reduce(mean_g2, block_size=(1, y_side//xbin_num), func=np.sum)
-        y_reduced = block_reduce(mean_g2, bblock_size=(x_side//ybin_num, 1), func=np.sum)
+        y_reduced = block_reduce(mean_g2, block_size=(x_side//ybin_num, 1), func=np.sum)
         x_stacked = np.mean(x_reduced, axis=0)
         y_stacked = np.mean(y_reduced, axis=1)
         x_stacked_std = np.std(x_reduced, axis=0)
