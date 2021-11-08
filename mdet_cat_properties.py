@@ -590,9 +590,9 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         plt.clf()
         return
 
-    # drawDECamCCDs_Plot(x0,y0,ccdres,'e1',rotate=False,label=False,color='k',lw=0.5,ls='-')
-    # drawDECamCCDs_Plot(x0,y0,ccdres,'e2',rotate=False,label=False,color='k',lw=0.5,ls='-')
-    stack_CCDs(ccdres, 'all', x_side, y_side)
+    drawDECamCCDs_Plot(x0,y0,ccdres,'e1',rotate=False,label=False,color='k',lw=0.5,ls='-')
+    drawDECamCCDs_Plot(x0,y0,ccdres,'e2',rotate=False,label=False,color='k',lw=0.5,ls='-')
+    # stack_CCDs(ccdres, 'all', x_side, y_side)
     print('saved figure...')
 
 
