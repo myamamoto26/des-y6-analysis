@@ -531,6 +531,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         ax1[1,1].set_xlabel('CCD coordinates')
         ax1[1,1].set_ylabel('<e2>')
         ax1[1,1].set_xticks([])
+        ax1[1,1].legend(fontsize='large')
 
         # plt.legend(fontsize='large')
         plt.savefig('mdet_shear_variations_focal_plane_stacked_'+name+'.pdf')
