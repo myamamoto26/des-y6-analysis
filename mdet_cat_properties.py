@@ -685,7 +685,7 @@ def main(argv):
                     # with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
                     with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
                         pickle.dump(tile_g1g2, raw, protocol=pickle.HIGHEST_PROTOCOL)
-                        print('saving dict to a file...')
+                        print('saving dict to a file...', t)
             sys.exit()
 
             ## starting from the middle. ##
