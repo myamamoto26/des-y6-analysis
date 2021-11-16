@@ -275,6 +275,9 @@ def mdet_shear_pairs_plotting(d, nperbin):
     axs[0,0].legend(loc='upper right')
     plt.savefig('mdet_psf_vs_shear_fit_v2_goldmaskpix.png')
 
+def jackknife_error_estimate():
+
+
 def categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_obj):
 
     xind = np.floor((x-ccd_x_min + 0.5)/piece_side).astype(int)
@@ -472,7 +475,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         print(mean_g1, mean_g2)
         # ax = plt.gca()
         fig, ax1 = plt.subplots(2,2,figsize=(35,18))
-        plt.style.use('default')
+        # plt.style.use('default')
         matplotlib.rcParams.update({'font.size': 28})
         cmap = plt.get_cmap('viridis')
         cmap.set_bad(color='k', alpha=1.)
@@ -669,14 +672,21 @@ def main(argv):
 
             t0 = time.time()
             for t in tqdm(tilenames):
+                ccdres = {}
                 ccdres = spatial_variations(ccdres, f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
-            
-            if save_raw:
-                # with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
-                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
-                    pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
-                    print('saving dict to a file...')
-                sys.exit()
+                tile_g1g2 = {}
+                for k in range(1,63):
+                    if k in list(ccdres):
+                        g1, g2 = _compute_g1_g2(ccdres, k)
+                        tile_g1g2[k] = {}
+                        tile_g1g2[k]['g1'] = g1
+                        tile_g1g2[k]['g2'] = g2
+                if save_raw:
+                    # with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
+                    with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
+                        pickle.dump(tile_g1g2, raw, protocol=pickle.HIGHEST_PROTOCOL)
+                        print('saving dict to a file...')
+            sys.exit()
 
             ## starting from the middle. ##
             if plotting:
