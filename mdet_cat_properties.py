@@ -636,7 +636,7 @@ def main(argv):
         mdet_shear_pairs_plotting(d, 4000000)
         # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
-        just_plot = True
+        just_plot = False
         plotting = False
         save_raw = True
         work = '/data/des70.a/data/masaya'
