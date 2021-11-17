@@ -275,7 +275,54 @@ def mdet_shear_pairs_plotting(d, nperbin):
     axs[0,0].legend(loc='upper right')
     plt.savefig('mdet_psf_vs_shear_fit_v2_goldmaskpix.png')
 
-# def jackknife_error_estimate():
+def jackknife_cov(tile_g1g2, x_side, y_side):
+
+    SECTIONS = dDECam.CCDSECTIONS
+    stack_g1 = np.zeros((y_side, x_side))
+    num_g1 = np.zeros((y_side, x_side))
+    stack_g2 = np.zeros((y_side, x_side))
+    num_g2 = np.zeros((y_side, x_side))
+    for k, v in list(SECTIONS.items()):
+        if k in list(tile_g1g2):
+            g1 = tile_g1g2[k]['g1']
+            g2 = tile_g1g2[k]['g2']
+        else:
+            continue
+
+        if k < 32:
+            stack_g1 = np.nansum(np.dstack((stack_g1, g1)), 2)
+            rows,cols = np.where(~np.isnan(g1))
+            np.add.at(num_g1, (rows, cols), 1)
+
+            stack_g2 = np.nansum(np.dstack((stack_g2, g2)), 2)
+            rows,cols = np.where(~np.isnan(g2))
+            np.add.at(num_g2, (rows, cols), 1)
+        else:
+            g1 = np.flip(g1, 0)
+            stack_g1 = np.nansum(np.dstack((stack_g1, g1)), 2)
+            rows,cols = np.where(~np.isnan(g1))
+            np.add.at(num_g1, (rows, cols), 1)
+
+            g2 = np.flip(g2, 0)
+            stack_g2 = np.nansum(np.dstack((stack_g2, g2)), 2)
+            rows,cols = np.where(~np.isnan(g2))
+            np.add.at(num_g2, (rows, cols), 1)
+    mean_g1 = np.rot90(stack_g1/num_g1)
+    mean_g2 = np.rot90(stack_g2/num_g2)
+    print(mean_g1, mean_g2)
+
+    ## stack this 61x125 CCD in 10 bins along the x or y directions.
+    xbin_num = 25
+    ybin_num = 15
+    x_reduced = block_reduce(mean_g1, block_size=(1, y_side//xbin_num), func=np.nanmean)
+    y_reduced = block_reduce(mean_g1, block_size=(x_side//ybin_num, 1), func=np.nanmean)
+    # x_stacked = np.nanmean(x_reduced, axis=0)
+    # y_stacked = np.nanmean(y_reduced, axis=1)
+    cov_x = len(x_reduced[0])
+    cov_y = len(y_reduced)
+
+    return None
+    
 
 
 def categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_obj):
@@ -654,10 +701,11 @@ def main(argv):
         ccdres = {}
         t0 = time.time()
 
+        f = fio.read(os.path.join(work, 'metadetect/'+ver+'/mdet_test_all_v2.fits'))
+        tilenames = np.unique(f['TILENAME'])
         if not just_plot:
-            f = fio.read(os.path.join(work, 'metadetect/'+ver+'/mdet_test_all_v2.fits'))
+            
             coadd_f = fio.read(os.path.join(work, 'pizza-slice/'+ver+'/pizza_slices_coadd_v2.fits')) # Made from make_download_files_v2.py
-            tilenames = np.unique(f['TILENAME'])
             coadd_files = {t: [] for t in tilenames}
             bands = {t: [] for t in tilenames}
             for coa in coadd_f:
@@ -674,17 +722,10 @@ def main(argv):
             for t in tqdm(tilenames):
                 ccdres = {}
                 ccdres = spatial_variations(ccdres, f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
-                tile_g1g2 = {}
-                for k in range(1,63):
-                    if k in list(ccdres):
-                        g1, g2 = _compute_g1_g2(ccdres, k)
-                        tile_g1g2[k] = {}
-                        tile_g1g2[k]['g1'] = g1
-                        tile_g1g2[k]['g2'] = g2
                 if save_raw:
                     # with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
                     with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
-                        pickle.dump(tile_g1g2, raw, protocol=pickle.HIGHEST_PROTOCOL)
+                        pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
                         print('saving dict to a file...', t)
             sys.exit()
 
@@ -701,8 +742,10 @@ def main(argv):
         else:
             print('Plotting...')
             # with open('./binshear_test/mdet_shear_focal_plane_0.pickle', 'rb') as handle:
-            with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
-                ccdres = pickle.load(handle)
+            for t in tilenames:
+                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                    tile_g1g2 = pickle.load(handle)
+                jc = jackknife_cov(tile_g1g2)
             plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd)
 
 if __name__ == "__main__":
