@@ -480,8 +480,9 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
                 np.add.at(num_g2, (rows, cols), 1)
         mean_g1 = np.rot90(stack_g1/num_g1)
         mean_g2 = np.rot90(stack_g2/num_g2)
-        print(jk)
+
         if jk:
+            print('inside jk')
             x_data = []
             y_data = []
             for g in [mean_g1, mean_g2]:
@@ -493,6 +494,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
                 y_stacked = np.nanmean(y_reduced, axis=1)
                 x_data.append(x_stacked)
                 y_data.append(y_stacked)
+            print(x_data, y_data)
             return x_data, y_data
 
         # ax = plt.gca()
