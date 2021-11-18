@@ -480,8 +480,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
                 np.add.at(num_g2, (rows, cols), 1)
         mean_g1 = np.rot90(stack_g1/num_g1)
         mean_g2 = np.rot90(stack_g2/num_g2)
-        print(mean_g1, mean_g2)
-
+        print(jk)
         if jk:
             x_data = []
             y_data = []
@@ -494,7 +493,6 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
                 y_stacked = np.nanmean(y_reduced, axis=1)
                 x_data.append(x_stacked)
                 y_data.append(y_stacked)
-
             return x_data, y_data
 
         # ax = plt.gca()
@@ -556,7 +554,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
         ax1[1,1].set_xticks([])
 
         plt.legend(fontsize='large')
-        plt.savefig('mdet_shear_variations_focal_plane_stacked_'+name+'.pdf')
+        # plt.savefig('mdet_shear_variations_focal_plane_stacked_'+name+'.pdf')
         return
 
 
@@ -623,7 +621,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
     # drawDECamCCDs_Plot(x0,y0,ccdres,'e1',rotate=False,label=False,color='k',lw=0.5,ls='-')
     # drawDECamCCDs_Plot(x0,y0,ccdres,'e2',rotate=False,label=False,color='k',lw=0.5,ls='-')
     stack_CCDs(ccdres, 'all', x_side, y_side)
-    print('saved figure...')
+    # print('saved figure...')
 
 
 def main(argv):
