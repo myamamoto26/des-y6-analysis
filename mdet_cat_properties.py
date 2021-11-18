@@ -719,7 +719,7 @@ def main(argv):
             jk_y_g1_mean = []
             jk_x_g2_mean = []
             jk_y_g2_mean = []
-            for i in range(len(tilenames)):
+            for i in tqdm(range(len(tilenames))):
                 ccdres = {}
                 for j,t in enumerate(tilenames):
                     if i == j:
