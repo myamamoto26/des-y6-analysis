@@ -275,55 +275,6 @@ def mdet_shear_pairs_plotting(d, nperbin):
     axs[0,0].legend(loc='upper right')
     plt.savefig('mdet_psf_vs_shear_fit_v2_goldmaskpix.png')
 
-def jackknife_cov(tile_g1g2, x_side, y_side):
-
-    SECTIONS = dDECam.CCDSECTIONS
-    stack_g1 = np.zeros((y_side, x_side))
-    num_g1 = np.zeros((y_side, x_side))
-    stack_g2 = np.zeros((y_side, x_side))
-    num_g2 = np.zeros((y_side, x_side))
-    for k, v in list(SECTIONS.items()):
-        if k in list(tile_g1g2):
-            g1 = tile_g1g2[k]['g1']
-            g2 = tile_g1g2[k]['g2']
-        else:
-            continue
-
-        if k < 32:
-            stack_g1 = np.nansum(np.dstack((stack_g1, g1)), 2)
-            rows,cols = np.where(~np.isnan(g1))
-            np.add.at(num_g1, (rows, cols), 1)
-
-            stack_g2 = np.nansum(np.dstack((stack_g2, g2)), 2)
-            rows,cols = np.where(~np.isnan(g2))
-            np.add.at(num_g2, (rows, cols), 1)
-        else:
-            g1 = np.flip(g1, 0)
-            stack_g1 = np.nansum(np.dstack((stack_g1, g1)), 2)
-            rows,cols = np.where(~np.isnan(g1))
-            np.add.at(num_g1, (rows, cols), 1)
-
-            g2 = np.flip(g2, 0)
-            stack_g2 = np.nansum(np.dstack((stack_g2, g2)), 2)
-            rows,cols = np.where(~np.isnan(g2))
-            np.add.at(num_g2, (rows, cols), 1)
-    mean_g1 = np.rot90(stack_g1/num_g1)
-    mean_g2 = np.rot90(stack_g2/num_g2)
-    print(mean_g1, mean_g2)
-
-    ## stack this 61x125 CCD in 10 bins along the x or y directions.
-    xbin_num = 25
-    ybin_num = 15
-    x_reduced = block_reduce(mean_g1, block_size=(1, y_side//xbin_num), func=np.nanmean)
-    y_reduced = block_reduce(mean_g1, block_size=(x_side//ybin_num, 1), func=np.nanmean)
-    # x_stacked = np.nanmean(x_reduced, axis=0)
-    # y_stacked = np.nanmean(y_reduced, axis=1)
-    cov_x = len(x_reduced[0])
-    cov_y = len(y_reduced)
-
-    return None
-    
-
 
 def categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_obj):
 
@@ -466,7 +417,17 @@ def calculate_tile_response(ccd_list, piece_ccd_tile, ver, batch, save=True):
             pickle.dump(mean_shear_divisions, handle, protocol=pickle.HIGHEST_PROTOCOL) 
     return mean_shear_divisions
 
-def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
+def jackknife_cov(jk_x_mean_g1, jk_y_mean_g1, jk_x_mean_g2, jk_y_mean_g2, N):
+
+    x_cov_g1 = np.sqrt(np.sum(jk_x_mean_g1**2, axis=0)/N - (np.sum(jk_x_mean_g1, axis=0)/N)**2) * np.sqrt(N-1)
+    y_cov_g1 = np.sqrt(np.sum(jk_y_mean_g1**2, axis=0)/N - (np.sum(jk_y_mean_g1, axis=0)/N)**2) * np.sqrt(N-1)
+    x_cov_g2 = np.sqrt(np.sum(jk_x_mean_g2**2, axis=0)/N - (np.sum(jk_x_mean_g2, axis=0)/N)**2) * np.sqrt(N-1)
+    y_cov_g2 = np.sqrt(np.sum(jk_y_mean_g2**2, axis=0)/N - (np.sum(jk_y_mean_g2, axis=0)/N)**2) * np.sqrt(N-1)
+
+    return x_cov_g1, y_cov_g1, x_cov_g2, y_cov_g2
+
+
+def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None):
 
     x0 = dDECam.CCDSECTION_X0
     y0 = dDECam.CCDSECTION_Y0
@@ -520,6 +481,22 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         mean_g1 = np.rot90(stack_g1/num_g1)
         mean_g2 = np.rot90(stack_g2/num_g2)
         print(mean_g1, mean_g2)
+
+        if jk:
+            x_data = []
+            y_data = []
+            for g in [mean_g1, mean_g2]:
+                xbin_num = 25
+                ybin_num = 15
+                x_reduced = block_reduce(g, block_size=(1, y_side//xbin_num), func=np.nanmean)
+                y_reduced = block_reduce(g, block_size=(x_side//ybin_num, 1), func=np.nanmean)
+                x_stacked = np.nanmean(x_reduced, axis=0)
+                y_stacked = np.nanmean(y_reduced, axis=1)
+                x_data.append(x_stacked)
+                y_data.append(y_stacked)
+
+            return x_data, y_data
+
         # ax = plt.gca()
         fig, ax1 = plt.subplots(2,2,figsize=(35,18))
         # plt.style.use('default')
@@ -552,15 +529,13 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         y_reduced = block_reduce(mean_g1, block_size=(x_side//ybin_num, 1), func=np.nanmean)
         x_stacked = np.nanmean(x_reduced, axis=0)
         y_stacked = np.nanmean(y_reduced, axis=1)
-        x_stacked_std = np.nanstd(x_reduced, axis=0)
-        y_stacked_std = np.nanstd(y_reduced, axis=1)
         
         x_ = np.linspace(0,1,len(x_stacked))
         y_ = np.linspace(0,1,len(y_stacked))
         ax1[1,0].plot(x_, x_stacked, c='b', label='x-stacked')
-        # ax1[1,0].errorbar(x_, x_stacked, yerr=x_stacked_std, c='b')
+        ax1[1,0].errorbar(x_, x_stacked, yerr=jc[0], c='b')
         ax1[1,0].plot(y_, y_stacked, c='r', label='y-stacked')
-        # ax1[1,0].errorbar(y_, y_stacked, yerr=y_stacked_std, c='r')
+        ax1[1,0].errorbar(y_, y_stacked, yerr=jc[1], c='r')
         ax1[1,0].set_ylim(-0.2,0.2)
         ax1[1,0].set_xlabel('CCD coordinates')
         ax1[1,0].set_ylabel('<e1>')
@@ -570,13 +545,11 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd):
         y_reduced = block_reduce(mean_g2, block_size=(x_side//ybin_num, 1), func=np.nanmean)
         x_stacked = np.nanmean(x_reduced, axis=0)
         y_stacked = np.nanmean(y_reduced, axis=1)
-        x_stacked_std = np.nanstd(x_reduced, axis=0)
-        y_stacked_std = np.nanstd(y_reduced, axis=1)
 
         ax1[1,1].plot(x_, x_stacked, c='b', label='x-stacked')
-        # ax1[1,1].errorbar(x_, x_stacked, yerr=x_stacked_std, c='b')
+        ax1[1,1].errorbar(x_, x_stacked, yerr=jc[2], c='b')
         ax1[1,1].plot(y_, y_stacked, c='r', label='y-stacked')
-        # ax1[1,1].errorbar(y_, y_stacked, yerr=y_stacked_std, c='r')
+        ax1[1,1].errorbar(y_, y_stacked, yerr=jc[3], c='r')
         ax1[1,1].set_ylim(-0.2,0.2)
         ax1[1,1].set_xlabel('CCD coordinates')
         ax1[1,1].set_ylabel('<e2>')
@@ -683,7 +656,7 @@ def main(argv):
         mdet_shear_pairs_plotting(d, 4000000)
         # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
-        just_plot = False
+        just_plot = True
         plotting = False
         save_raw = True
         work = '/data/des70.a/data/masaya'
@@ -742,11 +715,46 @@ def main(argv):
         else:
             print('Plotting...')
             # with open('./binshear_test/mdet_shear_focal_plane_0.pickle', 'rb') as handle:
-            for t in tilenames:
-                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-                    tile_g1g2 = pickle.load(handle)
-                jc = jackknife_cov(tile_g1g2)
-            plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd)
+            jk_x_g1_mean = []
+            jk_y_g1_mean = []
+            jk_x_g2_mean = []
+            jk_y_g2_mean = []
+            for i in range(len(tilenames)):
+                ccdres = {}
+                for j,t in enumerate(tilenames):
+                    if i == j:
+                        continue
+                    if len(ccdres) == 0:
+                        with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                            ccdres = pickle.load(handle)
+                        continue
+                    else:
+                        with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                            ccdres_ = pickle.load(handle)
+                        for k in range(1,63):
+                            if (k in list(ccdres)) and (k in list(ccdres_)):
+                                ccdres[k]['g1'] = ccdres[k]['g1'] + ccdres_[k]['g1']
+                                ccdres[k]['num_g1'] = ccdres[k]['num_g1'] + ccdres_[k]['num_g1']
+                                ccdres[k]['g1p'] = ccdres[k]['g1p'] + ccdres_[k]['g1p']
+                                ccdres[k]['num_g1p'] = ccdres[k]['num_g1p'] + ccdres_[k]['num_g1p']
+                                ccdres[k]['g1m'] = ccdres[k]['g1m'] + ccdres_[k]['g1m']
+                                ccdres[k]['num_g1m'] = ccdres[k]['num_g1m'] + ccdres_[k]['num_g1m']
+                                ccdres[k]['g2'] = ccdres[k]['g2'] + ccdres_[k]['g2']
+                                ccdres[k]['num_g2'] = ccdres[k]['num_g2'] + ccdres_[k]['num_g2']
+                                ccdres[k]['g2p'] = ccdres[k]['g2p'] + ccdres_[k]['g2p']
+                                ccdres[k]['num_g2p'] = ccdres[k]['num_g2p'] + ccdres_[k]['num_g2p']
+                                ccdres[k]['g2m'] = ccdres[k]['g2m'] + ccdres_[k]['g2m']
+                                ccdres[k]['num_g2m'] = ccdres[k]['num_g2m'] + ccdres_[k]['num_g2m']
+    
+                x_data, y_data = plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=True)
+                jk_x_g1_mean.append(x_data[0])
+                jk_y_g1_mean.append(y_data[0])
+                jk_x_g2_mean.append(x_data[1])
+                jk_y_g2_mean.append(y_data[1])
+            jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = jackknife_cov(jk_x_g1_mean, jk_y_g1_mean, jk_x_g2_mean, jk_y_g2_mean, len(tilenames))
+            with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
+                ccdres = pickle.load(handle)
+                plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
 
 if __name__ == "__main__":
     main(sys.argv)
