@@ -494,68 +494,68 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
                 x_data.append(x_stacked)
                 y_data.append(y_stacked)
             return (x_data, y_data)
+        else:
+            # ax = plt.gca()
+            fig, ax1 = plt.subplots(2,2,figsize=(35,18))
+            # plt.style.use('default')
+            matplotlib.rcParams.update({'font.size': 28})
+            cmap = plt.get_cmap('viridis')
+            cmap.set_bad(color='k', alpha=1.)
+            piece_side = 32
+            # X, Y = np.meshgrid(np.linspace(1, 2049, (2048//piece_side)+1), np.linspace(1, 4097, (4096//piece_side)+1))
+            # mesh = ax1[0].pcolormesh(X,Y,stacked_mean_shear, vmin=-0.01, vmax=0.01)
+            X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
+            
+            mesh = ax1[0,0].pcolormesh(X,Y,mean_g1, vmin=-0.05, vmax=0.05, cmap=cmap)
+            ax1[0,0].set_aspect(1)
+            ax1[0,0].set_title('<e1>', fontsize=20)
+            ax1[0,0].set_xticks([])
+            ax1[0,0].set_yticks([])
+            plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
 
-        # ax = plt.gca()
-        fig, ax1 = plt.subplots(2,2,figsize=(35,18))
-        # plt.style.use('default')
-        matplotlib.rcParams.update({'font.size': 28})
-        cmap = plt.get_cmap('viridis')
-        cmap.set_bad(color='k', alpha=1.)
-        piece_side = 32
-        # X, Y = np.meshgrid(np.linspace(1, 2049, (2048//piece_side)+1), np.linspace(1, 4097, (4096//piece_side)+1))
-        # mesh = ax1[0].pcolormesh(X,Y,stacked_mean_shear, vmin=-0.01, vmax=0.01)
-        X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
-        
-        mesh = ax1[0,0].pcolormesh(X,Y,mean_g1, vmin=-0.05, vmax=0.05, cmap=cmap)
-        ax1[0,0].set_aspect(1)
-        ax1[0,0].set_title('<e1>', fontsize=20)
-        ax1[0,0].set_xticks([])
-        ax1[0,0].set_yticks([])
-        plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
+            mesh = ax1[0,1].pcolormesh(X,Y,mean_g2, vmin=-0.05, vmax=0.05, cmap=cmap)
+            ax1[0,1].set_aspect(1)
+            ax1[0,1].set_title('<e2>', fontsize=20)
+            ax1[0,1].set_xticks([])
+            ax1[0,1].set_yticks([])
+            # plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
 
-        mesh = ax1[0,1].pcolormesh(X,Y,mean_g2, vmin=-0.05, vmax=0.05, cmap=cmap)
-        ax1[0,1].set_aspect(1)
-        ax1[0,1].set_title('<e2>', fontsize=20)
-        ax1[0,1].set_xticks([])
-        ax1[0,1].set_yticks([])
-        # plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
+            ## stack this 61x125 CCD in 10 bins along the x or y directions.
+            xbin_num = 25
+            ybin_num = 15
+            x_reduced = block_reduce(mean_g1, block_size=(1, y_side//xbin_num), func=np.nanmean)
+            y_reduced = block_reduce(mean_g1, block_size=(x_side//ybin_num, 1), func=np.nanmean)
+            x_stacked = np.nanmean(x_reduced, axis=0)
+            y_stacked = np.nanmean(y_reduced, axis=1)
+            
+            x_ = np.linspace(0,1,len(x_stacked))
+            y_ = np.linspace(0,1,len(y_stacked))
+            ax1[1,0].plot(x_, x_stacked, c='b', label='x-stacked')
+            ax1[1,0].errorbar(x_, x_stacked, yerr=jc[0], c='b')
+            ax1[1,0].plot(y_, y_stacked, c='r', label='y-stacked')
+            ax1[1,0].errorbar(y_, y_stacked, yerr=jc[1], c='r')
+            ax1[1,0].set_ylim(-0.2,0.2)
+            ax1[1,0].set_xlabel('CCD coordinates')
+            ax1[1,0].set_ylabel('<e1>')
+            ax1[1,0].set_xticks([])
 
-        ## stack this 61x125 CCD in 10 bins along the x or y directions.
-        xbin_num = 25
-        ybin_num = 15
-        x_reduced = block_reduce(mean_g1, block_size=(1, y_side//xbin_num), func=np.nanmean)
-        y_reduced = block_reduce(mean_g1, block_size=(x_side//ybin_num, 1), func=np.nanmean)
-        x_stacked = np.nanmean(x_reduced, axis=0)
-        y_stacked = np.nanmean(y_reduced, axis=1)
-        
-        x_ = np.linspace(0,1,len(x_stacked))
-        y_ = np.linspace(0,1,len(y_stacked))
-        ax1[1,0].plot(x_, x_stacked, c='b', label='x-stacked')
-        ax1[1,0].errorbar(x_, x_stacked, yerr=jc[0], c='b')
-        ax1[1,0].plot(y_, y_stacked, c='r', label='y-stacked')
-        ax1[1,0].errorbar(y_, y_stacked, yerr=jc[1], c='r')
-        ax1[1,0].set_ylim(-0.2,0.2)
-        ax1[1,0].set_xlabel('CCD coordinates')
-        ax1[1,0].set_ylabel('<e1>')
-        ax1[1,0].set_xticks([])
+            x_reduced = block_reduce(mean_g2, block_size=(1, y_side//xbin_num), func=np.nanmean)
+            y_reduced = block_reduce(mean_g2, block_size=(x_side//ybin_num, 1), func=np.nanmean)
+            x_stacked = np.nanmean(x_reduced, axis=0)
+            y_stacked = np.nanmean(y_reduced, axis=1)
 
-        x_reduced = block_reduce(mean_g2, block_size=(1, y_side//xbin_num), func=np.nanmean)
-        y_reduced = block_reduce(mean_g2, block_size=(x_side//ybin_num, 1), func=np.nanmean)
-        x_stacked = np.nanmean(x_reduced, axis=0)
-        y_stacked = np.nanmean(y_reduced, axis=1)
+            ax1[1,1].plot(x_, x_stacked, c='b', label='x-stacked')
+            ax1[1,1].errorbar(x_, x_stacked, yerr=jc[2], c='b')
+            ax1[1,1].plot(y_, y_stacked, c='r', label='y-stacked')
+            ax1[1,1].errorbar(y_, y_stacked, yerr=jc[3], c='r')
+            ax1[1,1].set_ylim(-0.2,0.2)
+            ax1[1,1].set_xlabel('CCD coordinates')
+            ax1[1,1].set_ylabel('<e2>')
+            ax1[1,1].set_xticks([])
 
-        ax1[1,1].plot(x_, x_stacked, c='b', label='x-stacked')
-        ax1[1,1].errorbar(x_, x_stacked, yerr=jc[2], c='b')
-        ax1[1,1].plot(y_, y_stacked, c='r', label='y-stacked')
-        ax1[1,1].errorbar(y_, y_stacked, yerr=jc[3], c='r')
-        ax1[1,1].set_ylim(-0.2,0.2)
-        ax1[1,1].set_xlabel('CCD coordinates')
-        ax1[1,1].set_ylabel('<e2>')
-        ax1[1,1].set_xticks([])
-
-        plt.legend(fontsize='large')
-        # plt.savefig('mdet_shear_variations_focal_plane_stacked_'+name+'.pdf')
-        return None
+            plt.legend(fontsize='large')
+            plt.savefig('mdet_shear_variations_focal_plane_stacked_'+name+'.pdf')
+            return None
 
 
     def drawDECamCCDs_Plot(x0, y0, ccdres, name, trim=False, rotate=True, label=False, **kwargs):
@@ -749,7 +749,6 @@ def main(argv):
                                 ccdres[k]['num_g2m'] = ccdres[k]['num_g2m'] + ccdres_[k]['num_g2m']
     
                 x_data, y_data = plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=True)
-                sys.exit()
                 jk_x_g1_mean.append(x_data[0])
                 jk_y_g1_mean.append(y_data[0])
                 jk_x_g2_mean.append(x_data[1])
