@@ -417,12 +417,18 @@ def calculate_tile_response(ccd_list, piece_ccd_tile, ver, batch, save=True):
             pickle.dump(mean_shear_divisions, handle, protocol=pickle.HIGHEST_PROTOCOL) 
     return mean_shear_divisions
 
-def jackknife_cov(jk_x_mean_g1, jk_y_mean_g1, jk_x_mean_g2, jk_y_mean_g2, N):
+def jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, N):
 
-    x_cov_g1 = np.sqrt(np.sum(np.power(jk_x_mean_g1, 2), axis=0)/N - (np.sum(jk_x_mean_g1, axis=0)/N)**2) * np.sqrt(N-1)
-    y_cov_g1 = np.sqrt(np.sum(np.power(jk_y_mean_g1, 2), axis=0)/N - (np.sum(jk_y_mean_g1, axis=0)/N)**2) * np.sqrt(N-1)
-    x_cov_g2 = np.sqrt(np.sum(np.power(jk_x_mean_g2, 2), axis=0)/N - (np.sum(jk_x_mean_g2, axis=0)/N)**2) * np.sqrt(N-1)
-    y_cov_g2 = np.sqrt(np.sum(np.power(jk_y_mean_g2, 2), axis=0)/N - (np.sum(jk_y_mean_g2, axis=0)/N)**2) * np.sqrt(N-1)
+    # compute jackknife average. 
+    jk_x_g1_ave = np.sum(jk_x_g1, axis=0)/N
+    jk_y_g1_ave = np.sum(jk_y_g1, axis=0)/N
+    jk_x_g2_ave = np.sum(jk_x_g2, axis=0)/N
+    jk_y_g2_ave = np.sum(jk_y_g2, axis=0)/N
+
+    x_cov_g1 = np.sqrt(np.sum((jk_x_g1 - jk_x_g1_ave)**2, axis=0)/(N*(N-1)))
+    y_cov_g1 = np.sqrt(np.sum((jk_y_g1 - jk_y_g1_ave)**2, axis=0)/(N*(N-1)))
+    x_cov_g2 = np.sqrt(np.sum((jk_x_g2 - jk_x_g2_ave)**2, axis=0)/(N*(N-1)))
+    y_cov_g2 = np.sqrt(np.sum((jk_y_g2 - jk_y_g2_ave)**2, axis=0)/(N*(N-1)))
 
     return x_cov_g1, y_cov_g1, x_cov_g2, y_cov_g2
 
@@ -672,6 +678,7 @@ def main(argv):
         num_ccd = 62
         div_tiles = np.resize(np.array([k for k in range(1,pieces+1)]), (y_side, x_side))
         ccdres = {}
+        jk_sample = 500
         t0 = time.time()
 
         f = fio.read(os.path.join(work, 'metadetect/'+ver+'/mdet_test_all_v2.fits'))
@@ -715,43 +722,31 @@ def main(argv):
         else:
             print('Plotting...')
             # with open('./binshear_test/mdet_shear_focal_plane_0.pickle', 'rb') as handle:
-            jk_x_g1_mean = []
-            jk_y_g1_mean = []
-            jk_x_g2_mean = []
-            jk_y_g2_mean = []
+            jk_x_g1 = []
+            jk_y_g1 = []
+            jk_x_g2 = []
+            jk_y_g2 = []
             for i in tqdm(range(len(tilenames))):
-                ccdres = {}
+                x_g1 = []
+                y_g1 = []
+                x_g2 = []
+                y_g2 = []
                 for j,t in enumerate(tilenames):
                     if i == j:
                         continue
-                    if len(ccdres) == 0:
-                        with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-                            ccdres = pickle.load(handle)
-                        continue
-                    else:
-                        with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-                            ccdres_ = pickle.load(handle)
-                        for k in range(1,63):
-                            if (k in list(ccdres)) and (k in list(ccdres_)):
-                                ccdres[k]['g1'] = ccdres[k]['g1'] + ccdres_[k]['g1']
-                                ccdres[k]['num_g1'] = ccdres[k]['num_g1'] + ccdres_[k]['num_g1']
-                                ccdres[k]['g1p'] = ccdres[k]['g1p'] + ccdres_[k]['g1p']
-                                ccdres[k]['num_g1p'] = ccdres[k]['num_g1p'] + ccdres_[k]['num_g1p']
-                                ccdres[k]['g1m'] = ccdres[k]['g1m'] + ccdres_[k]['g1m']
-                                ccdres[k]['num_g1m'] = ccdres[k]['num_g1m'] + ccdres_[k]['num_g1m']
-                                ccdres[k]['g2'] = ccdres[k]['g2'] + ccdres_[k]['g2']
-                                ccdres[k]['num_g2'] = ccdres[k]['num_g2'] + ccdres_[k]['num_g2']
-                                ccdres[k]['g2p'] = ccdres[k]['g2p'] + ccdres_[k]['g2p']
-                                ccdres[k]['num_g2p'] = ccdres[k]['num_g2p'] + ccdres_[k]['num_g2p']
-                                ccdres[k]['g2m'] = ccdres[k]['g2m'] + ccdres_[k]['g2m']
-                                ccdres[k]['num_g2m'] = ccdres[k]['num_g2m'] + ccdres_[k]['num_g2m']
+                    with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                        ccdres = pickle.load(handle)
+                    x_data, y_data = plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=True)
+                    x_g1.append(x_data[0])
+                    y_g1.append(y_data[0])
+                    x_g2.append(x_data[1])
+                    y_g2.append(y_data[1])
     
-                x_data, y_data = plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=True)
-                jk_x_g1_mean.append(x_data[0])
-                jk_y_g1_mean.append(y_data[0])
-                jk_x_g2_mean.append(x_data[1])
-                jk_y_g2_mean.append(y_data[1])
-            jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = jackknife_cov(jk_x_g1_mean, jk_y_g1_mean, jk_x_g2_mean, jk_y_g2_mean, len(tilenames))
+                jk_x_g1.append(np.sum(x_g1, axis=0)/(jk_sample-1))
+                jk_y_g1.append(np.sum(y_g1, axis=0)/(jk_sample-1))
+                jk_x_g2.append(np.sum(x_g2, axis=0)/(jk_sample-1))
+                jk_y_g2.append(np.sum(y_g2, axis=0)/(jk_sample-1))
+            jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
             print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
             with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
                 ccdres = pickle.load(handle)
