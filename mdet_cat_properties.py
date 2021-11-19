@@ -502,8 +502,6 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
             cmap = plt.get_cmap('viridis')
             cmap.set_bad(color='k', alpha=1.)
             piece_side = 32
-            # X, Y = np.meshgrid(np.linspace(1, 2049, (2048//piece_side)+1), np.linspace(1, 4097, (4096//piece_side)+1))
-            # mesh = ax1[0].pcolormesh(X,Y,stacked_mean_shear, vmin=-0.01, vmax=0.01)
             X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
             
             mesh = ax1[0,0].pcolormesh(X,Y,mean_g1, vmin=-0.05, vmax=0.05, cmap=cmap)
@@ -754,6 +752,7 @@ def main(argv):
                 jk_x_g2_mean.append(x_data[1])
                 jk_y_g2_mean.append(y_data[1])
             jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = jackknife_cov(jk_x_g1_mean, jk_y_g1_mean, jk_x_g2_mean, jk_y_g2_mean, len(tilenames))
+            print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
             with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
                 ccdres = pickle.load(handle)
                 plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
