@@ -419,10 +419,10 @@ def calculate_tile_response(ccd_list, piece_ccd_tile, ver, batch, save=True):
 
 def jackknife_cov(jk_x_mean_g1, jk_y_mean_g1, jk_x_mean_g2, jk_y_mean_g2, N):
 
-    x_cov_g1 = np.sqrt(np.sum(jk_x_mean_g1**2, axis=0)/N - (np.sum(jk_x_mean_g1, axis=0)/N)**2) * np.sqrt(N-1)
-    y_cov_g1 = np.sqrt(np.sum(jk_y_mean_g1**2, axis=0)/N - (np.sum(jk_y_mean_g1, axis=0)/N)**2) * np.sqrt(N-1)
-    x_cov_g2 = np.sqrt(np.sum(jk_x_mean_g2**2, axis=0)/N - (np.sum(jk_x_mean_g2, axis=0)/N)**2) * np.sqrt(N-1)
-    y_cov_g2 = np.sqrt(np.sum(jk_y_mean_g2**2, axis=0)/N - (np.sum(jk_y_mean_g2, axis=0)/N)**2) * np.sqrt(N-1)
+    x_cov_g1 = np.sqrt(np.sum(np.power(jk_x_mean_g1, 2), axis=0)/N - (np.sum(jk_x_mean_g1, axis=0)/N)**2) * np.sqrt(N-1)
+    y_cov_g1 = np.sqrt(np.sum(np.power(jk_y_mean_g1, 2), axis=0)/N - (np.sum(jk_y_mean_g1, axis=0)/N)**2) * np.sqrt(N-1)
+    x_cov_g2 = np.sqrt(np.sum(np.power(jk_x_mean_g2, 2), axis=0)/N - (np.sum(jk_x_mean_g2, axis=0)/N)**2) * np.sqrt(N-1)
+    y_cov_g2 = np.sqrt(np.sum(np.power(jk_y_mean_g2, 2), axis=0)/N - (np.sum(jk_y_mean_g2, axis=0)/N)**2) * np.sqrt(N-1)
 
     return x_cov_g1, y_cov_g1, x_cov_g2, y_cov_g2
 
