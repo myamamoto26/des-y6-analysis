@@ -23,11 +23,12 @@ radius = 0.263/3600 # degrees
 matches = smatch.match(hyperleda['RAJ2000'], hyperleda['DEJ2000'], radius, gold['RA'], gold['DEC'], nside=nside, maxmatch=maxmatch)
 matched_data = hyperleda[matches['i1']]
 matched_data_mag = gold[matches['i2']]['BDF_MAG_R']
+print(len(matched_data_mag))
 
 fig, ax = plt.subplots(figsize=(10,7)) 
 ax.hist(matched_data_mag, bins=40, histtype='step')
 plt.tight_layout()
-plt.savefig('~/des-y6-analysis/hyperleda_gold_mag.pdf')
+plt.savefig('hyperleda_gold_mag.pdf')
 
 # bin_config = dict(
 #         sep_units = 'arcmin',
