@@ -30,6 +30,8 @@ print(len(matched_data_mag))
 
 fig, ax = plt.subplots(figsize=(10,7)) 
 ax.hist(matched_data_mag, bins=40, histtype='step')
+ax.set_xlabel('Magnitude', fontsize=16)
+ax.set_title('r-band magnitude of HYPERLEDA objects matched with GOLD catalog')
 plt.tight_layout()
 plt.savefig('hyperleda_gold_mag.pdf')
 
