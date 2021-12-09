@@ -178,6 +178,30 @@ def exclude_gold_mask_objects(d):
     
     return d[mask]
 
+def exclude_hyperleda_objects(d_hyperleda, d_mdet, d_gold, step):
+
+    import smatch
+
+    metadetect = fio.read(d_mdet)
+    mdet_step = metadetect[metadetect['MDET_STEP']==step]
+    hyperleda = fio.read(d_hyperleda)
+                 
+    gold = fio.read(d_gold)
+    nside = 4096
+    maxmatch = 1
+    radius = 0.263/3600 # degrees
+    matches = smatch.match(hyperleda['RAJ2000'], hyperleda['DEJ2000'], radius, gold['RA'], gold['DEC'], nside=nside, maxmatch=maxmatch)
+    hyperleda_des = hyperleda[matches['i1']]
+
+    nside = 4096
+    for ii in range(len(hyperleda_des)):
+
+        radius = (10**(hyperleda_des['logD25'][ii]))/600
+        matches = smatch.match(hyperleda_des['RAJ2000'][ii], hyperleda_des['DEJ2000'][ii], radius, mdet_step['RA'], mdet_step['DEC'], nside=nside)
+        mask = matches['i2']
+        mdet_step = mdet_step[~mask]
+
+    return mdet_step
 
 def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
 
