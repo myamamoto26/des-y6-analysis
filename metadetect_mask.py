@@ -25,6 +25,9 @@ matched_data = hyperleda[matches['i1']]
 matched_data_mag = gold[matches['i2']]['BDF_MAG_R']
 print(len(matched_data_mag))
 
+matched_data_mag = matched_data_mag[matched_data_mag['BDF_MAG_R'] > 0]
+print(len(matched_data_mag))
+
 fig, ax = plt.subplots(figsize=(10,7)) 
 ax.hist(matched_data_mag, bins=40, histtype='step')
 plt.tight_layout()
