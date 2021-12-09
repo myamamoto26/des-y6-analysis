@@ -24,7 +24,7 @@ matches = smatch.match(hyperleda['RAJ2000'], hyperleda['DEJ2000'], radius, gold[
 matched_data = hyperleda[matches['i1']]
 matched_data_mag = gold[matches['i2']]['BDF_MAG_R']
 print(len(matched_data_mag))
-
+print(matched_data_mag)
 matched_data_mag = matched_data_mag[matched_data_mag['BDF_MAG_R'] > 0]
 print(len(matched_data_mag))
 
