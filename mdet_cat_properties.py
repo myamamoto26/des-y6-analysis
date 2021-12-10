@@ -181,7 +181,7 @@ def exclude_gold_mask_objects(d):
 def exclude_hyperleda_objects(d_mdet):
 
     import smatch
-    d_hyperleda = os.join('des-y6-analysis', 'asu.fit')
+    d_hyperleda = os.path.join('/home/s1/masaya/des-y6-analysis', 'asu.fit')
     d_gold = os.path.join('/data/des70.a/data/masaya/gold', 'y6_gold_2_0_magnitudes.fits')
 
     metadetect = fio.read(d_mdet)
