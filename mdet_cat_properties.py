@@ -198,7 +198,7 @@ def exclude_hyperleda_objects(d_mdet):
     nside = 4096
     for ii in range(len(hyperleda_des)):
 
-        radius = (10**(hyperleda_des['logD25'][ii]))/600
+        radius = 2*(10**(hyperleda_des['logD25'][ii]))/600
         matches = smatch.match(hyperleda_des['RAJ2000'][ii], hyperleda_des['DEJ2000'][ii], radius, metadetect['RA'], metadetect['DEC'], nside=nside)
         mask = matches['i2']
         metadetect = metadetect[~mask]
