@@ -184,7 +184,7 @@ def exclude_hyperleda_objects(d_mdet):
     d_hyperleda = os.path.join('/home/s1/masaya/des-y6-analysis', 'asu.fit')
     d_gold = os.path.join('/data/des70.a/data/masaya/gold', 'y6_gold_2_0_magnitudes.fits')
 
-    metadetect = fio.read(d_mdet)
+    metadetect = d_mdet
     # mdet_step = metadetect[metadetect['MDET_STEP']==step]
     hyperleda = fio.read(d_hyperleda)
                  
