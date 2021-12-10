@@ -178,7 +178,7 @@ def exclude_gold_mask_objects(d):
     
     return d[mask]
 
-def exclude_hyperleda_objects(d_hyperleda, d_mdet, d_gold):
+def exclude_hyperleda_objects(d_mdet):
 
     import smatch
     d_hyperleda = os.join('des-y6-analysis', 'asu.fit')
