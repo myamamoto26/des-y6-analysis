@@ -178,12 +178,14 @@ def exclude_gold_mask_objects(d):
     
     return d[mask]
 
-def exclude_hyperleda_objects(d_hyperleda, d_mdet, d_gold, step):
+def exclude_hyperleda_objects(d_hyperleda, d_mdet, d_gold):
 
     import smatch
+    d_hyperleda = os.join('des-y6-analysis', 'asu.fit')
+    d_gold = os.path.join('/data/des70.a/data/masaya/gold', 'y6_gold_2_0_magnitudes.fits')
 
     metadetect = fio.read(d_mdet)
-    mdet_step = metadetect[metadetect['MDET_STEP']==step]
+    # mdet_step = metadetect[metadetect['MDET_STEP']==step]
     hyperleda = fio.read(d_hyperleda)
                  
     gold = fio.read(d_gold)
@@ -197,11 +199,11 @@ def exclude_hyperleda_objects(d_hyperleda, d_mdet, d_gold, step):
     for ii in range(len(hyperleda_des)):
 
         radius = (10**(hyperleda_des['logD25'][ii]))/600
-        matches = smatch.match(hyperleda_des['RAJ2000'][ii], hyperleda_des['DEJ2000'][ii], radius, mdet_step['RA'], mdet_step['DEC'], nside=nside)
+        matches = smatch.match(hyperleda_des['RAJ2000'][ii], hyperleda_des['DEJ2000'][ii], radius, metadetect['RA'], metadetect['DEC'], nside=nside)
         mask = matches['i2']
-        mdet_step = mdet_step[~mask]
+        metadetect = metadetect[~mask]
 
-    return mdet_step
+    return metadetect
 
 def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
 
@@ -252,7 +254,7 @@ def mdet_shear_pairs_plotting(d, nperbin):
     ## psf shape/area vs mean shear. 
     fig,axs = plt.subplots(3,2,figsize=(22,12))
     # exclude objects in healpix which is the same as the gold. 
-    d = exclude_gold_mask_objects(d)
+    d = exclude_hyperleda_objects(d)
     for q,ax in enumerate(axs.ravel()):
         if q==0 or q==1:
             psf_ = d['PSFREC_G_'+str(q+1)]
@@ -297,7 +299,8 @@ def mdet_shear_pairs_plotting(d, nperbin):
         ax.set_ylabel('<e'+str(q%2 + 1)+'>')
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     axs[0,0].legend(loc='upper right')
-    plt.savefig('mdet_psf_vs_shear_fit_v2_goldmaskpix.png')
+    plt.tight_layout()
+    plt.savefig('mdet_psf_vs_shear_fit_v2_hyperleda.pdf', bbox_inches='tight')
 
 
 def categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_obj):
