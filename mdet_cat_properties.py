@@ -204,7 +204,9 @@ def exclude_hyperleda_objects(d_mdet):
                         (d_mdet['DEC'] >= hyperleda_des['DEJ2000'][ii]-1.0) & 
                         (d_mdet['DEC'] <= hyperleda_des['DEJ2000'][ii]+1.0))
         mdet_limit = d_mdet[mask_limit]
-        print(hyperleda_des['RAJ2000'][ii], hyperleda_des['DEJ2000'][ii], len(mdet_limit), mdet_limit)
+        if len(mdet_limit) == 0:
+            continue
+        # print(hyperleda_des['RAJ2000'][ii], hyperleda_des['DEJ2000'][ii], len(mdet_limit), mdet_limit)
         matches = smatch.match(hyperleda_des['RAJ2000'][ii], hyperleda_des['DEJ2000'][ii], radius, mdet_limit['RA'], mdet_limit['DEC'], nside=nside, maxmatch=0)
         masked_obj.append(mdet_limit[matches['i2']])
     total_mask = np.concatenate(masked_obj)
