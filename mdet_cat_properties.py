@@ -184,7 +184,6 @@ def exclude_hyperleda_objects(d_mdet):
     d_hyperleda = os.path.join('/home/s1/masaya/des-y6-analysis', 'asu.fit')
     d_gold = os.path.join('/data/des70.a/data/masaya/gold', 'y6_gold_2_0_magnitudes.fits')
 
-    metadetect = d_mdet
     # mdet_step = metadetect[metadetect['MDET_STEP']==step]
     hyperleda = fio.read(d_hyperleda)
                  
@@ -197,13 +196,18 @@ def exclude_hyperleda_objects(d_mdet):
     print(len(hyperleda_des))
     
     masked_obj = []
-    for ii in range(len(hyperleda_des)):
+    for ii in tqdm(range(len(hyperleda_des))):
 
         radius = 2*(10**(hyperleda_des['logD25'][ii]))/600
-        matches = smatch.match(hyperleda_des['RAJ2000'][ii], hyperleda_des['DEJ2000'][ii], radius, metadetect['RA'], metadetect['DEC'], nside=nside, maxmatch=0)
-        masked_obj.append(metadetect[matches['i2']])
+        mask_limit = ((d_mdet['RA'] >= hyperleda_des['RAJ2000'][ii]-1.0) & 
+                        (d_mdet['RA'] <= hyperleda_des['RAJ2000'][ii]+1.0) & 
+                        (d_mdet['DEC'] >= hyperleda_des['DEJ2000'][ii]-1.0) & 
+                        (d_mdet['DEC'] <= hyperleda_des['DEJ2000'][ii]+1.0))
+        mdet_limit = d_mdet[mask_limit]
+        matches = smatch.match(hyperleda_des['RAJ2000'][ii], hyperleda_des['DEJ2000'][ii], radius, mdet_limit['RA'], mdet_limit['DEC'], nside=nside, maxmatch=0)
+        masked_obj.append(mdet_limit[matches['i2']])
     total_mask = np.concatenate(masked_obj)
-    mdet_mask = np.in1d(metadetect['ID'], total_mask['ID'], invert=True)
+    mdet_mask = np.in1d(d_mdet['ID'], total_mask['ID'], invert=True)
 
     return mdet_mask
 
