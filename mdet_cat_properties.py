@@ -211,8 +211,9 @@ def exclude_hyperleda_objects(d_mdet):
         masked_obj.append(mdet_limit[matches['i2']])
     total_mask = np.concatenate(masked_obj)
     mdet_mask = np.in1d(d_mdet['ID'], total_mask['ID'], invert=True)
+    mdet_masked = d_mdet[mdet_mask]
 
-    return mdet_mask
+    return mdet_masked
 
 def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
 
