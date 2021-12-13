@@ -193,7 +193,8 @@ def exclude_hyperleda_objects(d_mdet):
     radius = 0.263/3600 # degrees
     matches = smatch.match(hyperleda['RAJ2000'], hyperleda['DEJ2000'], radius, gold['RA'], gold['DEC'], nside=nside, maxmatch=maxmatch)
     hyperleda_des = hyperleda[matches['i1']]
-    print(len(hyperleda_des))
+    print('hyperleda objects within DES footprint', len(hyperleda_des))
+    print('mdet catalog', len(d_mdet))
     
     masked_obj = []
     for ii in tqdm(range(len(hyperleda_des))):
@@ -213,6 +214,7 @@ def exclude_hyperleda_objects(d_mdet):
     mdet_mask = np.in1d(d_mdet['ID'], total_mask['ID'], invert=True)
     mdet_masked = d_mdet[mdet_mask]
 
+    print('final mdet catalog', len(mdet_masked))
     return mdet_masked
 
 def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
