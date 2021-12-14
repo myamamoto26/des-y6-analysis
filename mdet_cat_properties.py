@@ -266,7 +266,7 @@ def mdet_shear_pairs_plotting(d, nperbin):
     ## psf shape/area vs mean shear. 
     fig,axs = plt.subplots(3,2,figsize=(22,12))
     # exclude objects in healpix which is the same as the gold. 
-    d = exclude_hyperleda_objects(d)
+    # d = exclude_hyperleda_objects(d)
     for q,ax in enumerate(axs.ravel()):
         if q==0 or q==1:
             psf_ = d['PSFREC_G_'+str(q+1)]
@@ -299,6 +299,7 @@ def mdet_shear_pairs_plotting(d, nperbin):
         params = curve_fit(func,hist['mean'],g_obs,p0=(0.,0.))
         m1,n1=params[0]
         x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
+        print('parameters of the fit. ', m1, n1)
 
         ax.plot(x, func(x,m1,n1), label='linear fit')
         ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
@@ -312,7 +313,7 @@ def mdet_shear_pairs_plotting(d, nperbin):
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     axs[0,0].legend(loc='upper right')
     plt.tight_layout()
-    plt.savefig('mdet_psf_vs_shear_fit_v2_hyperleda.pdf', bbox_inches='tight')
+    # plt.savefig('mdet_psf_vs_shear_fit_v2_hyperleda.pdf', bbox_inches='tight')
 
 
 def categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_obj):
