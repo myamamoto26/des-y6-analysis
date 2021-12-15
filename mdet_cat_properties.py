@@ -176,8 +176,7 @@ def exclude_gold_mask_objects(d):
     # gold_mask = fio.read('/data/des70.a/data/masaya/gold/y6a2_foreground_mask_v1.1.fits')
     # exclude_pix = np.unique(gold_mask['PIXEL'])
     # Y3 mask
-    f=h5py.File('/hpc/group/cosmology/tmpdata/Y3_mastercat_02_05_21.h5','r')
-    good_pix = f['index/mask/hpix'][:]
+    good_pix = fio.read('/home/s1/masaya/des-y6-analysis/y3_gold_mask_good_hpix.fits')
     
     hpix = hp.ang2pix(4096, d['RA'], d['DEC'], lonlat=True, nest=True)
     # mask = np.in1d(hpix, exclude_pix, invert=True)
@@ -750,8 +749,8 @@ def main(argv):
 
         # simple_properties()
         # mdet_shear_pairs(40, 1000)
-        # mdet_shear_pairs_plotting(d, 4000000)
-        plot_null_tests(d, 2000000, 'MDET_S2N')
+        mdet_shear_pairs_plotting(d, 4000000)
+        # plot_null_tests(d, 2000000, 'MDET_S2N')
         # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
         just_plot = True
