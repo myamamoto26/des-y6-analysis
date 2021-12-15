@@ -327,6 +327,10 @@ def plot_null_tests(d, nperbin, x):
     # d = exclude_hyperleda_objects(d)
     prop = d[x]
     # prop = prop[prop < 1000]
+    print(len(prop), len(prop[prop > 1000]))
+    plt.hist(prop[prop > 1000], bins=40, histtype='step')
+    plt.savefig('SNR_1000_hist.pdf')
+    sys.exit()
     hist = stat.histogram(prop, nperbin=nperbin, more=True)
     bin_num = len(hist['hist'])
     g_obs = np.zeros(bin_num)
@@ -349,9 +353,9 @@ def plot_null_tests(d, nperbin, x):
         ax.plot(x, func(x,m1,n1), label='linear fit')
         ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
         ax.set_xlabel('S/N', fontsize=20)
-        ax.set_ylabel('<e'+str(q+1)+'>', fontsize=20)
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-    axs[0].legend(loc='upper right')
+        ax.set_ylabel(r'$\langle$ e'+str(q+1)+'$\rangle$', fontsize=20)
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0), fontsize=16)
+    axs[1].legend(loc='upper right')
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v2_SNR.pdf', bbox_inches='tight')
 
