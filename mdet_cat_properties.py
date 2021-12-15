@@ -276,6 +276,7 @@ def mdet_shear_pairs_plotting(d, nperbin):
     # exclude objects in healpix which is the same as the gold. 
     d = exclude_gold_mask_objects(d)
     d = exclude_hyperleda_objects(d)
+    fio.write('mdet_exclude_y3goldmask_and_hyperleda.fits', d)
     for q,ax in enumerate(axs.ravel()):
         if q==0 or q==1:
             psf_ = d['PSFREC_G_'+str(q+1)]
@@ -319,7 +320,8 @@ def mdet_shear_pairs_plotting(d, nperbin):
         elif q==4 or q==5:
             ax.set_xlabel(r'$T_{ratio}$', fontsize=20)
         ax.set_ylabel('<e'+str(q%2 + 1)+'>', fontsize=20)
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0), labelsize=16)
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        ax.tick_params(labelsize=16)
     axs[0,0].legend(loc='upper right')
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v2_y3goldmask_and_hyperleda.pdf', bbox_inches='tight')
