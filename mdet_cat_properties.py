@@ -351,7 +351,7 @@ def plot_null_tests(d, nperbin, x):
         ax.set_xlabel('S/N', fontsize=20)
         ax.set_xscale('log')
         ax.set_ylabel(r'$\langle$ e'+str(q+1)+'$\rangle$', fontsize=20)
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0), fontsize=16)
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0), labelsize=16)
     axs[1].legend(loc='upper right')
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v2_SNR_1000.pdf', bbox_inches='tight')
