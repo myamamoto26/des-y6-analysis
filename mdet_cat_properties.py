@@ -28,7 +28,7 @@ from skimage.measure import block_reduce
 import drawDECam.drawDECam as dDECam
 import matplotlib
 
-sns.set()
+# sns.set()
 mdet_pars = ['noshear', '1p', '1m', '2p' ,'2m']
 
 PATH = "/data/des70.a/data/masaya/"
@@ -322,11 +322,11 @@ def plot_null_tests(d, nperbin, x):
         return m*x+n
     
     ## psf shape/area vs mean shear. 
-    fig,axs = plt.subplots(2,1,figsize=(22,12))
+    fig,axs = plt.subplots(2,1,figsize=(18,12))
     # exclude objects in healpix which is the same as the gold. 
     # d = exclude_hyperleda_objects(d)
     prop = d[x]
-    prop = prop[prop < 1000]
+    # prop = prop[prop < 1000]
     hist = stat.histogram(prop, nperbin=nperbin, more=True)
     bin_num = len(hist['hist'])
     g_obs = np.zeros(bin_num)
@@ -334,9 +334,9 @@ def plot_null_tests(d, nperbin, x):
     print(len(hist['low']), len(hist['mean']))
     for i in tqdm(range(bin_num)):
         additional_cuts = {'quantity': x, 'cuts': [hist['low'][i], hist['high'][i]]}
-        print(i, hist['low'][i], hist['high'][i])
-
         R, g_mean, gerr_mean, bs = calculate_response(d, additional_cuts=additional_cuts)
+        print(i, hist['low'][i], hist['high'][i], bs)
+
     for q,ax in enumerate(axs.ravel()):
         g_obs[i] = g_mean[q]/R[q]
         gerr_obs[i] = (gerr_mean[q]/R[q])
@@ -349,7 +349,7 @@ def plot_null_tests(d, nperbin, x):
         ax.plot(x, func(x,m1,n1), label='linear fit')
         ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
         ax.set_xlabel('S/N', fontsize=20)
-        ax.set_ylabel('<e'+str(q+1)+'>')
+        ax.set_ylabel('<e'+str(q+1)+'>', fontsize=20)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     axs[0].legend(loc='upper right')
     plt.tight_layout()
@@ -740,7 +740,7 @@ def main(argv):
         # simple_properties()
         # mdet_shear_pairs(40, 1000)
         # mdet_shear_pairs_plotting(d, 4000000)
-        plot_null_tests(d, 4000000, 'MDET_S2N')
+        plot_null_tests(d, 2000000, 'MDET_S2N')
         # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
         just_plot = True
