@@ -350,7 +350,7 @@ def plot_null_tests(d, nperbin, x):
         ax.set_xlabel('S/N', fontsize=20)
         ax.set_ylabel('<e'+str(q)+'>')
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-    axs[0,0].legend(loc='upper right')
+    axs[0].legend(loc='upper right')
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v2_SNR.pdf', bbox_inches='tight')
 
