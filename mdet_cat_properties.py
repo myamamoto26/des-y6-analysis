@@ -170,12 +170,20 @@ def bootstrap_sampling_error(N, data1, data2):
 def exclude_gold_mask_objects(d):
 
     import healpy as hp
+    import h5py
 
-    gold_mask = fio.read('/data/des70.a/data/masaya/gold/y6a2_foreground_mask_v1.1.fits')
-    exclude_pix = np.unique(gold_mask['PIXEL'])
-    hpix = hp.ang2pix(4096, d['RA'], d['DEC'], lonlat=True, nest=True)
-    mask = np.in1d(hpix, exclude_pix, invert=True)
+    # Y6 mask
+    # gold_mask = fio.read('/data/des70.a/data/masaya/gold/y6a2_foreground_mask_v1.1.fits')
+    # exclude_pix = np.unique(gold_mask['PIXEL'])
+    # Y3 mask
+    f=h5py.File('/hpc/group/cosmology/tmpdata/Y3_mastercat_02_05_21.h5','r')
+    good_pix = f['index/mask/hpix'][:]
     
+    hpix = hp.ang2pix(4096, d['RA'], d['DEC'], lonlat=True, nest=True)
+    # mask = np.in1d(hpix, exclude_pix, invert=True)
+    mask = np.in1d(hpix, good_pix)
+    
+    print('excluded objects with y3 gold mask, ', len(d)-len(d[mask]))
     return d[mask]
 
 def exclude_hyperleda_objects(d_mdet):
@@ -267,7 +275,8 @@ def mdet_shear_pairs_plotting(d, nperbin):
     ## psf shape/area vs mean shear. 
     fig,axs = plt.subplots(3,2,figsize=(30,17))
     # exclude objects in healpix which is the same as the gold. 
-    # d = exclude_hyperleda_objects(d)
+    d = exclude_gold_mask_objects(d)
+    d = exclude_hyperleda_objects(d)
     for q,ax in enumerate(axs.ravel()):
         if q==0 or q==1:
             psf_ = d['PSFREC_G_'+str(q+1)]
@@ -305,16 +314,16 @@ def mdet_shear_pairs_plotting(d, nperbin):
         ax.plot(x, func(x,m1,n1), label='linear fit')
         ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
         if q==0 or q==1:
-            ax.set_xlabel('e'+str(q+1)+',PSF')
+            ax.set_xlabel('e'+str(q+1)+',PSF', fontsize=20)
         elif q==2 or q==3:
-            ax.set_xlabel(r'$T_{PSF}$')
+            ax.set_xlabel(r'$T_{PSF}$', fontsize=20)
         elif q==4 or q==5:
-            ax.set_xlabel(r'$T_{ratio}$')
-        ax.set_ylabel('<e'+str(q%2 + 1)+'>')
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+            ax.set_xlabel(r'$T_{ratio}$', fontsize=20)
+        ax.set_ylabel('<e'+str(q%2 + 1)+'>', fontsize=20)
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0), labelsize=16)
     axs[0,0].legend(loc='upper right')
     plt.tight_layout()
-    # plt.savefig('mdet_psf_vs_shear_fit_v2_hyperleda.pdf', bbox_inches='tight')
+    plt.savefig('mdet_psf_vs_shear_fit_v2_y3goldmask_and_hyperleda.pdf', bbox_inches='tight')
 
 def plot_null_tests(d, nperbin, x):
 
@@ -740,8 +749,8 @@ def main(argv):
 
         # simple_properties()
         # mdet_shear_pairs(40, 1000)
-        # mdet_shear_pairs_plotting(d, 4000000)
-        plot_null_tests(d, 2000000, 'MDET_S2N')
+        mdet_shear_pairs_plotting(d, 4000000)
+        # plot_null_tests(d, 2000000, 'MDET_S2N')
         # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
         just_plot = True
