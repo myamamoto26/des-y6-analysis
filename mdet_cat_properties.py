@@ -255,7 +255,8 @@ def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
         ax.set_ylabel('<e'+str(q%2 + 1)+'>')
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
         ax.legend(loc='upper left')
-    plt.savefig('mdet_shear_Tcuts_v2.png')
+    plt.tight_layout()
+    plt.savefig('mdet_shear_Tcuts_v2.png', bbox_inches='tight')
 
 def mdet_shear_pairs_plotting(d, nperbin):
 
@@ -264,7 +265,7 @@ def mdet_shear_pairs_plotting(d, nperbin):
         return m*x+n
     
     ## psf shape/area vs mean shear. 
-    fig,axs = plt.subplots(3,2,figsize=(22,12))
+    fig,axs = plt.subplots(3,2,figsize=(30,17))
     # exclude objects in healpix which is the same as the gold. 
     # d = exclude_hyperleda_objects(d)
     for q,ax in enumerate(axs.ravel()):
@@ -314,6 +315,44 @@ def mdet_shear_pairs_plotting(d, nperbin):
     axs[0,0].legend(loc='upper right')
     plt.tight_layout()
     # plt.savefig('mdet_psf_vs_shear_fit_v2_hyperleda.pdf', bbox_inches='tight')
+
+def plot_null_tests(d, nperbin, x):
+
+    def func(x,m,n):
+        return m*x+n
+    
+    ## psf shape/area vs mean shear. 
+    fig,axs = plt.subplots(2,1,figsize=(22,12))
+    # exclude objects in healpix which is the same as the gold. 
+    # d = exclude_hyperleda_objects(d)
+    prop = d[x]
+    hist = stat.histogram(prop, nperbin=nperbin, more=True)
+    bin_num = len(hist['hist'])
+    g_obs = np.zeros(bin_num)
+    gerr_obs = np.zeros(bin_num)
+    print(len(hist['low']), len(hist['mean']))
+    for i in tqdm(range(bin_num)):
+        additional_cuts = {'quantity': x, 'cuts': [hist['low'][i], hist['high'][i]]}
+        print(i, hist['low'][i], hist['high'][i])
+
+        R, g_mean, gerr_mean, bs = calculate_response(d, additional_cuts=additional_cuts)
+    for q,ax in enumerate(axs.ravel()):
+        g_obs[i] = g_mean[q]/R[q]
+        gerr_obs[i] = (gerr_mean[q]/R[q])
+        
+        params = curve_fit(func,hist['mean'],g_obs,p0=(0.,0.))
+        m1,n1=params[0]
+        x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
+        print('parameters of the fit. ', m1, n1)
+
+        ax.plot(x, func(x,m1,n1), label='linear fit')
+        ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
+        ax.set_xlabel('S/N', fontsize=20)
+        ax.set_ylabel('<e'+str(q)+'>')
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+    axs[0,0].legend(loc='upper right')
+    plt.tight_layout()
+    plt.savefig('mdet_psf_vs_shear_fit_v2_SNR.pdf', bbox_inches='tight')
 
 
 def categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_obj):
@@ -699,7 +738,8 @@ def main(argv):
 
         # simple_properties()
         # mdet_shear_pairs(40, 1000)
-        mdet_shear_pairs_plotting(d, 4000000)
+        # mdet_shear_pairs_plotting(d, 4000000)
+        plot_null_tests(d, 4000000, 'MDET_S2N')
         # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
     elif sys.argv[1] == 'shear_spatial':
         just_plot = True
