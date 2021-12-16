@@ -254,7 +254,7 @@ def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
         m1,n1=params[0]
         x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
 
-        ax.plot(x, func(x,m1,n1), label='linear fit')
+        ax.plot(x, func(x,m1,n1), label='linear fit w/ fit params: m='+str("{:2.2f}".format(m1))+', b='+str("{:2.2f}".format(n1)))
         ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label=str(100-perc[q])+'percent cut, Tmax='+str("{:2.2f}".format(d_max)))
         # if q%2 == 0:
         #     ax.set_ylim(-3e-3, 5e-3)
@@ -266,7 +266,7 @@ def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
         ax.tick_params(labelsize=15)
         ax.legend(loc='upper left')
     plt.tight_layout()
-    plt.savefig('mdet_shear_e1cuts_v2.png', bbox_inches='tight')
+    plt.savefig('mdet_shear_e1cuts_v2.pdf', bbox_inches='tight')
 
 def mdet_shear_pairs_plotting(d, nperbin):
 
@@ -314,7 +314,7 @@ def mdet_shear_pairs_plotting(d, nperbin):
         x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
         print('parameters of the fit. ', m1, n1)
 
-        ax.plot(x, func(x,m1,n1), label='linear fit')
+        ax.plot(x, func(x,m1,n1), label='linear fit w/ fit params: m='+str("{:2.2f}".format(m1))+', b='+str("{:2.2f}".format(n1)))
         ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
         if q==0 or q==1:
             ax.set_xlabel('e'+str(q+1)+',PSF', fontsize=20)
@@ -359,7 +359,7 @@ def plot_null_tests(d, nperbin, x):
         x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
         print('parameters of the fit. ', m1, n1)
 
-        ax.plot(x, func(x,m1,n1), label='linear fit')
+        ax.plot(x, func(x,m1,n1), label='linear fit w/ fit params: m='+str("{:2.2f}".format(m1))+', b='+str("{:2.2f}".format(n1)))
         ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
         ax.set_xlabel('S/N', fontsize=20)
         ax.set_xscale('log')
