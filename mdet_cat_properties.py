@@ -237,13 +237,14 @@ def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
     for q,ax in enumerate(axs.ravel()):
         d_max = np.percentile(d[cut_quantity], perc[q], axis=0)
         d_mask = (d[cut_quantity] < d_max)
-        d = d[cut_quantity][d_mask]
-        hist = stat.histogram(d, nperbin=nperbin, more=True)
+        d_quant = d[cut_quantity][d_mask]
+        d = d[d_mask]
+        hist = stat.histogram(d_quant, nperbin=nperbin, more=True)
         bin_num = len(hist['hist'])
         g_obs = np.zeros(bin_num)
         gerr_obs = np.zeros(bin_num)
         for i in tqdm(range(bin_num)):
-            additional_cuts = {'quantity': 'PSFREC_G_1', 'cuts': [hist['low'][i], hist['high'][i]]}
+            additional_cuts = {'quantity': cut_quantity, 'cuts': [hist['low'][i], hist['high'][i]]}
             print(additional_cuts)
             R, g_mean, gerr_mean, bs = calculate_response(d, additional_cuts=additional_cuts)
             g_obs[i] = g_mean[q%2]/R[q%2]
