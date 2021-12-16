@@ -235,15 +235,15 @@ def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
     perc = [99,99,98,98,95,95,90,90,85,85]
     # def_mask = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_T_ratio'] > 1.2) & (d['mfrac'] < 0.1))
     for q,ax in enumerate(axs.ravel()):
-        T_max = np.percentile(d[cut_quantity], perc[q], axis=0)
-        T_mask = (d[cut_quantity] < T_max)
-        Tr = d['MDET_T_RATIO'][T_mask]
-        hist = stat.histogram(Tr, nperbin=3000000, more=True)
+        d_max = np.percentile(d[cut_quantity], perc[q], axis=0)
+        d_mask = (d[cut_quantity] < d_max)
+        d = d[cut_quantity][d_mask]
+        hist = stat.histogram(d, nperbin=nperbin, more=True)
         bin_num = len(hist['hist'])
         g_obs = np.zeros(bin_num)
         gerr_obs = np.zeros(bin_num)
         for i in tqdm(range(bin_num)):
-            additional_cuts = {'quantity': 'MDET_T_RATIO', 'cuts': [hist['low'][i], hist['high'][i]]}
+            additional_cuts = {'quantity': cut_quantity, 'cuts': [hist['low'][i], hist['high'][i]]}
             R, g_mean, gerr_mean, bs = calculate_response(d, additional_cuts=additional_cuts)
             g_obs[i] = g_mean[q%2]/R[q%2]
             gerr_obs[i] = (gerr_mean[q%2]/R[q%2])
@@ -253,17 +253,18 @@ def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
         x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
 
         ax.plot(x, func(x,m1,n1), label='linear fit')
-        ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label=str(100-perc[q])+'percent cut, Tmax='+str("{:2.2f}".format(T_max)))
+        ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label=str(100-perc[q])+'percent cut, Tmax='+str("{:2.2f}".format(d_max)))
         # if q%2 == 0:
         #     ax.set_ylim(-3e-3, 5e-3)
         # elif q%2 == 1:
         #     ax.set_ylim(-1e-2, 2e-2)
-        ax.set_xlabel(r'$T_{ratio}$')
+        ax.set_xlabel("e1,PSF")
         ax.set_ylabel('<e'+str(q%2 + 1)+'>')
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        ax.tick_params(labelsize=15)
         ax.legend(loc='upper left')
     plt.tight_layout()
-    plt.savefig('mdet_shear_Tcuts_v2.png', bbox_inches='tight')
+    plt.savefig('mdet_shear_e1cuts_v2.png', bbox_inches='tight')
 
 def mdet_shear_pairs_plotting(d, nperbin):
 
@@ -751,9 +752,9 @@ def main(argv):
 
         # simple_properties()
         # mdet_shear_pairs(40, 1000)
-        mdet_shear_pairs_plotting(d, 4000000)
+        # mdet_shear_pairs_plotting(d, 4000000)
         # plot_null_tests(d, 2000000, 'MDET_S2N')
-        # mdet_shear_pairs_plotting_percentile(d, 4000000, 'MDET_T')
+        mdet_shear_pairs_plotting_percentile(d, 3000000, 'PSFREC_G_1')
     elif sys.argv[1] == 'shear_spatial':
         just_plot = True
         plotting = False
