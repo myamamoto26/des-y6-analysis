@@ -167,6 +167,31 @@ def bootstrap_sampling_error(N, data1, data2):
     
     return [cov1, cov2]
 
+def OLSfit(x, y, dy=None):
+    """Find the best fitting parameters of a linear fit to the data through the
+    method of ordinary least squares estimation. (i.e. find m and b for
+    y = m*x + b)
+
+    Args:
+        x: Numpy array of independent variable data
+        y: Numpy array of dependent variable data. Must have same size as x.
+        dy: Numpy array of dependent variable standard deviations. Must be same
+            size as y.
+
+    Returns: A list with four floating point values. [m, dm, b, db]
+    """
+    if dy is None:
+        #if no error bars, weight every point the same
+        dy = np.ones(x.size)
+    denom = np.sum(1 / dy**2) * np.sum((x / dy)**2) - (np.sum(x / dy**2))**2
+    m = (np.sum(1 / dy**2) * np.sum(x * y / dy**2) -
+         np.sum(x / dy**2) * np.sum(y / dy**2)) / denom
+    b = (np.sum(x**2 / dy**2) * np.sum(y / dy**2) -
+         np.sum(x / dy**2) * np.sum(x * y / dy**2)) / denom
+    dm = np.sqrt(np.sum(1 / dy**2) / denom)
+    db = np.sqrt(np.sum(x / dy**2) / denom)
+    return [m, dm, b, db]
+
 def exclude_gold_mask_objects(d):
 
     import healpy as hp
@@ -254,7 +279,7 @@ def mdet_shear_pairs_plotting_percentile(d, nperbin, cut_quantity):
         m1,n1=params[0]
         x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
 
-        ax.plot(x, func(x,m1,n1), label='linear fit w/ fit params: m='+str("{:2.2f}".format(m1))+', b='+str("{:2.2f}".format(n1)))
+        ax.plot(x, func(x,m1,n1), label='linear fit w/ fit params: m='+str("{:2.4f}".format(m1))+', b='+str("{:2.4f}".format(n1)))
         ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label=str(100-perc[q])+'percent cut, Tmax='+str("{:2.2f}".format(d_max)))
         # if q%2 == 0:
         #     ax.set_ylim(-3e-3, 5e-3)
@@ -309,12 +334,13 @@ def mdet_shear_pairs_plotting(d, nperbin):
             g_obs[i] = g_mean[q%2]/R[q%2]
             gerr_obs[i] = (gerr_mean[q%2]/R[q%2])
         
-        params = curve_fit(func,hist['mean'],g_obs,p0=(0.,0.))
-        m1,n1=params[0]
+        # params = curve_fit(func,hist['mean'],g_obs,p0=(0.,0.))
+        # m1,n1=params[0]
+        params = OLSfit(hist['mean'], g_obs, dy=gerr_obs)
         x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
-        print('parameters of the fit. ', m1, n1)
+        print('parameters of the fit. ', params)
 
-        ax.plot(x, func(x,m1,n1), label='linear fit w/ fit params: m='+str("{:2.2f}".format(m1))+', b='+str("{:2.2f}".format(n1)))
+        ax.plot(x, func(x,params[0],params[2]), label='linear fit w/ fit params: m='+str("{:2.4f}".format(params[0]))+'+/-'+str(("{:2.4f}".format(params[1])))+', b='+str("{:2.4f}".format(params[2]))+'+/-'+str(("{:2.4f}".format(params[3]))))
         ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
         if q==0 or q==1:
             ax.set_xlabel('e'+str(q+1)+',PSF', fontsize=20)
@@ -327,7 +353,7 @@ def mdet_shear_pairs_plotting(d, nperbin):
         ax.tick_params(labelsize=16)
     axs[0,0].legend(loc='upper right')
     plt.tight_layout()
-    plt.savefig('mdet_psf_vs_shear_fit_v2_y3goldmask_and_hyperleda.pdf', bbox_inches='tight')
+    plt.savefig('mdet_psf_vs_shear_weightedfit_v2_y3goldmask_and_hyperleda.pdf', bbox_inches='tight')
 
 def plot_null_tests(d, nperbin, x):
 
@@ -359,7 +385,7 @@ def plot_null_tests(d, nperbin, x):
         x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
         print('parameters of the fit. ', m1, n1)
 
-        ax.plot(x, func(x,m1,n1), label='linear fit w/ fit params: m='+str("{:2.2f}".format(m1))+', b='+str("{:2.2f}".format(n1)))
+        ax.plot(x, func(x,m1,n1), label='linear fit w/ fit params: m='+str("{:2.4f}".format(m1))+', b='+str("{:2.4f}".format(n1)))
         ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
         ax.set_xlabel('S/N', fontsize=20)
         ax.set_xscale('log')
