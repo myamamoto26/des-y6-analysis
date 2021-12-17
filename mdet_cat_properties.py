@@ -754,9 +754,9 @@ def main(argv):
 
         # simple_properties()
         # mdet_shear_pairs(40, 1000)
-        # mdet_shear_pairs_plotting(d, 4000000)
-        # plot_null_tests(d, 2000000, 'MDET_S2N')
-        mdet_shear_pairs_plotting_percentile(d, 3000000, 'PSFREC_G_1')
+        mdet_shear_pairs_plotting(d, 3000000)
+        # plot_null_tests(d, 3000000, 'MDET_S2N')
+        # mdet_shear_pairs_plotting_percentile(d, 3000000, 'PSFREC_G_1')
     elif sys.argv[1] == 'shear_spatial':
         just_plot = True
         plotting = False
