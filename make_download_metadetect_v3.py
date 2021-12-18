@@ -9,7 +9,7 @@ def main(argv):
     fs = f.read().split('\n')
 
     all_files = []
-    for fname in enumerate(fs):
+    for fname in fs:
         whole_fname = os.path.join('https://www.cosmo.bnl.gov/Private/gpfs/workarea/beckermr/des-y6-analysis/2021_12_18_test_v6_download/data', fname)
         all_files.append(whole_fname)
 
