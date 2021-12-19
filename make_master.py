@@ -48,7 +48,7 @@ def make_master_cat():
     fs = f.read().split('\n')
 
     master = []
-    for fname in fs:
+    for fname in tqdm(fs):
         d = fname.split('/')[-1]
         mdet = fio.read(d)
         master.append(mdet)
