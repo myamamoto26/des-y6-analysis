@@ -55,3 +55,4 @@ def make_master_cat():
     master_mdet = np.concatenate(master, axis=0)
     fio.write(out_fname, master_mdet)
     
+make_master_cat()
