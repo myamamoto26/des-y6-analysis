@@ -50,6 +50,8 @@ def main(argv):
 
     master = []
     for fname in tqdm(fs_split[int(sys.argv[2])]):
+        if fname == '':
+            continue
         d = fname.split('/')[-1]
         mdet = fio.read(d)
         master.append(mdet)
