@@ -758,29 +758,29 @@ def main(argv):
     ver = 'v3'
     if sys.argv[1] == 'shear_pair':
 
-        if not os.path.exists(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'.fits')):
-            f = open('/home/s1/masaya/des-y6-analysis/tiles.txt', 'r')
-            tilenames = f.read().split('\n')[:-1]
-            start = 0
-            for f in tilenames:
-                print('Reading in '+f+'...')
-                if start == 0:
-                    d = fio.read(os.path.join(PATH, f+'_metadetect-v3_mdetcat_part0000.fits'))
-                    start += 1
-                else:
-                    try: 
-                        d2 = fio.read(os.path.join(PATH, f+'_metadetect-v3_mdetcat_part0000.fits'))
-                        d = np.concatenate((d,d2))
-                    except OSError:
-                        print(f+' tile does not exist. Please check the catalog.')
-                        continue
-            fio.write(os.path.join(PATH, 'metadetect/mdet_test_all.fits'), d)
-        else:
-            batch = 5
-            d = []
-            for i in range(batch):
-                d.append(fio.read(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'_'+str(i)+'.fits')))
-            all_d = np.concatenate(d, axis=0)
+        # if not os.path.exists(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'.fits')):
+        #     f = open('/home/s1/masaya/des-y6-analysis/tiles.txt', 'r')
+        #     tilenames = f.read().split('\n')[:-1]
+        #     start = 0
+        #     for f in tilenames:
+        #         print('Reading in '+f+'...')
+        #         if start == 0:
+        #             d = fio.read(os.path.join(PATH, f+'_metadetect-v3_mdetcat_part0000.fits'))
+        #             start += 1
+        #         else:
+        #             try: 
+        #                 d2 = fio.read(os.path.join(PATH, f+'_metadetect-v3_mdetcat_part0000.fits'))
+        #                 d = np.concatenate((d,d2))
+        #             except OSError:
+        #                 print(f+' tile does not exist. Please check the catalog.')
+        #                 continue
+        #     fio.write(os.path.join(PATH, 'metadetect/mdet_test_all.fits'), d)
+        # else:
+        batch = 5
+        d = []
+        for i in range(batch):
+            d.append(fio.read(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'_'+str(i)+'.fits')))
+        all_d = np.concatenate(d, axis=0)
 
         # simple_properties()
         # mdet_shear_pairs(40, 1000)
