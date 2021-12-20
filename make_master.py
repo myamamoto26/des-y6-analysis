@@ -49,7 +49,7 @@ def main(argv):
     fs_split = np.array_split(fs, 2)
 
     master = []
-    for fname in tqdm(fs_split[sys.argv[1]]):
+    for fname in tqdm(fs_split[int(sys.argv[1])]):
         d = fname.split('/')[-1]
         mdet = fio.read(d)
         master.append(mdet)
