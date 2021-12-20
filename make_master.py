@@ -43,13 +43,13 @@ PATH = "/data/des70.a/data/masaya/"
     
 def main(argv):
 
-    out_fname = '/data/des70.a/data/masaya/metadetect/v3/mdet_test_all_v3.fits'
+    out_fname = '/data/des70.a/data/masaya/metadetect/v3/mdet_test_all_v3_'+sys.argv[2]+'.fits'
     f = open('/data/des70.a/data/masaya/metadetect/v3/fnames.txt', 'r')
     fs = f.read().split('\n')
-    fs_split = np.array_split(fs, 2)
+    fs_split = np.array_split(fs, int(sys.argv[1]))
 
     master = []
-    for fname in tqdm(fs_split[int(sys.argv[1])]):
+    for fname in tqdm(fs_split[int(sys.argv[2])]):
         d = fname.split('/')[-1]
         mdet = fio.read(d)
         master.append(mdet)
