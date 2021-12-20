@@ -755,7 +755,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
 
 def main(argv):
 
-    ver = 'v2'
+    ver = 'v3'
     if sys.argv[1] == 'shear_pair':
 
         if not os.path.exists(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'.fits')):
@@ -776,11 +776,15 @@ def main(argv):
                         continue
             fio.write(os.path.join(PATH, 'metadetect/mdet_test_all.fits'), d)
         else:
-            d = fio.read(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'.fits'))
+            batch = 5
+            d = []
+            for i in range(batch):
+                d.append(fio.read(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'_'+str(i)+'.fits')))
+            all_d = np.concatenate(d, axis=0)
 
         # simple_properties()
         # mdet_shear_pairs(40, 1000)
-        mdet_shear_pairs_plotting(d, 3000000)
+        mdet_shear_pairs_plotting(all_d, 40000000)
         # plot_null_tests(d, 3000000, 'MDET_S2N')
         # mdet_shear_pairs_plotting_percentile(d, 3000000, 'PSFREC_G_1')
     elif sys.argv[1] == 'shear_spatial':
