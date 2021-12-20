@@ -41,18 +41,20 @@ PATH = "/data/des70.a/data/masaya/"
 #     fio.write('piff_model_master_v1.fits', master_piff_model)
 #     fio.write('piff_star_master_v1.fits', master_piff_star)
     
-def make_master_cat():
+def main(argv):
 
     out_fname = '/data/des70.a/data/masaya/metadetect/v3/mdet_test_all_v3.fits'
     f = open('/data/des70.a/data/masaya/metadetect/v3/fnames.txt', 'r')
     fs = f.read().split('\n')
+    fs_split = np.array_split(fs, 2)
 
     master = []
-    for fname in tqdm(fs):
+    for fname in tqdm(fs_split[sys.argv[1]]):
         d = fname.split('/')[-1]
         mdet = fio.read(d)
         master.append(mdet)
     master_mdet = np.concatenate(master, axis=0)
     fio.write(out_fname, master_mdet)
     
-make_master_cat()
+if __name__ == "__main__":
+    main(sys.argv)
