@@ -396,7 +396,44 @@ def plot_null_tests(d, nperbin, x):
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v2_SNR_1000.pdf', bbox_inches='tight')
 
-# def plot_null_tests2(mdet_qa, mdet_g1, mdet_g2, mdet_step):
+def plot_null_tests2(qa, mdet_qa, mdet_g1, mdet_g2, mdet_step, nperbin):
+
+    def func(x,m,n):
+        return m*x+n
+    
+    ## psf shape/area vs mean shear. 
+    fig,axs = plt.subplots(2,1,figsize=(18,12))
+    # exclude objects in healpix which is the same as the gold. 
+    # d = exclude_hyperleda_objects(d)
+    hist = stat.histogram(mdet_qa, nperbin=nperbin, more=True)
+    bin_num = len(hist['hist'])
+    g_obs = np.zeros(bin_num)
+    gerr_obs = np.zeros(bin_num)
+    print(len(hist['low']), len(hist['mean']))
+    for i in tqdm(range(bin_num)):
+        ind_ = np.where((mdet_qa >= hist['low'][i]) & (mdet_qa <= hist['high'][i]))
+        R, g_mean, gerr_mean, bs = calculate_response(d, additional_cuts=additional_cuts)
+        print(i, hist['low'][i], hist['high'][i], bs)
+
+    for q,ax in enumerate(axs.ravel()):
+        g_obs[i] = g_mean[q]/R[q]
+        gerr_obs[i] = (gerr_mean[q]/R[q])
+        
+        params = curve_fit(func,hist['mean'],g_obs,p0=(0.,0.))
+        m1,n1=params[0]
+        x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
+        print('parameters of the fit. ', m1, n1)
+
+        ax.plot(x, func(x,m1,n1), label='linear fit w/ fit params: m='+str("{:2.4f}".format(m1))+', b='+str("{:2.4f}".format(n1)))
+        ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
+        ax.set_xlabel('S/N', fontsize=20)
+        ax.set_xscale('log')
+        ax.set_ylabel(r"$\langle e'+str(q+1)+'\rangle$", fontsize=20)
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        ax.tick_params(labelsize=16)
+    axs[1].legend(loc='upper right')
+    plt.tight_layout()
+    plt.savefig('mdet_psf_vs_shear_fit_v2_SNR_1000.pdf', bbox_inches='tight')
 
 
 
@@ -799,13 +836,13 @@ def main(argv):
             d = fname.split('/')[-1]
             mdet = fio.read(os.path.join('/data/des70.a/data/masaya/metadetect/v3', d))
             mdet_qa.append(mdet[sys.argv[2]])
-            mdet_g1.append(mdet['mdet_g'][:,0])
-            mdet_g2.append(mdet['mdet_g'][:,0])
-            mdet_step.append(mdet['mdet_step'])
+            # mdet_g1.append(mdet['mdet_g'][:,0])
+            # mdet_g2.append(mdet['mdet_g'][:,0])
+            # mdet_step.append(mdet['mdet_step'])
         mdet_qa = np.concatenate(mdet_qa, axis=0)
-        mdet_g1 = np.concatenate(mdet_g1, axis=0)
-        mdet_g2 = np.concatenate(mdet_g2, axis=0)
-        mdet_step = np.concatenate(mdet_step, axis=0)
+        # mdet_g1 = np.concatenate(mdet_g1, axis=0)
+        # mdet_g2 = np.concatenate(mdet_g2, axis=0)
+        # mdet_step = np.concatenate(mdet_step, axis=0)
         sys.exit()
         plot_null_tests2(mdet_qa, mdet_g1, mdet_g2, mdet_step)
 
