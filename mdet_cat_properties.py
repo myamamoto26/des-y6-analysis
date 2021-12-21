@@ -396,6 +396,10 @@ def plot_null_tests(d, nperbin, x):
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v2_SNR_1000.pdf', bbox_inches='tight')
 
+# def plot_null_tests2(mdet_qa, mdet_g1, mdet_g2, mdet_step):
+
+
+
 
 def categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_obj):
 
@@ -758,35 +762,53 @@ def main(argv):
     ver = 'v3'
     if sys.argv[1] == 'shear_pair':
 
-        # if not os.path.exists(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'.fits')):
-        #     f = open('/home/s1/masaya/des-y6-analysis/tiles.txt', 'r')
-        #     tilenames = f.read().split('\n')[:-1]
-        #     start = 0
-        #     for f in tilenames:
-        #         print('Reading in '+f+'...')
-        #         if start == 0:
-        #             d = fio.read(os.path.join(PATH, f+'_metadetect-v3_mdetcat_part0000.fits'))
-        #             start += 1
-        #         else:
-        #             try: 
-        #                 d2 = fio.read(os.path.join(PATH, f+'_metadetect-v3_mdetcat_part0000.fits'))
-        #                 d = np.concatenate((d,d2))
-        #             except OSError:
-        #                 print(f+' tile does not exist. Please check the catalog.')
-        #                 continue
-        #     fio.write(os.path.join(PATH, 'metadetect/mdet_test_all.fits'), d)
-        # else:
-        batch = 5
-        d = []
-        for i in range(batch):
-            d.append(fio.read(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'_'+str(i)+'.fits')))
-        all_d = np.concatenate(d, axis=0)
+        if not os.path.exists(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'.fits')):
+            f = open('/home/s1/masaya/des-y6-analysis/tiles.txt', 'r')
+            tilenames = f.read().split('\n')[:-1]
+            start = 0
+            for f in tilenames:
+                print('Reading in '+f+'...')
+                if start == 0:
+                    d = fio.read(os.path.join(PATH, f+'_metadetect-v3_mdetcat_part0000.fits'))
+                    start += 1
+                else:
+                    try: 
+                        d2 = fio.read(os.path.join(PATH, f+'_metadetect-v3_mdetcat_part0000.fits'))
+                        d = np.concatenate((d,d2))
+                    except OSError:
+                        print(f+' tile does not exist. Please check the catalog.')
+                        continue
+            fio.write(os.path.join(PATH, 'metadetect/mdet_test_all.fits'), d)
+        else:
+            d = fio.read(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'.fits'))
 
         # simple_properties()
         # mdet_shear_pairs(40, 1000)
-        mdet_shear_pairs_plotting(all_d, 40000000)
+        mdet_shear_pairs_plotting(d, 40000000)
         # plot_null_tests(d, 3000000, 'MDET_S2N')
         # mdet_shear_pairs_plotting_percentile(d, 3000000, 'PSFREC_G_1')
+    elif sys.argv[1] == 'big_catalog':
+        f = open('/data/des70.a/data/masaya/metadetect/v3/fnames.txt', 'r')
+        fs = f.read().split('\n')[:-1]
+
+        mdet_qa = []
+        mdet_g1 = []
+        mdet_g2 = []
+        mdet_step = []
+        for fname in tqdm(fs):
+            d = fname.split('/')[-1]
+            mdet = fio.read(os.path.join('/data/des70.a/data/masaya/metadetect/v3', d))
+            mdet_qa.append(mdet[sys.argv[2]])
+            mdet_g1.append(mdet['MDET_G_1'])
+            mdet_g2.append(mdet['MDET_G_2'])
+            mdet_step.append(mdet['MDET_STEP'])
+        mdet_qa = np.concatenate(mdet_qa, axis=0)
+        mdet_g1 = np.concatenate(mdet_g1, axis=0)
+        mdet_g2 = np.concatenate(mdet_g2, axis=0)
+        mdet_step = np.concatenate(mdet_step, axis=0)
+        sys.exit()
+        plot_null_tests2(mdet_qa, mdet_g1, mdet_g2, mdet_step)
+
     elif sys.argv[1] == 'shear_spatial':
         just_plot = True
         plotting = False
