@@ -11,7 +11,7 @@ import time
 from numpy.core.shape_base import stack
 from numpy.lib.function_base import flip
 from numpy.lib.twodim_base import tril_indices
-import seaborn as sns
+# import seaborn as sns
 from scipy import stats
 import meds
 from esutil import stat
