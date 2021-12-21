@@ -799,9 +799,9 @@ def main(argv):
             d = fname.split('/')[-1]
             mdet = fio.read(os.path.join('/data/des70.a/data/masaya/metadetect/v3', d))
             mdet_qa.append(mdet[sys.argv[2]])
-            mdet_g1.append(mdet['MDET_G_1'])
-            mdet_g2.append(mdet['MDET_G_2'])
-            mdet_step.append(mdet['MDET_STEP'])
+            mdet_g1.append(mdet['mdet_g'][:,0])
+            mdet_g2.append(mdet['mdet_g'][:,0])
+            mdet_step.append(mdet['mdet_step'])
         mdet_qa = np.concatenate(mdet_qa, axis=0)
         mdet_g1 = np.concatenate(mdet_g1, axis=0)
         mdet_g2 = np.concatenate(mdet_g2, axis=0)
