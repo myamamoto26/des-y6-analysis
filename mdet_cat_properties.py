@@ -413,12 +413,12 @@ def plot_null_tests2(fs, predef_bin, qa):
                 np.add.at(
                     res[tilename][step], 
                     (bin, 0), 
-                    g[msk_bin][:,0],
+                    np.sum(g[msk_bin][:,0]),
                 )
                 np.add.at(
                     res[tilename][step], 
                     (bin, 1), 
-                    g[msk_bin][:,1],
+                    np.sum(g[msk_bin][:,1]),
                 )
                 np.add.at(
                     res[tilename]["num_" + step], 
