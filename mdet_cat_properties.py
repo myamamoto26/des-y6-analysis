@@ -402,9 +402,27 @@ def plot_null_tests2(fs, predef_bin, qa):
     def func(x,m,n):
         return m*x+n
 
-    def _accum_shear_v2(res, tilename, g_step, g, g_qa, bin_low, bin_high, binnum):
+    def _compute_g1_g2(res, binnum):
+
+        corrected_g1g2 = np.zeros((binnum, 2))
+        for bin in range(binnum):
+            g1 = res['all']['noshear'][bin][0] / res['all']['num_noshear'][bin][0]
+            g1p = res['all']['1p'][bin][0] / res['all']['num_1p'][bin][0]
+            g1m = res['all']['1m'][bin][0] / res['all']['num_1m'][bin][0]
+            R11 = (g1p - g1m) / 2 / 0.01
+
+            g2 = res['all']['noshear'][bin][1] / res['all']['num_noshear'][bin][1]
+            g2p = res['all']['2p'][bin][1] / res['all']['num_2p'][bin][1]
+            g2m = res['all']['2m'][bin][1] / res['all']['num_2m'][bin][1]
+            R22 = (g2p - g2m) / 2 / 0.01
+
+            corrected_g1g2[bin, 0] = g1/R11
+            corrected_g1g2[bin, 1] = g2/R22
+        return corrected_g1g2
+
+    def _accum_shear_per_catalog(res, tilename, g_step, g, g_qa, bin_low, bin_high, binnum):
         
-        for step in ['noshear', 'g1pshear', 'g1nshear', 'g2pshear', 'g2nshear']:
+        for step in ['noshear', '1p', '1m', '2p', '2m']:
             msk_s = np.where(g_step == step)[0]
             g_qa_mask = g_qa[msk_s]
             
@@ -431,6 +449,33 @@ def plot_null_tests2(fs, predef_bin, qa):
                     len(g[msk_bin][:,1]),
                 )
         return res
+
+    def _accum_shear_all(res, tilename, binnum):
+
+        for step in ['noshear', '1p', '1m', '2p', '2m']:
+            
+            for bin in range(binnum):
+                np.add.at(
+                    res['all'][step], 
+                    (bin, 0), 
+                    res[tilename][step][bin][0],
+                )
+                np.add.at(
+                    res['all'][step], 
+                    (bin, 1), 
+                    res[tilename][step][bin][1],
+                )
+                np.add.at(
+                    res['all']["num_" + step], 
+                    (bin, 0), 
+                    res[tilename]["num_" + step][bin][0],
+                )
+                np.add.at(
+                    res[tilename]["num_" + step], 
+                    (bin, 1), 
+                    res[tilename]["num_" + step][bin][1],
+                )
+        return res
     
     res = {}
     binnum = len(predef_bin['hist'])
@@ -440,15 +485,24 @@ def plot_null_tests2(fs, predef_bin, qa):
         msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.1) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
         mdet = mdet_all[msk_default]
         res[d.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
-                                'g1pshear': np.zeros((binnum, 2)), 'num_g1pshear': np.zeros((binnum, 2)), 
-                                'g1nshear': np.zeros((binnum, 2)), 'num_g1nshear': np.zeros((binnum, 2)),
-                                'g2pshear': np.zeros((binnum, 2)), 'num_g2pshear': np.zeros((binnum, 2)),
-                                'g2nshear': np.zeros((binnum, 2)), 'num_g2nshear': np.zeros((binnum, 2))}
-        res = _accum_shear_v2(res, d.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
-    print(res)
-    sys.exit()
+                                '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
+                                '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
+                                '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
+                                '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
+        res = _accum_shear_per_catalog(res, d.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
 
+    res['all'] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
+                  '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
+                  '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
+                  '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
+                  '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
+    for fname in tqdm(fs):
+        d = fname.split('/')[-1]
+        res = _accum_shear_all(res, d.split('_')[0], binnum)
     
+    result = _compute_g1_g2(res, binnum)
+    print(result)
+    sys.exit()
     ## psf shape/area vs mean shear. 
     fig,axs = plt.subplots(2,1,figsize=(18,12))
     # exclude objects in healpix which is the same as the gold. 
