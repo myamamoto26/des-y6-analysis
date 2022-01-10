@@ -409,7 +409,7 @@ def plot_null_tests2(fs, predef_bin, qa):
             g_qa_mask = g_qa[msk_s]
             
             for bin in range(binnum):
-                msk_bin = np.where(((g_qa_mask >= bin_low) & (g_qa_mask <= bin_high)))[0]
+                msk_bin = np.where(((g_qa_mask >= bin_low[bin]) & (g_qa_mask <= bin_high[bin])))[0]
                 np.add.at(
                     res[tilename][step], 
                     (bin, 0), 
