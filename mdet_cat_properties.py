@@ -396,10 +396,56 @@ def plot_null_tests(d, nperbin, x):
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v2_SNR_1000.pdf', bbox_inches='tight')
 
-def plot_null_tests2(qa, mdet_qa, mdet_g1, mdet_g2, mdet_step, nperbin):
+
+def plot_null_tests2(fs, predef_bin, qa):
 
     def func(x,m,n):
         return m*x+n
+
+    def _accum_shear_v2(res, tilename, g_step, g, g_qa, bin_low, bin_high, binnum):
+        
+        for step in ['noshear', 'g1pshear', 'g1nshear', 'g2pshear', 'g2nshear']:
+            msk_s = np.where(g_step == step)
+            g_qa_mask = g_qa[msk_s]
+            
+            for bin in range(binnum):
+                msk_bin = np.where(((g_qa_mask >= bin_low) & (g_qa_mask <= bin_high)))
+                np.add.at(
+                    res[tilename][step], 
+                    (bin, 0), 
+                    g[msk_bin][:,0],
+                )
+                np.add.at(
+                    res[tilename][step], 
+                    (bin, 1), 
+                    g[msk_bin][:,1],
+                )
+                np.add.at(
+                    res[tilename]["num_" + step], 
+                    (bin, 0), 
+                    len(g[msk_bin][:,0]),
+                )
+                np.add.at(
+                    res[tilename]["num_" + step], 
+                    (bin, 1), 
+                    len(g[msk_bin][:,1]),
+                )
+        return res
+    
+    res = {}
+    binnum = len(predef_bin['hist'])
+    for fname in tqdm(fs):
+        d = fname.split('/')[-1]
+        mdet = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', d))
+        res[d.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
+                                'g1pshear': np.zeros((binnum, 2)), 'num_g1pshear': np.zeros((binnum, 2)), 
+                                'g1nshear': np.zeros((binnum, 2)), 'num_g1nshear': np.zeros((binnum, 2)),
+                                'g2pshear': np.zeros((binnum, 2)), 'num_g2pshear': np.zeros((binnum, 2)),
+                                'g2nshear': np.zeros((binnum, 2)), 'num_g2nshear': np.zeros((binnum, 2))}
+        res = _accum_shear_v2(res, d.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
+    print(res)
+    sys.exit()
+
     
     ## psf shape/area vs mean shear. 
     fig,axs = plt.subplots(2,1,figsize=(18,12))
@@ -827,29 +873,10 @@ def main(argv):
     elif sys.argv[1] == 'big_catalog':
         f = open('/global/cscratch1/sd/myamamot/metadetect/fnames.txt', 'r')
         fs = f.read().split('\n')[:-1]
-        batch = 5
-        fs_split = np.array_split(fs, batch)
-
-        mdet_qa = []
-        mdet_g1 = []
-        mdet_g2 = []
-        mdet_step = []
-        for ii in range(batch):
-            mdet_qa = []
-            for fname in tqdm(fs_split[ii]):
-                d = fname.split('/')[-1]
-                mdet = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', d))
-                mdet_qa.append(mdet[sys.argv[2]])
-            fio.write('/global/cscratch1/sd/myamamot/metadetect/mdet_test_v3_Tratio_'+ii+'.fits', mdet_qa)
-            # mdet_g1.append(mdet['mdet_g'][:,0])
-            # mdet_g2.append(mdet['mdet_g'][:,0])
-            # mdet_step.append(mdet['mdet_step'])
-        sys.exit()
-        mdet_qa = np.concatenate(mdet_qa, axis=0)
-        # mdet_g1 = np.concatenate(mdet_g1, axis=0)
-        # mdet_g2 = np.concatenate(mdet_g2, axis=0)
-        # mdet_step = np.concatenate(mdet_step, axis=0)
-        plot_null_tests2(mdet_qa, mdet_g1, mdet_g2, mdet_step)
+        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_'+sys.argv[2]+'.pickle', 'rb') as handle:
+            predef_bin = pickle.load(handle)
+        
+        plot_null_tests2(fs, predef_bin, sys.argv[2])
 
     elif sys.argv[1] == 'shear_spatial':
         just_plot = True
