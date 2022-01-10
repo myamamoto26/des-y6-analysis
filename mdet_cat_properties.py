@@ -834,15 +834,15 @@ def main(argv):
         mdet_step = []
         for fname in tqdm(fs):
             d = fname.split('/')[-1]
-            mdet = fio.read(os.path.join('/global/cscratch1/sd/myamamot//metadetect', d))
+            mdet = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', d))
             mdet_qa.append(mdet[sys.argv[2]])
-            mdet_g1.append(mdet['mdet_g'][:,0])
-            mdet_g2.append(mdet['mdet_g'][:,0])
-            mdet_step.append(mdet['mdet_step'])
+            # mdet_g1.append(mdet['mdet_g'][:,0])
+            # mdet_g2.append(mdet['mdet_g'][:,0])
+            # mdet_step.append(mdet['mdet_step'])
         mdet_qa = np.concatenate(mdet_qa, axis=0)
-        mdet_g1 = np.concatenate(mdet_g1, axis=0)
-        mdet_g2 = np.concatenate(mdet_g2, axis=0)
-        mdet_step = np.concatenate(mdet_step, axis=0)
+        # mdet_g1 = np.concatenate(mdet_g1, axis=0)
+        # mdet_g2 = np.concatenate(mdet_g2, axis=0)
+        # mdet_step = np.concatenate(mdet_step, axis=0)
         sys.exit()
         plot_null_tests2(mdet_qa, mdet_g1, mdet_g2, mdet_step)
 
