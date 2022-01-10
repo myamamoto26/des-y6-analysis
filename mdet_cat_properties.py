@@ -870,10 +870,10 @@ def main(argv):
         mdet_shear_pairs_plotting(d, 40000000)
         # plot_null_tests(d, 3000000, 'MDET_S2N')
         # mdet_shear_pairs_plotting_percentile(d, 3000000, 'PSFREC_G_1')
-    elif sys.argv[1] == 'big_catalog':
+    elif sys.argv[1] == 'new_catalog':
         f = open('/global/cscratch1/sd/myamamot/metadetect/fnames.txt', 'r')
         fs = f.read().split('\n')[:-1]
-        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_'+sys.argv[2]+'.pickle', 'rb') as handle:
+        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_'+sys.argv[3]+'.pickle', 'rb') as handle:
             predef_bin = pickle.load(handle)
         
         plot_null_tests2(fs, predef_bin, sys.argv[2])
