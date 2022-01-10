@@ -405,11 +405,11 @@ def plot_null_tests2(fs, predef_bin, qa):
     def _accum_shear_v2(res, tilename, g_step, g, g_qa, bin_low, bin_high, binnum):
         
         for step in ['noshear', 'g1pshear', 'g1nshear', 'g2pshear', 'g2nshear']:
-            msk_s = np.where(g_step == step)
+            msk_s = np.where(g_step == step)[0]
             g_qa_mask = g_qa[msk_s]
             
             for bin in range(binnum):
-                msk_bin = np.where(((g_qa_mask >= bin_low) & (g_qa_mask <= bin_high)))
+                msk_bin = np.where(((g_qa_mask >= bin_low) & (g_qa_mask <= bin_high)))[0]
                 np.add.at(
                     res[tilename][step], 
                     (bin, 0), 
@@ -436,7 +436,9 @@ def plot_null_tests2(fs, predef_bin, qa):
     binnum = len(predef_bin['hist'])
     for fname in tqdm(fs):
         d = fname.split('/')[-1]
-        mdet = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', d))
+        mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', d))
+        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.1) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
+        mdet = mdet_all[msk_default]
         res[d.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                                 'g1pshear': np.zeros((binnum, 2)), 'num_g1pshear': np.zeros((binnum, 2)), 
                                 'g1nshear': np.zeros((binnum, 2)), 'num_g1nshear': np.zeros((binnum, 2)),
