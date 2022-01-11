@@ -471,7 +471,7 @@ def plot_null_tests2(fs, predef_bin, qa):
                     res[tilename]["num_" + step][bin][0],
                 )
                 np.add.at(
-                    res[tilename]["num_" + step], 
+                    res['all']["num_" + step], 
                     (bin, 1), 
                     res[tilename]["num_" + step][bin][1],
                 )
@@ -491,7 +491,6 @@ def plot_null_tests2(fs, predef_bin, qa):
                                 '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
         res = _accum_shear_per_catalog(res, d.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
 
-    print(res)
     res['all'] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                   '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
                   '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
@@ -500,44 +499,31 @@ def plot_null_tests2(fs, predef_bin, qa):
     for fname in tqdm(fs):
         d = fname.split('/')[-1]
         res = _accum_shear_all(res, d.split('_')[0], binnum)
-    print(res['all'])
     
     result = _compute_g1_g2(res, binnum)
     print(result)
-    sys.exit()
+
     ## psf shape/area vs mean shear. 
     fig,axs = plt.subplots(2,1,figsize=(18,12))
     # exclude objects in healpix which is the same as the gold. 
     # d = exclude_hyperleda_objects(d)
-    hist = stat.histogram(mdet_qa, nperbin=nperbin, more=True)
-    bin_num = len(hist['hist'])
-    g_obs = np.zeros(bin_num)
-    gerr_obs = np.zeros(bin_num)
-    print(len(hist['low']), len(hist['mean']))
-    for i in tqdm(range(bin_num)):
-        ind_ = np.where((mdet_qa >= hist['low'][i]) & (mdet_qa <= hist['high'][i]))
-        R, g_mean, gerr_mean, bs = calculate_response(d, additional_cuts=additional_cuts)
-        print(i, hist['low'][i], hist['high'][i], bs)
-
-    for q,ax in enumerate(axs.ravel()):
-        g_obs[i] = g_mean[q]/R[q]
-        gerr_obs[i] = (gerr_mean[q]/R[q])
         
-        params = curve_fit(func,hist['mean'],g_obs,p0=(0.,0.))
+    for ii in range(2):
+        params = curve_fit(func,predef_bin['mean'],result[:,ii],p0=(0.,0.))
         m1,n1=params[0]
-        x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
+        x = np.linspace(predef_bin['mean'][0], predef_bin['mean'][binnum], 100)
         print('parameters of the fit. ', m1, n1)
 
-        ax.plot(x, func(x,m1,n1), label='linear fit w/ fit params: m='+str("{:2.4f}".format(m1))+', b='+str("{:2.4f}".format(n1)))
-        ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
-        ax.set_xlabel('S/N', fontsize=20)
-        ax.set_xscale('log')
-        ax.set_ylabel(r"$\langle e'+str(q+1)+'\rangle$", fontsize=20)
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-        ax.tick_params(labelsize=16)
+        axs[ii].plot(x, func(x,m1,n1))#, label='linear fit w/ fit params: m='+str("{:2.4f}".format(m1))+', b='+str("{:2.4f}".format(n1)))
+        axs[ii].errorbar(predef_bin['mean'], result[:,ii], fmt='o', fillstyle='none', label='Y6 metadetect test')
+        axs[ii].set_xlabel('T_ratio', fontsize=20)
+        # axs[ii].set_xscale('log')
+        axs[ii].set_ylabel(r"$\langle e'+str(ii+1)+'\rangle$", fontsize=20)
+        axs[ii].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        axs[ii].tick_params(labelsize=16)
     axs[1].legend(loc='upper right')
     plt.tight_layout()
-    plt.savefig('mdet_psf_vs_shear_fit_v2_SNR_1000.pdf', bbox_inches='tight')
+    plt.savefig('mdet_psf_vs_shear_fit_v3_Tratio.pdf', bbox_inches='tight')
 
 
 
