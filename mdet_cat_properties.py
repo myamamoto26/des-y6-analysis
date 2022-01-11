@@ -175,6 +175,7 @@ def _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, N):
         jk_g1_ave = np.array([res_jk_mean[sample][bin][0] for sample in list(res_jk_mean)])
         jk_g2_ave = np.array([res_jk_mean[sample][bin][1] for sample in list(res_jk_mean)])
 
+        print(jk_g1_ave)
         cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g1_ave - res_all_mean[bin][0])**2))
         cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g2_ave - res_all_mean[bin][1])**2))
 
@@ -478,7 +479,7 @@ def plot_null_tests2(fs, predef_bin, qa):
                 )
         return res
     
-    def _accum_shear_per_jksample(res_jk, res, tilename, tilenames, binnum):
+    def _compute_shear_per_jksample(res_jk, res, tilename, tilenames, binnum):
         
         for t in tilenames:
             if t == tilename:
@@ -574,7 +575,7 @@ def plot_null_tests2(fs, predef_bin, qa):
                   '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
                   '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                   '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-        jk_sample_mean = _accum_shear_per_jksample(res_jk, res, fname.split('_')[0], tilenames, binnum)
+        jk_sample_mean = _compute_shear_per_jksample(res_jk, res, fname.split('_')[0], tilenames, binnum)
         res_jk_mean[sample] = jk_sample_mean
     
     # Compute jackknife error estimate.
@@ -591,7 +592,7 @@ def plot_null_tests2(fs, predef_bin, qa):
 
         axs[ii].plot(x, func(x,params[0],params[2]), label='linear fit w/ fit params: m='+str("{:2.4f}".format(params[0]))+', b='+str("{:2.4f}".format(params[1])))
         axs[ii].errorbar(predef_bin['mean'], res_all_mean[:,ii], yerr=jk_error[:,ii], fmt='o', fillstyle='none', label='Y6 metadetect test')
-        axs[ii].set_xlabel(r"$T_{ratio$}", fontsize=20)
+        axs[ii].set_xlabel(r"$T_{ratio}$", fontsize=20)
         # axs[ii].set_xscale('log')
         axs[ii].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
         axs[ii].tick_params(labelsize=16)
