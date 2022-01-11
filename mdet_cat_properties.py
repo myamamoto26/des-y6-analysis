@@ -175,7 +175,6 @@ def _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, N):
         jk_g1_ave = np.array([res_jk_mean[sample][bin][0] for sample in list(res_jk_mean)])
         jk_g2_ave = np.array([res_jk_mean[sample][bin][1] for sample in list(res_jk_mean)])
 
-        print(jk_g1_ave-res_all_mean[bin][0])
         cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g1_ave - res_all_mean[bin][0])**2))
         cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g2_ave - res_all_mean[bin][1])**2))
 
@@ -433,6 +432,7 @@ def plot_null_tests2(fs, predef_bin, qa):
                 g2p = res['2p'][bin][1] / res['num_2p'][bin][1]
                 g2m = res['2m'][bin][1] / res['num_2m'][bin][1]
                 R22 = (g2p - g2m) / 2 / 0.01
+                print('shear response: ', R11, R22)
 
             elif method == 'all':
                 g1 = res['all']['noshear'][bin][0] / res['all']['num_noshear'][bin][0]
@@ -444,6 +444,7 @@ def plot_null_tests2(fs, predef_bin, qa):
                 g2p = res['all']['2p'][bin][1] / res['all']['num_2p'][bin][1]
                 g2m = res['all']['2m'][bin][1] / res['all']['num_2m'][bin][1]
                 R22 = (g2p - g2m) / 2 / 0.01
+                print('shear response: ', R11, R22)
 
             corrected_g1g2[bin, 0] = g1/R11
             corrected_g1g2[bin, 1] = g2/R22
