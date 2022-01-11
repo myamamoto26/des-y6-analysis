@@ -491,6 +491,7 @@ def plot_null_tests2(fs, predef_bin, qa):
                                 '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
         res = _accum_shear_per_catalog(res, d.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
 
+    print(res)
     res['all'] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                   '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
                   '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
