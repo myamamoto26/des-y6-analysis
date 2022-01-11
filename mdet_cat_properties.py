@@ -546,7 +546,6 @@ def plot_null_tests2(fs, predef_bin, qa):
     res = {}
     binnum = len(predef_bin['hist'])
     filenames = [fname.split('/')[-1] for fname in fs]
-    filenames = filenames[:6]
     tilenames = [d.split('_')[0] for d in filenames] 
     for fname in tqdm(filenames):
         mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
