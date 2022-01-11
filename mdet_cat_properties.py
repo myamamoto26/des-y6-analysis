@@ -545,6 +545,7 @@ def plot_null_tests2(fs, predef_bin, qa):
         return res
     
     res = {}
+    num_objects = 0
     binnum = len(predef_bin['hist'])
     filenames = [fname.split('/')[-1] for fname in fs]
     tilenames = [d.split('_')[0] for d in filenames] 
@@ -552,6 +553,7 @@ def plot_null_tests2(fs, predef_bin, qa):
         mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
         msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.1) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
         mdet = mdet_all[msk_default]
+        num_objects += len(mdet)
         res[fname.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                                 '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
                                 '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
@@ -567,7 +569,8 @@ def plot_null_tests2(fs, predef_bin, qa):
                   '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
     for fname in tqdm(filenames):
         res = _accum_shear_all(res, fname.split('_')[0], binnum)
-    
+    print(num_objects, res['all']['num_noshear'][:,0]+res['all']['num_1p'][:,0]+res['all']['num_1m'][:,0]+res['all']['num_2p'][:,0]+res['all']['num_2m'][:,0])
+
     # Compute the mean g1 and g2 over all the tiles. 
     res_all_mean = _compute_g1_g2(res, binnum)
     print(res['all'])
