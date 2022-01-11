@@ -582,7 +582,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     jk_error = _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, len(tilenames))
     print("jackknife error estimate: ", jk_error)
 
-    fig,axs = plt.subplots(1,2,figsize=(18,12))
+    fig,axs = plt.subplots(1,2,figsize=(22,12))
     for ii in range(2):
         # params = curve_fit(func,predef_bin['mean'],res_all_mean[:,ii],p0=(0.,0.))
         # m1,n1=params[0]
@@ -599,6 +599,8 @@ def plot_null_tests2(fs, predef_bin, qa):
     axs[0].set_ylabel(r"$\langle e_{1} \rangle$", fontsize=20)
     axs[1].set_ylabel(r"$\langle e_{2} \rangle$", fontsize=20)
     axs[1].legend(loc='upper right')
+    axs[0].set_ylim(-3e-1, 3e-1)
+    axs[1].set_ylim(-3e-1, 3e-1)
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v3_Tratio.pdf', bbox_inches='tight')
 
