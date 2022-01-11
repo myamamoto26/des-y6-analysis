@@ -175,7 +175,7 @@ def _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, N):
         jk_g1_ave = np.array([res_jk_mean[sample][bin][0] for sample in list(res_jk_mean)])
         jk_g2_ave = np.array([res_jk_mean[sample][bin][1] for sample in list(res_jk_mean)])
 
-        print(jk_g1_ave)
+        print(jk_g1_ave-res_all_mean[bin][0])
         cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g1_ave - res_all_mean[bin][0])**2))
         cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g2_ave - res_all_mean[bin][1])**2))
 
