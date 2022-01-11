@@ -432,6 +432,8 @@ def plot_null_tests2(fs, predef_bin, qa):
                 g2p = res['2p'][bin][1] / res['num_2p'][bin][1]
                 g2m = res['2m'][bin][1] / res['num_2m'][bin][1]
                 R22 = (g2p - g2m) / 2 / 0.01
+                print('bin num: ', bin)
+                print('uncorrected shape: ', g1, g2)
                 print('shear response: ', R11, R22)
 
             elif method == 'all':
@@ -444,6 +446,8 @@ def plot_null_tests2(fs, predef_bin, qa):
                 g2p = res['all']['2p'][bin][1] / res['all']['num_2p'][bin][1]
                 g2m = res['all']['2m'][bin][1] / res['all']['num_2m'][bin][1]
                 R22 = (g2p - g2m) / 2 / 0.01
+                print('bin num: ', bin)
+                print('uncorrected shape: ', g1, g2)
                 print('shear response: ', R11, R22)
 
             corrected_g1g2[bin, 0] = g1/R11
@@ -543,7 +547,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     binnum = len(predef_bin['hist'])
     filenames = [fname.split('/')[-1] for fname in fs]
     tilenames = [d.split('_')[0] for d in filenames] 
-    for fname in tqdm(filenames):
+    for fname in tqdm(filenames[:5]):
         mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
         msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.1) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
         mdet = mdet_all[msk_default]
@@ -582,7 +586,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     # Compute jackknife error estimate.
     jk_error = _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, len(tilenames))
     print("jackknife error estimate: ", jk_error)
-
+    sys.exit()
     fig,axs = plt.subplots(1,2,figsize=(22,12))
     for ii in range(2):
         # params = curve_fit(func,predef_bin['mean'],res_all_mean[:,ii],p0=(0.,0.))
