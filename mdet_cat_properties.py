@@ -448,6 +448,7 @@ def plot_null_tests2(fs, predef_bin, qa):
                 R22 = (g2p - g2m) / 2 / 0.01
                 print('bin num: ', bin)
                 print('uncorrected shape: ', g1, g2)
+                print('sheared: ', g1p, g1m, g2p, g2m)
                 print('shear response: ', R11, R22)
 
             corrected_g1g2[bin, 0] = g1/R11
@@ -571,7 +572,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     res_all_mean = _compute_g1_g2(res, binnum)
     print(res['all'])
     print("mean shear over all tiles: ", res_all_mean)
-
+    sys.exit()
     # Compute jackknife samples.
     res_jk_mean = {} 
     for sample, fname in tqdm(enumerate(filenames)):
