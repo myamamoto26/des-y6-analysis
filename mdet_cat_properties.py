@@ -167,6 +167,22 @@ def bootstrap_sampling_error(N, data1, data2):
     
     return [cov1, cov2]
 
+def _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, N):
+
+    jk_cov = np.zeros((binnum, 2))
+    for bin in range(binnum):
+        # compute jackknife average. 
+        jk_g1_ave = np.array([res_jk_mean[sample][bin][0] for sample in list(res_jk_mean)])
+        jk_g2_ave = np.array([res_jk_mean[sample][bin][1] for sample in list(res_jk_mean)])
+
+        cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g1_ave - res_all_mean[bin][0])**2))
+        cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g2_ave - res_all_mean[bin][1])**2))
+
+        jk_cov[bin, 0] = cov_g1
+        jk_cov[bin, 1] = cov_g2
+    
+    return jk_cov
+
 def OLSfit(x, y, dy=None):
     """Find the best fitting parameters of a linear fit to the data through the
     method of ordinary least squares estimation. (i.e. find m and b for
@@ -402,25 +418,37 @@ def plot_null_tests2(fs, predef_bin, qa):
     def func(x,m,n):
         return m*x+n
 
-    def _compute_g1_g2(res, binnum):
+    def _compute_g1_g2(res, binnum, method='all'):
 
         corrected_g1g2 = np.zeros((binnum, 2))
         for bin in range(binnum):
-            g1 = res['all']['noshear'][bin][0] / res['all']['num_noshear'][bin][0]
-            g1p = res['all']['1p'][bin][0] / res['all']['num_1p'][bin][0]
-            g1m = res['all']['1m'][bin][0] / res['all']['num_1m'][bin][0]
-            R11 = (g1p - g1m) / 2 / 0.01
+            if method == 'jk':
+                g1 = res['noshear'][bin][0] / res['num_noshear'][bin][0]
+                g1p = res['1p'][bin][0] / res['num_1p'][bin][0]
+                g1m = res['1m'][bin][0] / res['num_1m'][bin][0]
+                R11 = (g1p - g1m) / 2 / 0.01
 
-            g2 = res['all']['noshear'][bin][1] / res['all']['num_noshear'][bin][1]
-            g2p = res['all']['2p'][bin][1] / res['all']['num_2p'][bin][1]
-            g2m = res['all']['2m'][bin][1] / res['all']['num_2m'][bin][1]
-            R22 = (g2p - g2m) / 2 / 0.01
+                g2 = res['noshear'][bin][1] / res['num_noshear'][bin][1]
+                g2p = res['2p'][bin][1] / res['num_2p'][bin][1]
+                g2m = res['2m'][bin][1] / res['num_2m'][bin][1]
+                R22 = (g2p - g2m) / 2 / 0.01
+
+            elif method == 'all':
+                g1 = res['all']['noshear'][bin][0] / res['all']['num_noshear'][bin][0]
+                g1p = res['all']['1p'][bin][0] / res['all']['num_1p'][bin][0]
+                g1m = res['all']['1m'][bin][0] / res['all']['num_1m'][bin][0]
+                R11 = (g1p - g1m) / 2 / 0.01
+
+                g2 = res['all']['noshear'][bin][1] / res['all']['num_noshear'][bin][1]
+                g2p = res['all']['2p'][bin][1] / res['all']['num_2p'][bin][1]
+                g2m = res['all']['2m'][bin][1] / res['all']['num_2m'][bin][1]
+                R22 = (g2p - g2m) / 2 / 0.01
 
             corrected_g1g2[bin, 0] = g1/R11
             corrected_g1g2[bin, 1] = g2/R22
         return corrected_g1g2
 
-    def _accum_shear_per_catalog(res, tilename, g_step, g, g_qa, bin_low, bin_high, binnum):
+    def _accum_shear_per_tile(res, tilename, g_step, g, g_qa, bin_low, bin_high, binnum):
         
         for step in ['noshear', '1p', '1m', '2p', '2m']:
             msk_s = np.where(g_step == step)[0]
@@ -449,6 +477,38 @@ def plot_null_tests2(fs, predef_bin, qa):
                     len(g[msk_bin][:,1]),
                 )
         return res
+    
+    def _accum_shear_per_jksample(res_jk, res, tilename, tilenames, binnum):
+        
+        for t in tilenames:
+            if t == tilename:
+                continue
+            else:
+                for step in ['noshear', '1p', '1m', '2p', '2m']:
+                    
+                    for bin in range(binnum):
+                        np.add.at(
+                            res_jk[step], 
+                            (bin, 0), 
+                            res[tilename][step][bin][0],
+                        )
+                        np.add.at(
+                            res_jk[step], 
+                            (bin, 1), 
+                            res[tilename][step][bin][1],
+                        )
+                        np.add.at(
+                            res_jk["num_" + step], 
+                            (bin, 0), 
+                            res[tilename]["num_" + step][bin][0],
+                        )
+                        np.add.at(
+                            res_jk["num_" + step], 
+                            (bin, 1), 
+                            res[tilename]["num_" + step][bin][1],
+                        )
+        jk_sample_mean = _compute_g1_g2(res_jk, binnum, method='jk')
+        return jk_sample_mean
 
     def _accum_shear_all(res, tilename, binnum):
 
@@ -479,53 +539,67 @@ def plot_null_tests2(fs, predef_bin, qa):
     
     res = {}
     binnum = len(predef_bin['hist'])
-    for fname in tqdm(fs):
-        d = fname.split('/')[-1]
-        mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', d))
+    filenames = [fname.split('/')[-1] for fname in fs]
+    tilenames = [d.split('_')[0] for d in filenames] 
+    for fname in tqdm(filenames):
+        mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
         msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.1) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
         mdet = mdet_all[msk_default]
-        res[d.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
+        res[fname.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                                 '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
                                 '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
                                 '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                                 '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-        res = _accum_shear_per_catalog(res, d.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
+        res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
 
+    # Accumulate all the tiles shears. 
     res['all'] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                   '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
                   '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
                   '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                   '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-    for fname in tqdm(fs):
-        d = fname.split('/')[-1]
-        res = _accum_shear_all(res, d.split('_')[0], binnum)
+    for fname in tqdm(filenames):
+        res = _accum_shear_all(res, fname.split('_')[0], binnum)
     
-    result = _compute_g1_g2(res, binnum)
-    print(result)
+    # Compute the mean g1 and g2 over all the tiles. 
+    res_all_mean = _compute_g1_g2(res, binnum)
+    print(res['all'])
+    print("mean shear over all tiles: ", res_all_mean)
 
-    ## psf shape/area vs mean shear. 
-    fig,axs = plt.subplots(2,1,figsize=(18,12))
-    # exclude objects in healpix which is the same as the gold. 
-    # d = exclude_hyperleda_objects(d)
-        
+    # Compute jackknife samples.
+    res_jk_mean = {} 
+    for sample, fname in tqdm(enumerate(filenames)):
+        res_jk = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
+                  '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
+                  '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
+                  '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
+                  '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
+        jk_sample_mean = _accum_shear_per_jksample(res_jk, res, fname.split('_')[0], tilenames, binnum)
+        res_jk_mean[sample] = jk_sample_mean
+    
+    # Compute jackknife error estimate.
+    jk_error = _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, len(tilenames))
+    print("jackknife error estimate: ", jk_error)
+
+    fig,axs = plt.subplots(1,2,figsize=(18,12))
     for ii in range(2):
-        params = curve_fit(func,predef_bin['mean'],result[:,ii],p0=(0.,0.))
-        m1,n1=params[0]
+        # params = curve_fit(func,predef_bin['mean'],res_all_mean[:,ii],p0=(0.,0.))
+        # m1,n1=params[0]
+        params = OLSfit(predef_bin['mean'], res_all_mean[:,ii], dy=jk_error[:,ii])
         x = np.linspace(predef_bin['mean'][0], predef_bin['mean'][binnum-1], 100)
-        print('parameters of the fit. ', m1, n1)
+        print('parameters of the fit. ', params)
 
-        axs[ii].plot(x, func(x,m1,n1))#, label='linear fit w/ fit params: m='+str("{:2.4f}".format(m1))+', b='+str("{:2.4f}".format(n1)))
-        axs[ii].errorbar(predef_bin['mean'], result[:,ii], fmt='o', fillstyle='none', label='Y6 metadetect test')
-        axs[ii].set_xlabel('T_ratio', fontsize=20)
+        axs[ii].plot(x, func(x,params[0],params[2]), label='linear fit w/ fit params: m='+str("{:2.4f}".format(params[0]))+', b='+str("{:2.4f}".format(params[1])))
+        axs[ii].errorbar(predef_bin['mean'], res_all_mean[:,ii], yerr=jk_error[:,ii] fmt='o', fillstyle='none', label='Y6 metadetect test')
+        axs[ii].set_xlabel(r"$T_{ratio$}", fontsize=20)
         # axs[ii].set_xscale('log')
-        axs[ii].set_ylabel(r"$\langle e'+str(ii+1)+'\rangle$", fontsize=20)
         axs[ii].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
         axs[ii].tick_params(labelsize=16)
+    axs[0].set_ylabel(r"$\langle e_{1} \rangle$", fontsize=20)
+    axs[1].set_ylabel(r"$\langle e_{2} \rangle$", fontsize=20)
     axs[1].legend(loc='upper right')
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v3_Tratio.pdf', bbox_inches='tight')
-
-
 
 
 def categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_obj):
