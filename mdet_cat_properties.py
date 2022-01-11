@@ -500,6 +500,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     for fname in tqdm(fs):
         d = fname.split('/')[-1]
         res = _accum_shear_all(res, d.split('_')[0], binnum)
+    print(res['all'])
     
     result = _compute_g1_g2(res, binnum)
     print(result)
