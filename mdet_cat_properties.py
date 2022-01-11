@@ -590,7 +590,7 @@ def plot_null_tests2(fs, predef_bin, qa):
         print('parameters of the fit. ', params)
 
         axs[ii].plot(x, func(x,params[0],params[2]), label='linear fit w/ fit params: m='+str("{:2.4f}".format(params[0]))+', b='+str("{:2.4f}".format(params[1])))
-        axs[ii].errorbar(predef_bin['mean'], res_all_mean[:,ii], yerr=jk_error[:,ii] fmt='o', fillstyle='none', label='Y6 metadetect test')
+        axs[ii].errorbar(predef_bin['mean'], res_all_mean[:,ii], yerr=jk_error[:,ii], fmt='o', fillstyle='none', label='Y6 metadetect test')
         axs[ii].set_xlabel(r"$T_{ratio$}", fontsize=20)
         # axs[ii].set_xscale('log')
         axs[ii].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
