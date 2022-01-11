@@ -543,15 +543,17 @@ def plot_null_tests2(fs, predef_bin, qa):
                     res[tilename]["num_" + step][bin][1],
                 )
         return res
+
+    
     
     res = {}
     num_objects = 0
-    binnum = len(predef_bin['hist'])
+    binnum = 1 #len(predef_bin['hist'])
     filenames = [fname.split('/')[-1] for fname in fs]
     tilenames = [d.split('_')[0] for d in filenames] 
     for fname in tqdm(filenames):
         mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
-        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.1) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
+        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
         mdet = mdet_all[msk_default]
         num_objects += len(mdet)
         res[fname.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
@@ -559,7 +561,8 @@ def plot_null_tests2(fs, predef_bin, qa):
                                 '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
                                 '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                                 '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-        res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
+        # res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
+        res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], 1.2, 999, binnum)
 
     # Accumulate all the tiles shears. 
     res['all'] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
