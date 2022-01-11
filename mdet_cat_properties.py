@@ -511,7 +511,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     for ii in range(2):
         params = curve_fit(func,predef_bin['mean'],result[:,ii],p0=(0.,0.))
         m1,n1=params[0]
-        x = np.linspace(predef_bin['mean'][0], predef_bin['mean'][binnum], 100)
+        x = np.linspace(predef_bin['mean'][0], predef_bin['mean'][binnum-1], 100)
         print('parameters of the fit. ', m1, n1)
 
         axs[ii].plot(x, func(x,m1,n1))#, label='linear fit w/ fit params: m='+str("{:2.4f}".format(m1))+', b='+str("{:2.4f}".format(n1)))
