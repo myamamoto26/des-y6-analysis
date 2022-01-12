@@ -180,7 +180,8 @@ def _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, N):
 
         jk_cov[bin, 0] = cov_g1
         jk_cov[bin, 1] = cov_g2
-    
+    print(jk_g1_ave)
+    print((jk_g1_ave - res_all_mean[bin][0])**2)
     return jk_cov
 
 def OLSfit(x, y, dy=None):
@@ -586,7 +587,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     tilenames = [d.split('_')[0] for d in filenames] 
     for fname in tqdm(filenames):
         mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
-        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.1) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
+        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
         mdet = mdet_all[msk_default]
         num_objects += len(mdet)
         res[fname.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
@@ -606,7 +607,7 @@ def plot_null_tests2(fs, predef_bin, qa):
                   '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
     for fname in tqdm(filenames):
         res = _accum_shear_all(res, fname.split('_')[0], binnum)
-    print(num_objects, res['all']['num_noshear'][:,0]+res['all']['num_1p'][:,0]+res['all']['num_1m'][:,0]+res['all']['num_2p'][:,0]+res['all']['num_2m'][:,0])
+    print(num_objects, np.sum(res['all']['num_noshear'][:,0])+np.sum(res['all']['num_1p'][:,0])+np.sum(res['all']['num_1m'][:,0])+np.sum(res['all']['num_2p'][:,0])+np.sum(res['all']['num_2m'][:,0]))
 
     # Compute the mean g1 and g2 over all the tiles. 
     res_all_mean = _compute_g1_g2(res, binnum)
@@ -628,7 +629,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     jk_error = _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, len(tilenames))
     print("jackknife error estimate: ", jk_error)
 
-    fig,axs = plt.subplots(1,2,figsize=(22,12))
+    fig,axs = plt.subplots(1,2,figsize=(28,10))
     for ii in range(2):
         # params = curve_fit(func,predef_bin['mean'],res_all_mean[:,ii],p0=(0.,0.))
         # m1,n1=params[0]
