@@ -418,7 +418,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     def func(x,m,n):
         return m*x+n
 
-    def _compute_g1_g2(res, binnum, method='all'):
+    def _compute_g1_g2(res, binnum, method='all', tile=None):
 
         corrected_g1g2 = np.zeros((binnum, 2))
         for bin in range(binnum):
@@ -434,6 +434,18 @@ def plot_null_tests2(fs, predef_bin, qa):
                 R22 = (g2p - g2m) / 2 / 0.01
                 print('bin num: ', bin)
                 print('uncorrected shape: ', g1, g2)
+                print('shear response: ', R11, R22)
+            
+            elif method == 'tile':
+                g1 = res[tile]['noshear'][bin][0] / res[tile]['num_noshear'][bin][0]
+                g1p = res[tile]['1p'][bin][0] / res[tile]['num_1p'][bin][0]
+                g1m = res[tile]['1m'][bin][0] / res[tile]['num_1m'][bin][0]
+                R11 = (g1p - g1m) / 2 / 0.01
+
+                g2 = res[tile]['noshear'][bin][1] / res[tile]['num_noshear'][bin][1]
+                g2p = res[tile]['2p'][bin][1] / res[tile]['num_2p'][bin][1]
+                g2m = res[tile]['2m'][bin][1] / res[tile]['num_2m'][bin][1]
+                R22 = (g2p - g2m) / 2 / 0.01
                 print('shear response: ', R11, R22)
 
             elif method == 'all':
@@ -546,7 +558,7 @@ def plot_null_tests2(fs, predef_bin, qa):
 
     
     
-    res = {}
+    # res = {}
     num_objects = 0
     binnum = 1 #len(predef_bin['hist'])
     filenames = [fname.split('/')[-1] for fname in fs]
@@ -556,6 +568,7 @@ def plot_null_tests2(fs, predef_bin, qa):
         msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
         mdet = mdet_all[msk_default]
         num_objects += len(mdet)
+        res = {}
         res[fname.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                                 '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
                                 '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
@@ -563,7 +576,9 @@ def plot_null_tests2(fs, predef_bin, qa):
                                 '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
         # res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
         res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], [1.2], [999], binnum)
+        res_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
 
+    sys.exit()
     # Accumulate all the tiles shears. 
     res['all'] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                   '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
