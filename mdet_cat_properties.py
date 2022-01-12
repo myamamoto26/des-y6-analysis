@@ -432,7 +432,6 @@ def plot_null_tests2(fs, predef_bin, qa):
                 g2p = res['2p'][bin][1] / res['num_2p'][bin][1]
                 g2m = res['2m'][bin][1] / res['num_2m'][bin][1]
                 R22 = (g2p - g2m) / 2 / 0.01
-                print('shear response: ', R11, R22)
             
             elif method == 'tile':
                 g1 = res[tile]['noshear'][bin][0] / res[tile]['num_noshear'][bin][0]
@@ -628,7 +627,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     # Compute jackknife error estimate.
     jk_error = _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, len(tilenames))
     print("jackknife error estimate: ", jk_error)
-    sys.exit()
+
     fig,axs = plt.subplots(1,2,figsize=(22,12))
     for ii in range(2):
         # params = curve_fit(func,predef_bin['mean'],res_all_mean[:,ii],p0=(0.,0.))
@@ -646,8 +645,6 @@ def plot_null_tests2(fs, predef_bin, qa):
     axs[0].set_ylabel(r"$\langle e_{1} \rangle$", fontsize=20)
     axs[1].set_ylabel(r"$\langle e_{2} \rangle$", fontsize=20)
     axs[1].legend(loc='upper right')
-    axs[0].set_ylim(-3e-1, 3e-1)
-    axs[1].set_ylim(-3e-1, 3e-1)
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v3_Tratio.pdf', bbox_inches='tight')
 
