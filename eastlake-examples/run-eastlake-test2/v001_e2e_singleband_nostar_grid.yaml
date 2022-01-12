@@ -1,0 +1,163 @@
+# This example config file uses a number of the custom modules available in galsim_extra including
+#     DesTile output type
+#     MixedScene stamp type
+#     CosmosR50, CosmosFlux value types along with cosmos_sampler input type
+#     LogNormal value type
+#     OffChip value type
+modules:
+    - galsim.des
+    - galsim_extra
+    - montara
+    - numpy
+
+pipeline:
+    steps: [galsim_montara, true_detection, meds, newish_metacal]
+
+true_detection:
+  box_size: 32
+
+newish_metacal:
+    bands: ['r']
+
+meds:
+    cutout_types: ['image','weight','seg','bmask']
+    meds_dir: meds
+    meds_run: y3v02
+    sub_bkg: False
+    delete_images: True
+    add_psf_data: True
+    meds.psf_type: piff
+    meds.use_joblib: True
+    stage_output: True
+
+mcal:
+    config_file: ${IMSIM_DIR}/ngmix_config/run-y3imsim-mcal-nocorrect-psfinfile.yaml
+    clobber: True
+    use_joblib: True
+
+input:
+    # Use analytic galaxies with size and flux parameters that match the distribution seen
+    # in the COSMOS galaxies.
+    catalog_sampler:
+        file_name: /global/project/projectdirs/des/y3-image-sims/input_cosmos_v4.fits
+        cuts:
+            mag_i: [15., 25.]  #use only 15<mag_i<25. for now.
+            isgal: [1,] #select galaxies only since we're simulating stars separately.
+            mask_flags: [0,] #apply mask flags
+            bdf_hlr: [0.,5.]
+    desstar:
+        file_name:
+            type: FormattedStr
+            format: /global/cscratch1/sd/maccrann/DES/image_sims/star_cats_v0/stars-%s.fits
+            items:
+            - "$tilename"
+        mag_i_max: 25.
+    des_piff:
+        file_name: "$piff_path"
+
+image:
+    type: WideScattered
+    border: 15
+    random_seed: 1234
+    nproc: 1
+
+    # The number of objects across the full focal plane.
+    nobjects: 80000
+
+    #could read this from the image headers, but let's set them explicitly for now
+    xsize: 2048
+    ysize: 4096
+
+    world_pos:
+        type: RADec
+        type: RADec
+        ra:
+            type: Degrees
+            theta: { type: Random, min: "$ra_min_deg", max: "$ra_max_deg" }
+        dec:
+            type: Radians
+            theta:
+                type: RandomDistribution
+                function: "math.cos(x)"  # Uniform on the sky means P(delta) ~ cos(delta)
+                x_min: "$numpy.radians(dec_min_deg)"
+                x_max: "$numpy.radians(dec_max_deg)"
+
+#use Piff PSF for now
+psf:
+    type: Gaussian
+    fwhm: 0.9
+    flux: 1.0
+
+#No knots
+gal:
+    type: Exponential
+    half_light_radius: 0.5
+    ellip:
+        type: G1G2
+        g1: 0.0
+        g2: 0.0
+    flux:
+        type: Eval
+        #Input catalog has mag
+        #convert to flux via flux = 10**(0.4*(mag_zp-mag))
+        str: "10**(0.4*(mag_zp-mag))"
+        fmag: 17.
+
+star:
+    type: Gaussian  # Basically a delta function.
+    sigma: 1.e-6
+    flux: 1.0
+
+stamp:
+    type: MixedScene
+    objects:
+        # These give the probability of picking each kind of object.  The
+        # choice of which one is picked for a given object is written to the
+        # base dict as base['current_obj_type'] and is thus available as
+        # @current_obj_type.  The actual constructed object is similarly
+        # available as @current_obj.  And the type by number in this list
+        # (starting with 0 for the first) is @current_obj_type_index.
+        star: 0.0
+        gal: 1.0
+    obj_type: 'gal'
+    draw_method: auto
+    shear:
+        type: G1G2
+        g1: 0.00
+        g2: 0.02
+    gsparams:
+        maximum_fft_size: 16384
+
+output:
+    type: DESTile
+    nproc: 0
+    # The number of exposures to build
+    bands: [r]
+    desrun: y3v02
+    noise_mode: from_weight
+    add_bkg: False
+    tilename: DES0003-3832
+    rejectlist_file: "/global/homes/m/maccrann/DES/y3-wl_image_sims/input/piff_stuff/blacklist400.yaml"
+    grid_objects: True
+    dither_scale: 0.5
+
+    #Save weight and badpix extensions too
+    badpix:
+        hdu: 1
+    weight:
+        hdu: 2
+
+    truth:
+        #DESTile type fills in filename
+        columns:
+            num: obj_num
+            half_light_radius:
+                type: Eval
+                str: "0.0 if @current_obj_type=='star' else hlr"
+                fhlr: "@gal.half_light_radius"
+            g1: "$(@stamp.shear).g1"
+            g2: "$(@stamp.shear).g2"
+            obj_type: "@current_obj_type"
+            obj_type_index: "@current_obj_type_index"
+            band: "band"
+            mag_zp: "$mag_zp"
