@@ -585,9 +585,9 @@ def plot_null_tests2(fs, predef_bin, qa):
             )
         return res
     
-    # res = {}
+    res = {}
     num_objects = 0
-    binnum = 1 #len(predef_bin['hist'])
+    binnum = len(predef_bin['hist'])
     filenames = [fname.split('/')[-1] for fname in fs]
     tilenames = [d.split('_')[0] for d in filenames] 
     for fname in tqdm(filenames):
@@ -595,18 +595,15 @@ def plot_null_tests2(fs, predef_bin, qa):
         msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.1) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
         mdet = mdet_all[msk_default]
         num_objects += len(mdet)
-        res = {}
         res[fname.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                                 '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
                                 '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
                                 '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                                 '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-        # res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
-        res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], [1.2], [999], binnum)
+        res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
         # res = _accum_shear_per_tile_without_bin(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], 0)
-        res_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
+        # res_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
 
-    sys.exit()
     # Accumulate all the tiles shears. 
     res['all'] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                   '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
@@ -621,7 +618,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     res_all_mean = _compute_g1_g2(res, binnum)
     print(res['all'])
     print("mean shear over all tiles: ", res_all_mean)
-    sys.exit()
+
     # Compute jackknife samples.
     res_jk_mean = {} 
     for sample, fname in tqdm(enumerate(filenames)):
