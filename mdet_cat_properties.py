@@ -603,7 +603,7 @@ def plot_null_tests2(fs, predef_bin, qa):
         # res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
         # res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], [1.2], [999], binnum)
         # res_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
-        res = _accum_shear_per_tile_v2(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], binnum)
+        res = _accum_shear_per_tile_v2(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], 0)
         res_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
 
     sys.exit()
