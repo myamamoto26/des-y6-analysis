@@ -485,7 +485,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     bt_sample1_mean = np.zeros((binnum, N_boot))
     bt_sample2_mean = np.zeros((binnum, N_boot))
     for bin in range(binnum):
-        for n in N_boot:
+        for n in range(N_boot):
             bt_g1_bin = np.array([res_tile_mean[t][bin][0] for t in list(res_tile_mean)])
             bt_g2_bin = np.array([res_tile_mean[t][bin][1] for t in list(res_tile_mean)])
             bt_sample1 = np.random.choice(bt_g1_bin, size=bt_size, replace=True)
@@ -510,7 +510,7 @@ def plot_null_tests2(fs, predef_bin, qa):
         res_jk_mean[sample] = jk_sample_mean
     
     # Compute jackknife error estimate.
-    jk_error = _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, len(tilenames))
+    jk_error = _compute_jackknife_error_estimate(res_jk_mean, res_all_mean, binnum, len(tilenames))
     print("jackknife error estimate: ", jk_error)
 
     sys.exit()
@@ -533,3 +533,39 @@ def plot_null_tests2(fs, predef_bin, qa):
     axs[1].legend(loc='upper right')
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v3_Tratio.pdf', bbox_inches='tight')
+
+def main(argv):
+
+    if sys.argv[1] == 'old_catalog':
+        ver = 'v3'
+        if not os.path.exists(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'.fits')):
+            f = open('/home/s1/masaya/des-y6-analysis/tiles.txt', 'r')
+            tilenames = f.read().split('\n')[:-1]
+            start = 0
+            for f in tilenames:
+                print('Reading in '+f+'...')
+                if start == 0:
+                    d = fio.read(os.path.join(PATH, f+'_metadetect-v3_mdetcat_part0000.fits'))
+                    start += 1
+                else:
+                    try: 
+                        d2 = fio.read(os.path.join(PATH, f+'_metadetect-v3_mdetcat_part0000.fits'))
+                        d = np.concatenate((d,d2))
+                    except OSError:
+                        print(f+' tile does not exist. Please check the catalog.')
+                        continue
+            fio.write(os.path.join(PATH, 'metadetect/mdet_test_all.fits'), d)
+        else:
+            d = fio.read(os.path.join(PATH, 'metadetect/'+ver+'/mdet_test_all_'+ver+'.fits'))
+
+        # mdet_shear_pairs(40, 1000)
+        mdet_shear_pairs_plotting(d, 40000000)
+        # plot_null_tests(d, 3000000, 'MDET_S2N')
+        # mdet_shear_pairs_plotting_percentile(d, 3000000, 'PSFREC_G_1')
+    elif sys.argv[1] == 'new_catalog':
+        f = open('/global/cscratch1/sd/myamamot/metadetect/fnames.txt', 'r')
+        fs = f.read().split('\n')[:-1]
+        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_'+sys.argv[3]+'.pickle', 'rb') as handle:
+            predef_bin = pickle.load(handle)
+        
+        plot_null_tests2(fs, predef_bin, sys.argv[2])
