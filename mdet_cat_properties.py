@@ -598,6 +598,22 @@ def plot_null_tests2(fs, predef_bin, qa):
         res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
         # res = _accum_shear_per_tile_without_bin(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], 0)
         # res_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
+    
+    # Compute the g1, g2 for each tile. 
+    res_tile_mean = {}
+    for fname in tqdm(filenames):
+        mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
+        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
+        mdet = mdet_all[msk_default]
+        res_tile = {}
+        res_tile[fname.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
+                                        '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
+                                        '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
+                                        '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
+                                        '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
+        res_tile = _accum_shear_per_tile_without_bin(res_tile, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], 0)
+        tile_mean = _compute_g1_g2(res_tile, binnum, method='tile', tile=fname.split('_')[0])
+        res_tile_mean[fname.split('_')[0]] = tile_mean
 
     # Accumulate all the tiles shears. 
     res['all'] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
@@ -614,6 +630,25 @@ def plot_null_tests2(fs, predef_bin, qa):
     print(res['all'])
     print("mean shear over all tiles: ", res_all_mean)
 
+    # Compute bootstrap sampling errors.
+    N_boot = 500
+    bt_size = len(list(res_tile_mean))
+    bt_sample1_mean = np.zeros((binnum, N_boot))
+    bt_sample2_mean = np.zeros((binnum, N_boot))
+    for bin in range(binnum):
+        for n in N_boot:
+            bt_g1_bin = np.array([res_tile_mean[t][bin][0] for t in list(res_tile_mean)])
+            bt_g2_bin = np.array([res_tile_mean[t][bin][1] for t in list(res_tile_mean)])
+            bt_sample1 = np.random.choice(bt_g1_bin, size=bt_size, replace=True)
+            bt_sample2 = np.random.choice(bt_g2_bin, size=bt_size, replace=True)
+            bt_sample1_mean[bin, n] = np.mean(bt_sample1)
+            bt_sample2_mean[bin, n] = np.mean(bt_sample2)
+    bt_error = np.zeros((binnum, 2))
+    for bin in range(binnum):
+        bt_error[bin, 0] = np.std(bt_sample1_mean[bin])
+        bt_error[bin, 1] = np.std(bt_sample2_mean[bin])
+    print(bt_error)
+    sys.exit()
     # Compute jackknife samples.
     res_jk_mean = {} 
     for sample, fname in tqdm(enumerate(filenames)):
