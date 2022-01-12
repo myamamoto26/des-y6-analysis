@@ -432,8 +432,6 @@ def plot_null_tests2(fs, predef_bin, qa):
                 g2p = res['2p'][bin][1] / res['num_2p'][bin][1]
                 g2m = res['2m'][bin][1] / res['num_2m'][bin][1]
                 R22 = (g2p - g2m) / 2 / 0.01
-                print('bin num: ', bin)
-                print('uncorrected shape: ', g1, g2)
                 print('shear response: ', R11, R22)
             
             elif method == 'tile':
@@ -458,9 +456,6 @@ def plot_null_tests2(fs, predef_bin, qa):
                 g2p = res['all']['2p'][bin][1] / res['all']['num_2p'][bin][1]
                 g2m = res['all']['2m'][bin][1] / res['all']['num_2m'][bin][1]
                 R22 = (g2p - g2m) / 2 / 0.01
-                print('bin num: ', bin)
-                print('uncorrected shape: ', g1, g2)
-                print('sheared: ', g1p, g1m, g2p, g2m)
                 print('shear response: ', R11, R22)
 
             corrected_g1g2[bin, 0] = g1/R11
@@ -496,7 +491,7 @@ def plot_null_tests2(fs, predef_bin, qa):
                     (bin, 1), 
                     len(g_masked[msk_bin,1]),
                 )
-        print(tilename, res[tilename])
+        
         return res
     
     def _compute_shear_per_jksample(res_jk, res, tilename, tilenames, binnum):
