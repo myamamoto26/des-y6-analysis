@@ -581,6 +581,7 @@ def plot_null_tests2(fs, predef_bin, qa):
         return res
     
     res = {}
+    res_tile_mean = {}
     num_objects = 0
     binnum = len(predef_bin['hist'])
     filenames = [fname.split('/')[-1] for fname in fs]
@@ -598,21 +599,7 @@ def plot_null_tests2(fs, predef_bin, qa):
         res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
         # res = _accum_shear_per_tile_without_bin(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], 0)
         # res_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
-    
-    # Compute the g1, g2 for each tile. 
-    res_tile_mean = {}
-    for fname in tqdm(filenames):
-        mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
-        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
-        mdet = mdet_all[msk_default]
-        res_tile = {}
-        res_tile[fname.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
-                                        '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
-                                        '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
-                                        '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
-                                        '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-        res_tile = _accum_shear_per_tile_without_bin(res_tile, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], 0)
-        tile_mean = _compute_g1_g2(res_tile, binnum, method='tile', tile=fname.split('_')[0])
+        tile_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
         res_tile_mean[fname.split('_')[0]] = tile_mean
 
     # Accumulate all the tiles shears. 
