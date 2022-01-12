@@ -569,3 +569,6 @@ def main(argv):
             predef_bin = pickle.load(handle)
         
         plot_null_tests2(fs, predef_bin, sys.argv[2])
+
+if __name__ == "__main__":
+    main(sys.argv)
