@@ -173,15 +173,18 @@ def _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, N):
     for bin in range(binnum):
         # compute jackknife average. 
         jk_g1_ave = np.array([res_jk_mean[sample][bin][0] for sample in list(res_jk_mean)])
+        jk_all_g1_ave = np.mean(jk_g1_ave)
         jk_g2_ave = np.array([res_jk_mean[sample][bin][1] for sample in list(res_jk_mean)])
+        jk_all_g2_ave = np.mean(jk_g2_ave)
 
-        cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g1_ave - res_all_mean[bin][0])**2))
-        cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g2_ave - res_all_mean[bin][1])**2))
+        # cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g1_ave - res_all_mean[bin][0])**2))
+        # cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g2_ave - res_all_mean[bin][1])**2))
+        cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g1_ave - jk_all_g1_ave)**2))
+        cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g2_ave - jk_all_g2_ave)**2))
 
         jk_cov[bin, 0] = cov_g1
         jk_cov[bin, 1] = cov_g2
-    print(jk_g1_ave)
-    print((jk_g1_ave - res_all_mean[bin][0])**2)
+
     return jk_cov
 
 def OLSfit(x, y, dy=None):
@@ -635,7 +638,7 @@ def plot_null_tests2(fs, predef_bin, qa):
         bt_error[bin, 0] = np.std(bt_sample1_mean[bin])
         bt_error[bin, 1] = np.std(bt_sample2_mean[bin])
     print(bt_error)
-    sys.exit()
+
     # Compute jackknife samples.
     res_jk_mean = {} 
     for sample, fname in tqdm(enumerate(filenames)):
@@ -651,6 +654,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     jk_error = _get_jackknife_cov(res_jk_mean, res_all_mean, binnum, len(tilenames))
     print("jackknife error estimate: ", jk_error)
 
+    sys.exit()
     fig,axs = plt.subplots(1,2,figsize=(28,10))
     for ii in range(2):
         # params = curve_fit(func,predef_bin['mean'],res_all_mean[:,ii],p0=(0.,0.))
