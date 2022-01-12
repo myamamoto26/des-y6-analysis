@@ -471,29 +471,30 @@ def plot_null_tests2(fs, predef_bin, qa):
         
         for step in ['noshear', '1p', '1m', '2p', '2m']:
             msk_s = np.where(g_step == step)[0]
-            g_qa_mask = g_qa[msk_s]
+            qa_masked = g_qa[msk_s]
+            g_masked = g[msk_s]
             
             for bin in range(binnum):
-                msk_bin = np.where(((g_qa_mask >= bin_low[bin]) & (g_qa_mask <= bin_high[bin])))[0]
+                msk_bin = np.where(((qa_masked >= bin_low[bin]) & (qa_masked <= bin_high[bin])))[0]
                 np.add.at(
                     res[tilename][step], 
                     (bin, 0), 
-                    np.sum(g[msk_bin,0]),
+                    np.sum(g_masked[msk_bin,0]),
                 )
                 np.add.at(
                     res[tilename][step], 
                     (bin, 1), 
-                    np.sum(g[msk_bin,1]),
+                    np.sum(g_masked[msk_bin,1]),
                 )
                 np.add.at(
                     res[tilename]["num_" + step], 
                     (bin, 0), 
-                    len(g[msk_bin,0]),
+                    len(g_masked[msk_bin,0]),
                 )
                 np.add.at(
                     res[tilename]["num_" + step], 
                     (bin, 1), 
-                    len(g[msk_bin,1]),
+                    len(g_masked[msk_bin,1]),
                 )
         print(tilename, res[tilename])
         return res
@@ -557,7 +558,7 @@ def plot_null_tests2(fs, predef_bin, qa):
                 )
         return res
 
-    def _accum_shear_per_tile_v2(res, tilename, g_step, g, bin):
+    def _accum_shear_per_tile_without_bin(res, tilename, g_step, g, bin):
 
         for step in ['noshear', '1p', '1m', '2p', '2m']:
             msk_s = np.where(g_step == step)[0]
@@ -601,9 +602,8 @@ def plot_null_tests2(fs, predef_bin, qa):
                                 '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                                 '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
         # res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
-        # res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], [1.2], [999], binnum)
-        # res_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
-        res = _accum_shear_per_tile_v2(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], 0)
+        res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], [1.2], [999], binnum)
+        # res = _accum_shear_per_tile_without_bin(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], 0)
         res_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
 
     sys.exit()
