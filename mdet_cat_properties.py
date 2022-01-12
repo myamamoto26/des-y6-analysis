@@ -495,7 +495,7 @@ def plot_null_tests2(fs, predef_bin, qa):
                     (bin, 1), 
                     len(g[msk_bin,1]),
                 )
-        print(res[tilename])
+        print(tilename, res[tilename])
         return res
     
     def _compute_shear_per_jksample(res_jk, res, tilename, tilenames, binnum):
