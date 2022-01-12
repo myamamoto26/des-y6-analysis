@@ -478,23 +478,24 @@ def plot_null_tests2(fs, predef_bin, qa):
                 np.add.at(
                     res[tilename][step], 
                     (bin, 0), 
-                    np.sum(g[msk_bin][:,0]),
+                    np.sum(g[msk_bin,0]),
                 )
                 np.add.at(
                     res[tilename][step], 
                     (bin, 1), 
-                    np.sum(g[msk_bin][:,1]),
+                    np.sum(g[msk_bin,1]),
                 )
                 np.add.at(
                     res[tilename]["num_" + step], 
                     (bin, 0), 
-                    len(g[msk_bin][:,0]),
+                    len(g[msk_bin,0]),
                 )
                 np.add.at(
                     res[tilename]["num_" + step], 
                     (bin, 1), 
-                    len(g[msk_bin][:,1]),
+                    len(g[msk_bin,1]),
                 )
+        print(res[tilename])
         return res
     
     def _compute_shear_per_jksample(res_jk, res, tilename, tilenames, binnum):
@@ -565,7 +566,7 @@ def plot_null_tests2(fs, predef_bin, qa):
     tilenames = [d.split('_')[0] for d in filenames] 
     for fname in tqdm(filenames):
         mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
-        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
+        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.1) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
         mdet = mdet_all[msk_default]
         num_objects += len(mdet)
         res = {}
