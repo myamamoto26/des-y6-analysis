@@ -291,8 +291,9 @@ def _compute_OLSfit(x, y, dy=None):
          np.sum(x / dy**2) * np.sum(y / dy**2)) / denom
     b = (np.sum(x**2 / dy**2) * np.sum(y / dy**2) -
          np.sum(x / dy**2) * np.sum(x * y / dy**2)) / denom
+    
     dm = np.sqrt(np.sum(1 / dy**2) / denom)
-    db = np.sqrt(np.sum(x / dy**2) / denom)
+    db = np.sqrt(np.abs(np.sum(x / dy**2) / denom))
     return [m, dm, b, db]
 
 def _plot_data(bins, d_mean, d_err, bin_name, fname):
