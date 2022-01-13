@@ -483,7 +483,7 @@ def statistics_per_tile_without_bins(fs):
         R22 = (np.mean(mdet_all['mdet_g'][(msk_default & msk_2p), 1]) - np.mean(mdet_all['mdet_g'][(msk_default & msk_2m), 1]))/0.02
     return 
 
-def bin_statistics_per_tile(fs, predef_bin, qa):
+def bin_statistics_per_tile(fs, predef_bin, qa, plt_label, plt_fname, qa_psfg=None):
     
     res = {} # dictionary to accumulate raw sums. 
     res_tile_mean = {} # dictionary to accumulate mean shear for each tile. 
@@ -502,7 +502,12 @@ def bin_statistics_per_tile(fs, predef_bin, qa):
                                 '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
                                 '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                                 '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-        res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
+        if qa=='psfrec_g' and qa_psfg==1:
+            res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa][:,0], predef_bin['low'], predef_bin['high'], binnum)
+        elif qa=='psfrec_g' and qa_psfg==2:
+            res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa][:,1], predef_bin['low'], predef_bin['high'], binnum)
+        else:
+            res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
         tile_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
         res_tile_mean[fname.split('_')[0]] = tile_mean
 
@@ -555,16 +560,21 @@ def bin_statistics_per_tile(fs, predef_bin, qa):
     jk_error = _compute_jackknife_error_estimate(res_jk_mean, res_all_mean, binnum, len(tilenames))
     print("jackknife error estimate: ", jk_error)
 
-    _plot_data(predef_bin, res_all_mean, jk_error, "e_{1,PSF}", 'mdet_psf_vs_shear_fit_v3_e1psf.pdf')
+    _plot_data(predef_bin, res_all_mean, jk_error, plt_label, plt_fname)
 
 def main(argv):
 
     f = open('/global/cscratch1/sd/myamamot/metadetect/fnames.txt', 'r')
     fs = f.read().split('\n')[:-1]
-    with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_'+sys.argv[3]+'.pickle', 'rb') as handle:
+    with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_'+sys.argv[1]+'.pickle', 'rb') as handle:
         predef_bin = pickle.load(handle)
     
-    bin_statistics_per_tile(fs, predef_bin, sys.argv[2])
+    if sys.argv[2]=='psfrec_g' and sys.argv[1]=='psfg1':
+        bin_statistics_per_tile(fs, predef_bin, sys.argv[2], sys.argv[3], sys.argv[4], qa_psfg=1)
+    elif sys.argv[2]=='psfrec_g' and sys.argv[1]=='psfg2':
+        bin_statistics_per_tile(fs, predef_bin, sys.argv[2], sys.argv[3], sys.argv[4], qa_psfg=2)
+    else:
+        bin_statistics_per_tile(fs, predef_bin, sys.argv[2], sys.argv[3], sys.argv[4])
 
 if __name__ == "__main__":
     main(sys.argv)
