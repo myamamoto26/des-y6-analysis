@@ -1,5 +1,6 @@
 
 import fitsio as fio
+from fitsio.hdu import table
 import numpy as np
 from matplotlib import pyplot as plt
 import os, sys
@@ -173,13 +174,13 @@ def _accum_shear_per_tile_without_bin(res, tilename, g_step, g, bin):
         )
     return res
 
-def _compute_shear_per_jksample(res_jk, res, tilename, tilenames, binnum):
+def _compute_shear_per_jksample(res_jk, res, ith_tilename, tilenames, binnum):
 
     # Compute mean shear for each jackknife sample. 
     # For each jackknife sample, you leave one tile out, sums the shears in N-1 tiles, and compute the mean. 
     
     for t in tilenames:
-        if t == tilename:
+        if t == ith_tilename:
             continue
         else:
             for step in ['noshear', '1p', '1m', '2p', '2m']:
@@ -188,22 +189,22 @@ def _compute_shear_per_jksample(res_jk, res, tilename, tilenames, binnum):
                     np.add.at(
                         res_jk[step], 
                         (bin, 0), 
-                        res[tilename][step][bin][0],
+                        res[t][step][bin][0],
                     )
                     np.add.at(
                         res_jk[step], 
                         (bin, 1), 
-                        res[tilename][step][bin][1],
+                        res[t][step][bin][1],
                     )
                     np.add.at(
                         res_jk["num_" + step], 
                         (bin, 0), 
-                        res[tilename]["num_" + step][bin][0],
+                        res[t]["num_" + step][bin][0],
                     )
                     np.add.at(
                         res_jk["num_" + step], 
                         (bin, 1), 
-                        res[tilename]["num_" + step][bin][1],
+                        res[t]["num_" + step][bin][1],
                     )
     jk_sample_mean = _compute_g1_g2(res_jk, binnum, method='jk')
     return jk_sample_mean
@@ -261,8 +262,8 @@ def _compute_jackknife_error_estimate(res_jk_mean, res_all_mean, binnum, N):
 
         # cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g1_ave - res_all_mean[bin][0])**2))
         # cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g2_ave - res_all_mean[bin][1])**2))
-        cov_g1 = np.sqrt(1/(N*(N-1)))*np.sqrt(np.sum((jk_g1_ave - jk_all_g1_ave)**2))
-        cov_g2 = np.sqrt(1/(N*(N-1)))*np.sqrt(np.sum((jk_g2_ave - jk_all_g2_ave)**2))
+        cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g1_ave - jk_all_g1_ave)**2))
+        cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_g2_ave - jk_all_g2_ave)**2))
 
         jk_cov[bin, 0] = cov_g1
         jk_cov[bin, 1] = cov_g2
@@ -307,7 +308,7 @@ def _plot_data(bins, d_mean, d_err, bin_name, fname):
         x = np.linspace(bins['mean'][0], bins['mean'][len(bins['hist'])-1], 100)
         print('parameters of the fit. ', params)
 
-        axs[ii].plot(x, func(x,params[0],params[2]), label='linear fit w/ fit params: m='+str("{:2.4f}".format(params[0]))+', b='+str("{:2.4f}".format(params[1])))
+        axs[ii].plot(x, func(x,params[0],params[2]), label='linear fit w/ fit params: m='+str("{:2.4f}".format(params[0]))+', b='+str("{:2.4f}".format(params[2])))
         axs[ii].errorbar(bins['mean'], d_mean[:,ii], yerr=d_err[:,ii], fmt='o', fillstyle='none', label='Y6 metadetect test')
         axs[ii].set_xlabel(r"${}$".format(bin_name), fontsize=20)
         # axs[ii].set_xscale('log')
@@ -316,7 +317,7 @@ def _plot_data(bins, d_mean, d_err, bin_name, fname):
         axs[ii].set_ylim(-0.7e-3, 3.5e-3)
     axs[0].set_ylabel(r"$\langle e_{1} \rangle$", fontsize=20)
     axs[1].set_ylabel(r"$\langle e_{2} \rangle$", fontsize=20)
-    axs[1].legend(loc='upper right')
+    # axs[1].legend(loc='upper right')
     plt.tight_layout()
     plt.savefig(fname, bbox_inches='tight')
 
