@@ -555,7 +555,7 @@ def bin_statistics_per_tile(fs, predef_bin, qa):
     jk_error = _compute_jackknife_error_estimate(res_jk_mean, res_all_mean, binnum, len(tilenames))
     print("jackknife error estimate: ", jk_error)
 
-    _plot_data(predef_bin, res_all_mean, jk_error, "T_{PSF}", 'mdet_psf_vs_shear_fit_v3_Tpsf.pdf')
+    _plot_data(predef_bin, res_all_mean, jk_error, "e_{1,PSF}", 'mdet_psf_vs_shear_fit_v3_e1psf.pdf')
 
 def main(argv):
 
