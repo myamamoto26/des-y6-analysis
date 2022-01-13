@@ -527,6 +527,7 @@ def plot_null_tests2(fs, predef_bin, qa):
         # axs[ii].set_xscale('log')
         axs[ii].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
         axs[ii].tick_params(labelsize=16)
+        axs[ii].set_ylim(-0.7e-3, 3.5e-3)
     axs[0].set_ylabel(r"$\langle e_{1} \rangle$", fontsize=20)
     axs[1].set_ylabel(r"$\langle e_{2} \rangle$", fontsize=20)
     axs[1].legend(loc='upper right')
