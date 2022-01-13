@@ -314,7 +314,6 @@ def _plot_data(bins, d_mean, d_err, bin_name, fname):
         # axs[ii].set_xscale('log')
         axs[ii].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
         axs[ii].tick_params(labelsize=16)
-        axs[ii].set_ylim(-0.7e-3, 3.5e-3)
     axs[0].set_ylabel(r"$\langle e_{1} \rangle$", fontsize=20)
     axs[1].set_ylabel(r"$\langle e_{2} \rangle$", fontsize=20)
     # axs[1].legend(loc='upper right')
