@@ -523,23 +523,23 @@ def bin_statistics_per_tile(fs, predef_bin, qa):
     print("mean shear over all tiles: ", res_all_mean)
 
     # Compute bootstrap sampling errors.
-    N_boot = 500
-    bt_size = len(list(res_tile_mean))
-    bt_sample1_mean = np.zeros((binnum, N_boot))
-    bt_sample2_mean = np.zeros((binnum, N_boot))
-    for bin in range(binnum):
-        for n in range(N_boot):
-            bt_g1_bin = np.array([res_tile_mean[t][bin][0] for t in list(res_tile_mean)])
-            bt_g2_bin = np.array([res_tile_mean[t][bin][1] for t in list(res_tile_mean)])
-            bt_sample1 = np.random.choice(bt_g1_bin, size=bt_size, replace=True)
-            bt_sample2 = np.random.choice(bt_g2_bin, size=bt_size, replace=True)
-            bt_sample1_mean[bin, n] = np.mean(bt_sample1)
-            bt_sample2_mean[bin, n] = np.mean(bt_sample2)
-    bt_error = np.zeros((binnum, 2))
-    for bin in range(binnum):
-        bt_error[bin, 0] = np.std(bt_sample1_mean[bin])
-        bt_error[bin, 1] = np.std(bt_sample2_mean[bin])
-    print(bt_error)
+    # N_boot = 500
+    # bt_size = len(list(res_tile_mean))
+    # bt_sample1_mean = np.zeros((binnum, N_boot))
+    # bt_sample2_mean = np.zeros((binnum, N_boot))
+    # for bin in range(binnum):
+    #     for n in range(N_boot):
+    #         bt_g1_bin = np.array([res_tile_mean[t][bin][0] for t in list(res_tile_mean)])
+    #         bt_g2_bin = np.array([res_tile_mean[t][bin][1] for t in list(res_tile_mean)])
+    #         bt_sample1 = np.random.choice(bt_g1_bin, size=bt_size, replace=True)
+    #         bt_sample2 = np.random.choice(bt_g2_bin, size=bt_size, replace=True)
+    #         bt_sample1_mean[bin, n] = np.mean(bt_sample1)
+    #         bt_sample2_mean[bin, n] = np.mean(bt_sample2)
+    # bt_error = np.zeros((binnum, 2))
+    # for bin in range(binnum):
+    #     bt_error[bin, 0] = np.std(bt_sample1_mean[bin])
+    #     bt_error[bin, 1] = np.std(bt_sample2_mean[bin])
+    # print(bt_error)
 
     # Compute jackknife samples.
     res_jk_mean = {} 
@@ -556,7 +556,7 @@ def bin_statistics_per_tile(fs, predef_bin, qa):
     jk_error = _compute_jackknife_error_estimate(res_jk_mean, res_all_mean, binnum, len(tilenames))
     print("jackknife error estimate: ", jk_error)
 
-    _plot_data(predef_bin, res_all_mean, jk_error, "T_{ratio}", 'mdet_psf_vs_shear_fit_v3_Tratio.pdf')
+    _plot_data(predef_bin, res_all_mean, jk_error, "T_{PSF}", 'mdet_psf_vs_shear_fit_v3_Tpsf.pdf')
 
 def main(argv):
 
