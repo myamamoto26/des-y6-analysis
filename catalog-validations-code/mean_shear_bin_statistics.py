@@ -499,7 +499,7 @@ def bin_statistics_per_tile(fs, predef_bin, qa, plt_label, plt_fname, qa_psfg=No
 
 def main(argv):
 
-    d = fio.read('/data/des70.a/data/masaya/metadetect/v2')
+    d = fio.read('/data/des70.a/data/masaya/metadetect/v2/mdet_test_all_v2.fits')
     percentile_bin_statistics(d, 3000000, 'MDET_T')
     sys.exit()
     f = open('/global/cscratch1/sd/myamamot/metadetect/fnames.txt', 'r')
