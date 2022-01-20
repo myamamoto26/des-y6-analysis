@@ -312,12 +312,13 @@ def _plot_data(bins, d_mean, d_err, bin_name, fname):
         axs[ii].plot(x, func(x,params[0],params[2]), label='linear fit w/ fit params: m='+str("{:2.4f}".format(params[0]))+', b='+str("{:2.4f}".format(params[2])))
         axs[ii].errorbar(bins['mean'], d_mean[:,ii], yerr=d_err[:,ii], fmt='o', fillstyle='none', label='Y6 metadetect test')
         axs[ii].set_xlabel(r"${}$".format(bin_name), fontsize=20)
-        # axs[ii].set_xscale('log')
         axs[ii].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
         axs[ii].tick_params(labelsize=16)
+        if bin_name == 'S/N':
+            axs[ii].set_xscale('log')
     axs[0].set_ylabel(r"$\langle e_{1} \rangle$", fontsize=20)
     axs[1].set_ylabel(r"$\langle e_{2} \rangle$", fontsize=20)
-    # axs[1].legend(loc='upper right')
+    axs[1].legend(loc='upper right')
     plt.tight_layout()
     plt.savefig(fname, bbox_inches='tight')
 
@@ -507,12 +508,17 @@ def main(argv):
     with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_'+sys.argv[1]+'.pickle', 'rb') as handle:
         predef_bin = pickle.load(handle)
     
-    if sys.argv[2]=='psfrec_g' and sys.argv[1]=='psfg1':
-        bin_statistics_per_tile(fs, predef_bin, sys.argv[2], sys.argv[3], sys.argv[4], qa_psfg=1)
-    elif sys.argv[2]=='psfrec_g' and sys.argv[1]=='psfg2':
-        bin_statistics_per_tile(fs, predef_bin, sys.argv[2], sys.argv[3], sys.argv[4], qa_psfg=2)
+    predef_bin_name = sys.argv[1]
+    column_name = sys.argv[2]
+    xlabel = sys.argv[3]
+    plot_fname = sys.argv[4]
+
+    if column_name=='psfrec_g' and predef_bin_name=='psfg1':
+        bin_statistics_per_tile(fs, predef_bin, column_name, xlabel, plot_fname, qa_psfg=1)
+    elif column_name=='psfrec_g' and predef_bin_name=='psfg2':
+        bin_statistics_per_tile(fs, predef_bin, column_name, xlabel, plot_fname, qa_psfg=2)
     else:
-        bin_statistics_per_tile(fs, predef_bin, sys.argv[2], sys.argv[3], sys.argv[4])
+        bin_statistics_per_tile(fs, predef_bin, column_name, xlabel, plot_fname)
 
 if __name__ == "__main__":
     main(sys.argv)
