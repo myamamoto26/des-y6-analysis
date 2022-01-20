@@ -9,7 +9,7 @@ d = fio.read('/data/des70.a/data/masaya/metadetect/v2/mdet_test_all_v2.fits')
 # histogram
 def _get_hist_with_upper_cuts(d, qa_cut_quantity, qa_cut):
     
-    fig,ax=plt.subplots(1,3,figsize=(15,7))
+    fig,ax=plt.subplots(1,3,figsize=(19,7))
     label = 'QA Cuts: '
     total = len(d)
     for i in range(len(qa_cut_quantity)):
