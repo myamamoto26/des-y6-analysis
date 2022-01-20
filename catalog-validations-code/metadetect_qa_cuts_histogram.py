@@ -8,7 +8,8 @@ d = fio.read('/data/des70.a/data/masaya/metadetect/v2/mdet_test_all_v2.fits')
 
 # histogram
 def _get_hist_with_upper_cuts(d, qa_cut_quantity, qa_cut):
-    
+
+    plt.clf()
     fig,ax=plt.subplots(1,3,figsize=(19,7))
     label = 'QA Cuts: '
     total = len(d)
@@ -30,6 +31,7 @@ def _get_hist_with_upper_cuts(d, qa_cut_quantity, qa_cut):
     ax[2].set_xlabel(r'$T_{ratio}$', fontsize=20)
     ax[2].tick_params(labelsize=15)
     
+    print(label+label2)
     ax[1].set_title(label+label2, fontsize=15)
     plt.tight_layout()
     plt.savefig('mdet_qa_cuts.pdf', bbox_inches='tight')
