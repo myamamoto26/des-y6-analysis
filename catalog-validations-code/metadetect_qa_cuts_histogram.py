@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 d = fio.read('/data/des70.a/data/masaya/metadetect/v2/mdet_test_all_v2.fits')
 
 # histogram
-def _get_hist_with_cuts(d, qa_cut_quantity, qa_cut):
+def _get_hist_with_upper_cuts(d, qa_cut_quantity, qa_cut):
     
     fig,ax=plt.subplots(1,3,figsize=(15,7))
     label = 'QA Cuts: '
@@ -30,6 +30,6 @@ def _get_hist_with_cuts(d, qa_cut_quantity, qa_cut):
     ax[2].set_xlabel(r'$T_{ratio}$', fontsize=20)
     ax[2].tick_params(labelsize=15)
     
-    ax[1].title(label, fontsize=15)
+    ax[1].set_title(label+label2, fontsize=15)
     plt.tight_layout()
     plt.savefig('mdet_qa_cuts.pdf', bbox_inches='tight')
