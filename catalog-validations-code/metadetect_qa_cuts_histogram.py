@@ -2,6 +2,7 @@
 import fitsio as fio
 import numpy as np
 from matplotlib import pyplot as plt
+from esutil import stat
 
 # This catalog only contains 500 tiles. 
 d = fio.read('/data/des70.a/data/masaya/metadetect/v2/mdet_test_all_v2.fits')
@@ -17,7 +18,7 @@ def _get_hist_with_upper_cuts(d, qa_cut_quantity, qa_cut):
         msk = (d[qa_cut_quantity[i]] < qa_cut[i])
         d = d[msk]
         label += qa_cut_quantity[i]+'<'+str(qa_cut[i])+' '
-    label2 = 'Remaining: '+str(total*100/len(d))
+    label2 = 'Remaining: '+str(len(d)*100/total)+"%"
     
     ax[0].hist(d['MDET_S2N'], bins=100000, histtype='step')
     ax[0].set_xlabel('S/N', fontsize=20)
@@ -35,3 +36,10 @@ def _get_hist_with_upper_cuts(d, qa_cut_quantity, qa_cut):
     ax[1].set_title(label+label2, fontsize=15)
     plt.tight_layout()
     plt.savefig('mdet_qa_cuts.pdf', bbox_inches='tight')
+
+def _compute_bins(d, binname, qa_upper_cuts, nperbin):
+    
+    d_bin = d[binname]
+    hist = stat.histogram(d_bin, nperbin=nperbin, more=True)
+    bin_num = len(hist['hist'])
+    
