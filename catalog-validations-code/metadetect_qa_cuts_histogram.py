@@ -36,7 +36,7 @@ def _get_hist_with_upper_cuts(d, qa_upper_cuts, qa_upper_cuts_value):
     print(label+label2)
     ax[1].set_title(label+label2, fontsize=15)
     plt.tight_layout()
-    plt.savefig('mdet_qa_cuts.pdf', bbox_inches='tight')
+    plt.savefig('mdet_qa_v1_cuts.pdf', bbox_inches='tight')
 
 def _predefine_bins(d, binname, fname, qa_upper_cuts, qa_upper_cuts_value, nperbin):
     
@@ -49,8 +49,8 @@ def _predefine_bins(d, binname, fname, qa_upper_cuts, qa_upper_cuts_value, nperb
     hist = stat.histogram(d_bin, nperbin=nperbin, more=True)
     bin_num = len(hist['hist'])
 
-    print(hist['low'], hist['high'])
+    print(bin_num, hist['low'], hist['high'])
     with open(fname, 'wb') as f:
-        pickle.dump(hist, fname, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(hist, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     
