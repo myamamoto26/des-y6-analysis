@@ -328,8 +328,7 @@ def percentile_bin_statistics(d, nperbin, cut_quantity):
     def func(x,m,n):
         return m*x+n
     
-    ## psf shape/area vs mean shear. 
-    fig,axs = plt.subplots(5,2,figsize=(36,20))
+    fig,axs = plt.subplots(5,2,figsize=(45,18),dpi=100)
     perc = [99,99,98,98,95,95,90,90,85,85]
     # def_mask = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_T_ratio'] > 1.2) & (d['mfrac'] < 0.1))
     for q,ax in enumerate(axs.ravel()):
@@ -348,85 +347,20 @@ def percentile_bin_statistics(d, nperbin, cut_quantity):
             g_obs[i] = g_mean[q%2]/R[q%2]
             gerr_obs[i] = (gerr_mean[q%2]/R[q%2])
         
-        params = curve_fit(func,hist['mean'],g_obs,p0=(0.,0.))
-        m1,n1=params[0]
-        x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
+        params = _compute_OLSfit(hist['mean'], g_obs, dy=gerr_obs)
+        m1, n1 = params[0], params[2]
+        x = np.linspace(hist['mean'][0], hist['mean'][len(hist['hist'])-1], 100)
 
         ax.plot(x, func(x,m1,n1), label='linear fit w/ fit params: m='+str("{:2.4f}".format(m1))+', b='+str("{:2.4f}".format(n1)))
         ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label=str(100-perc[q])+'percent cut, Tmax='+str("{:2.2f}".format(d_max)))
-        # if q%2 == 0:
-        #     ax.set_ylim(-3e-3, 5e-3)
-        # elif q%2 == 1:
-        #     ax.set_ylim(-1e-2, 2e-2)
-        ax.set_xlabel("e1,PSF")
-        ax.set_ylabel('<e'+str(q%2 + 1)+'>')
+
+        ax.set_xlabel("T", fontsize=20)
+        ax.set_ylabel('<e'+str(q%2 + 1)+'>', fontsize=20)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
         ax.tick_params(labelsize=15)
         ax.legend(loc='upper left')
     plt.tight_layout()
-    plt.savefig('mdet_shear_e1cuts_v2.pdf', bbox_inches='tight')
-
-def _compute_bins(d, nperbin):
-
-    ## for linear fit
-    def func(x,m,n):
-        return m*x+n
-    
-    ## psf shape/area vs mean shear. 
-    fig,axs = plt.subplots(3,2,figsize=(30,17))
-    # exclude objects in healpix which is the same as the gold. 
-    d = exclude_gold_mask_objects(d)
-    d = exclude_hyperleda_objects(d)
-    # fio.write('mdet_exclude_y3goldmask_and_hyperleda.fits', d)
-    for q,ax in enumerate(axs.ravel()):
-        if q==0 or q==1:
-            psf_ = d['PSFREC_G_'+str(q+1)]
-            hist = stat.histogram(psf_, nperbin=nperbin, more=True)
-            bin_num = len(hist['hist'])
-        elif q==2 or q==3:
-            Tpsf = d['PSFREC_T']
-            hist = stat.histogram(Tpsf, nperbin=nperbin, more=True)
-            bin_num = len(hist['hist'])
-        elif q==4 or q==5:
-            Tr = d['MDET_T_RATIO'] # d['mdet_T'][T_mask]
-            hist = stat.histogram(Tr, nperbin=2000000, more=True)
-            bin_num = len(hist['hist'])
-        g_obs = np.zeros(bin_num)
-        gerr_obs = np.zeros(bin_num)
-        print(len(hist['low']), len(hist['mean']))
-        for i in tqdm(range(bin_num)):
-            if q==0 or q==1:
-                additional_cuts = {'quantity': 'PSFREC_G_'+str(q+1), 'cuts': [hist['low'][i], hist['high'][i]]}
-            elif q==2 or q==3:
-                additional_cuts = {'quantity': 'PSFREC_T', 'cuts': [hist['low'][i], hist['high'][i]]}
-            elif q==4 or q==5:
-                additional_cuts = {'quantity': 'MDET_T_RATIO', 'cuts': [hist['low'][i], hist['high'][i]]}
-                print(i, hist['low'][i], hist['high'][i])
-
-            R, g_mean, gerr_mean, bs = _compute_response(d, additional_cuts=additional_cuts)
-            g_obs[i] = g_mean[q%2]/R[q%2]
-            gerr_obs[i] = (gerr_mean[q%2]/R[q%2])
-        
-        # params = curve_fit(func,hist['mean'],g_obs,p0=(0.,0.))
-        # m1,n1=params[0]
-        params = _compute_OLSfit(hist['mean'], g_obs, dy=gerr_obs)
-        x = np.linspace(hist['mean'][0], hist['mean'][bin_num-1], 100)
-        print('parameters of the fit. ', params)
-
-        ax.plot(x, func(x,params[0],params[2]), label='linear fit w/ fit params: m='+str("{:2.4f}".format(params[0]))+'+/-'+str(("{:2.4f}".format(params[1])))+', b='+str("{:2.4f}".format(params[2]))+'+/-'+str(("{:2.4f}".format(params[3]))))
-        ax.errorbar(hist['mean'], g_obs, yerr=gerr_obs, fmt='o', fillstyle='none', label='Y6 metadetect test')
-        if q==0 or q==1:
-            ax.set_xlabel('e'+str(q+1)+',PSF', fontsize=20)
-        elif q==2 or q==3:
-            ax.set_xlabel(r'$T_{PSF}$', fontsize=20)
-        elif q==4 or q==5:
-            ax.set_xlabel(r'$T_{ratio}$', fontsize=20)
-        ax.set_ylabel('<e'+str(q%2 + 1)+'>', fontsize=20)
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-        ax.tick_params(labelsize=16)
-    axs[0,0].legend(loc='upper right')
-    plt.tight_layout()
-    plt.savefig('mdet_psf_vs_shear_weightedfit_v2_y3goldmask_and_hyperleda.pdf', bbox_inches='tight')
+    plt.savefig('mdet_shear_percentile_Tcuts.pdf', bbox_inches='tight')
 
 def bin_statistics_from_master(d, nperbin, x):
 
@@ -565,6 +499,9 @@ def bin_statistics_per_tile(fs, predef_bin, qa, plt_label, plt_fname, qa_psfg=No
 
 def main(argv):
 
+    d = fio.read('/data/des70.a/data/masaya/metadetect/v2')
+    percentile_bin_statistics(d, 3000000, 'MDET_T')
+    sys.exit()
     f = open('/global/cscratch1/sd/myamamot/metadetect/fnames.txt', 'r')
     fs = f.read().split('\n')[:-1]
     with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_'+sys.argv[1]+'.pickle', 'rb') as handle:
