@@ -63,6 +63,22 @@ def fwhm_PSF():
     plt.legend(loc='upper right')
     plt.savefig('seeing_fwhm.png')
 
+def bin_exposures_quartile(good_piff_models, par):
+
+    good = fio.read(good_piff_models)
+    expnumq = np.unique(good['EXPNUM'])
+    quantity=[]
+    for u in expnumq:
+        seeing=np.unique(good[good['EXPNUM']==u][par])[0]
+        quantity.append(seeing)
+    quartiles = np.quantile(quantity, [0., 0.25, 0.50, 0.75, 1.0])
+    quartiles_exp = []
+    for q in range(len(quartiles)-1):
+        mask = ((good[par] >= quartiles[q]) & (good[par] < quartiles[q+1]))
+        quartiles_exp.append(good[mask]['EXPNUM'])
+
+    return quartiles, quartiles_exp
+
 # Figure 6; PSF residuals as a function of star magnitudes (BFE)
 def brighter_fatter_effect(gold_cat, data, band): #piff_cat_i, piff_cat_z):
 
