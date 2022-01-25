@@ -134,13 +134,13 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
                 continue
             unique_slices = np.unique(epochs['id'][msk])
 
-            msk_obj = np.where(np.in1d(mdet_obj['SLICE_ID'], unique_slices))[0]
+            msk_obj = np.where(np.in1d(mdet_obj['slice_id'], unique_slices))[0]
             if len(msk_obj) == 0:
                 continue
         
             n = len(msk_obj)
-            ra_obj = mdet_obj['RA'][msk_obj]
-            dec_obj = mdet_obj['DEC'][msk_obj]
+            ra_obj = mdet_obj['ra'][msk_obj]
+            dec_obj = mdet_obj['dec'][msk_obj]
 
             # pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj)
             pos_x, pos_y = gs_wcs.radecToxy(ra_obj, dec_obj, units="degrees")
@@ -156,13 +156,13 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
                 print(pos_y[((pos_y<=98) | (pos_y>3998))])
             if ccdnum not in list(ccdres):
                 ccdres[ccdnum] = {}
-            mdet_step = mdet_obj["MDET_STEP"][msk_obj]
-            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj["MDET_G_1"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj["MDET_G_2"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj["MDET_G_1"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj["MDET_G_1"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj["MDET_G_2"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj["MDET_G_2"][msk_obj], x_side, y_side)
+            mdet_step = mdet_obj["mdet_step"][msk_obj]
+            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g"][:,0][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g"][:,1][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj["mdet_g"][:,0][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj["mdet_g"][:,0][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj["mdet_g"][:,1][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj["mdet_g"][:,1][msk_obj], x_side, y_side)
 
     return ccdres
 
