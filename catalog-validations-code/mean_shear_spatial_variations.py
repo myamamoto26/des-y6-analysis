@@ -56,9 +56,9 @@ def _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side):
             if cname not in list(ccdres_all[ccdnum]):
                 ccdres_all[ccdnum][cname] = np.zeros((y_side, x_side))
                 ccdres_all[ccdnum]["num_" + cname] = np.zeros((y_side, x_side))
-
-            ccdres_all[ccdnum][cname] += ccdres[ccdnum][cname]
-            ccdres_all[ccdnum]["num_"+cname] += ccdres[ccdnum]["num_"+cname]
+            if cname in list(ccdres[ccdnum]):
+                ccdres_all[ccdnum][cname] += ccdres[ccdnum][cname]
+                ccdres_all[ccdnum]["num_"+cname] += ccdres[ccdnum]["num_"+cname]
 
     return ccdres_all
 
