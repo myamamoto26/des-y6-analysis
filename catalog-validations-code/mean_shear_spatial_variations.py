@@ -424,7 +424,7 @@ def main(argv):
         # Add raw sums for all the tiles from individual tile file. 
         ccdres_all = {}
         for t in tqdm(tilenames):
-            with open('/data/des70.a/data/masaya/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+            with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
                 ccdres = pickle.load(handle)
             ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
         with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
@@ -444,7 +444,7 @@ def main(argv):
             for j,t in enumerate(tilenames):
                 if i == j:
                     continue
-                with open('/data/des70.a/data/masaya/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
                     ccdres = pickle.load(handle)
                 x_data, y_data = plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=True)
                 x_g1.append(x_data[0])
