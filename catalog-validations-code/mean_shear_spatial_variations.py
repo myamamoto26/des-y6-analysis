@@ -388,7 +388,7 @@ def main(argv):
     if not just_plot:
         
         # Obtain file, tile, band information from information file queried from desoper. 
-        tilenames = ['DES0211-0624', 'DES0449-4623', 'DES2308-0124', 'DES0211-0707', 'DES0449-4706']
+        tilenames = np.array(['DES0211-0624', 'DES0449-4623', 'DES2308-0124', 'DES0211-0707', 'DES0449-4706'])
         coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
         coadd_files = {t: [] for t in tilenames}
         bands = {t: [] for t in tilenames}
