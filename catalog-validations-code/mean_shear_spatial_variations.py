@@ -114,7 +114,7 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
 
     # How this function works: Collect info (id, ra, dec, CCD coord, mean property values), save it, and plot later. 
     for pizza_f,band in zip(coadd_files, bands):
-        coadd = fio.FITS(os.path.join('/global/cscratch1/sd/myamamot/pizza-slice/v2/'+band+'_band/', pizza_f))
+        coadd = fio.FITS(os.path.join('/global/cscratch1/sd/myamamot/pizza-slice', pizza_f))
         epochs = coadd['epochs_info'].read()
         image_info = coadd['image_info'].read()
 
