@@ -367,7 +367,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
 
 def main(argv):
 
-    just_plot = False
+    just_plot = True
     work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
     work = '/global/cscratch1/sd/myamamot'
     ccd_x_min = 48
@@ -458,6 +458,7 @@ def main(argv):
             jk_y_g2.append(np.sum(y_g2, axis=0)/(jk_sample-1))
         jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
         print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
+        exit()
         with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
             ccdres = pickle.load(handle)
             plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
