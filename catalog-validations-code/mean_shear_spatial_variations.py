@@ -413,7 +413,7 @@ def main(argv):
         # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
         for t in tqdm(tilenames):
             ccdres = {}
-            d = fio.read(os.path.join(work, mdet_filenames[np.where(tilenames == t)[0][0]]))
+            d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(tilenames == t)[0][0]]))
             ccdres = spatial_variations(ccdres, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
             with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
                 pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
