@@ -368,7 +368,8 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
 def main(argv):
 
     just_plot = False
-    work = '/global/cscratch1/sd/myamamot'
+    work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
+    work_pizza = '/global/cscratch1/sd/myamamot/pizza-slice'
     ccd_x_min = 48
     ccd_x_max = 2000
     ccd_y_min = 48
@@ -389,7 +390,7 @@ def main(argv):
         
         # Obtain file, tile, band information from information file queried from desoper. 
         tilenames = np.array(['DES0211-0624', 'DES0449-4623', 'DES2308-0124', 'DES0211-0707', 'DES0449-4706'])
-        coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
+        coadd_info = fio.read(os.path.join(work_pizza, 'pizza-slice/pizza-cutter-coadds-info.fits'))
         coadd_files = {t: [] for t in tilenames}
         bands = {t: [] for t in tilenames}
         # for coadd in coadd_info:
@@ -412,7 +413,7 @@ def main(argv):
         # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
         for t in tqdm(tilenames):
             ccdres = {}
-            d = fio.read(mdet_filenames[np.where(tilenames == t)[0][0]])
+            d = fio.read(os.path.join(work, mdet_filenames[np.where(tilenames == t)[0][0]]))
             ccdres = spatial_variations(ccdres, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
             with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
                 pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
