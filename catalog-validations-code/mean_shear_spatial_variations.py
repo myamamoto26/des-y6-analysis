@@ -369,7 +369,7 @@ def main(argv):
 
     just_plot = False
     work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
-    work_pizza = '/global/cscratch1/sd/myamamot/pizza-slice'
+    work = '/global/cscratch1/sd/myamamot'
     ccd_x_min = 48
     ccd_x_max = 2000
     ccd_y_min = 48
@@ -390,7 +390,7 @@ def main(argv):
         
         # Obtain file, tile, band information from information file queried from desoper. 
         tilenames = np.array(['DES0211-0624', 'DES0449-4623', 'DES2308-0124', 'DES0211-0707', 'DES0449-4706'])
-        coadd_info = fio.read(os.path.join(work_pizza, 'pizza-slice/pizza-cutter-coadds-info.fits'))
+        coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
         coadd_files = {t: [] for t in tilenames}
         bands = {t: [] for t in tilenames}
         # for coadd in coadd_info:
