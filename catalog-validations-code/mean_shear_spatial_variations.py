@@ -368,7 +368,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
 def main(argv):
 
     just_plot = False
-    work = '/data/des70.a/data/masaya'
+    work = '/global/cscratch1/sd/myamamot'
     ccd_x_min = 48
     ccd_x_max = 2000
     ccd_y_min = 48
