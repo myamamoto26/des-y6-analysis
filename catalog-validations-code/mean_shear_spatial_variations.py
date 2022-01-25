@@ -246,14 +246,14 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
             
             mesh = ax1[0,0].pcolormesh(X,Y,mean_g1, vmin=-0.05, vmax=0.05, cmap=cmap)
             ax1[0,0].set_aspect(1)
-            ax1[0,0].set_title('<e1>', fontsize=20)
+            ax1[0,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
             ax1[0,0].set_xticks([])
             ax1[0,0].set_yticks([])
             plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
 
             mesh = ax1[0,1].pcolormesh(X,Y,mean_g2, vmin=-0.05, vmax=0.05, cmap=cmap)
             ax1[0,1].set_aspect(1)
-            ax1[0,1].set_title('<e2>', fontsize=20)
+            ax1[0,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
             ax1[0,1].set_xticks([])
             ax1[0,1].set_yticks([])
             # plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
@@ -274,7 +274,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
             ax1[1,0].errorbar(y_, y_stacked, yerr=jc[1], c='r')
             ax1[1,0].set_ylim(-0.2,0.2)
             ax1[1,0].set_xlabel('CCD coordinates')
-            ax1[1,0].set_ylabel('<e1>')
+            ax1[1,0].set_ylabel(r'$\langle e_{1} \rangle$')
             ax1[1,0].set_xticks([])
 
             x_reduced = block_reduce(mean_g2, block_size=(1, y_side//xbin_num), func=np.nanmean)
@@ -288,7 +288,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
             ax1[1,1].errorbar(y_, y_stacked, yerr=jc[3], c='r')
             ax1[1,1].set_ylim(-0.2,0.2)
             ax1[1,1].set_xlabel('CCD coordinates')
-            ax1[1,1].set_ylabel('<e2>')
+            ax1[1,1].set_ylabel(r'$\langle e_{2} \rangle$')
             ax1[1,1].set_xticks([])
 
             plt.legend(fontsize='large')
@@ -356,10 +356,9 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
         plt.clf()
         return
 
-    # drawDECamCCDs_Plot(x0,y0,ccdres,'e1',rotate=False,label=False,color='k',lw=0.5,ls='-')
-    # drawDECamCCDs_Plot(x0,y0,ccdres,'e2',rotate=False,label=False,color='k',lw=0.5,ls='-')
+    drawDECamCCDs_Plot(x0,y0,ccdres,'e1',rotate=False,label=False,color='k',lw=0.5,ls='-')
+    drawDECamCCDs_Plot(x0,y0,ccdres,'e2',rotate=False,label=False,color='k',lw=0.5,ls='-')
     data = stack_CCDs(ccdres, 'all', x_side, y_side)
-    # print('saved figure...')
     if jk:
         return data[0], data[1]
     else:
@@ -367,7 +366,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
 
 def main(argv):
 
-    just_plot = True
+    just_plot = False
     work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
     work = '/global/cscratch1/sd/myamamot'
     ccd_x_min = 48
@@ -429,6 +428,8 @@ def main(argv):
             ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
         with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
             pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
+        # plot for all the CCDs. 
+        plot_shear_vaiations_ccd(x_side, y_side, ccdres_all, num_ccd, jk=False)
         
         # Compute jackknife error estimate. 
         jk_sample = len(tilenames)
@@ -458,8 +459,8 @@ def main(argv):
             jk_y_g2.append(np.sum(y_g2, axis=0)/(jk_sample-1))
         jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
         print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
-        exit()
-        with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
+
+        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
             ccdres = pickle.load(handle)
             plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
 
