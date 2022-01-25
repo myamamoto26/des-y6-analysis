@@ -44,6 +44,24 @@ def _accum_shear(ccdres, ccdnum, cname, shear, mdet_step, xind, yind, g, x_side,
 
     return ccdres
 
+def _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side):
+
+    for ccdnum in list(ccdres):
+        if ccdnum not in list(ccdres_all):
+            ccdres_all[ccdnum] = {}
+
+    step_names = ['noshear', 'g1p', 'g1m', 'g2p', 'g2m']
+    for ccdnum in list(ccdres):
+        for cname in step_names:
+            if cname not in list(ccdres_all[ccdnum]):
+                ccdres_all[ccdnum][cname] = np.zeros((y_side, x_side))
+                ccdres_all[ccdnum]["num_" + cname] = np.zeros((y_side, x_side))
+
+            ccdres_all[ccdnum][cname] += ccdres[ccdnum][cname]
+            ccdres_all[ccdnum]["num_"+cname] += ccdres[ccdnum]["num_"+cname]
+
+    return ccdres_all
+
 def _compute_g1_g2(ccdres, ccdnum):
     g1 = ccdres[ccdnum]["g1"] / ccdres[ccdnum]["num_g1"]
     g1p = ccdres[ccdnum]["g1p"] / ccdres[ccdnum]["num_g1p"]
@@ -95,9 +113,8 @@ def _categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_o
 def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands):
 
     # How this function works: Collect info (id, ra, dec, CCD coord, mean property values), save it, and plot later. 
-    
     for pizza_f,band in zip(coadd_files, bands):
-        coadd = fio.FITS(os.path.join('/data/des70.a/data/masaya/pizza-slice/v2/'+band+'_band/', pizza_f))
+        coadd = fio.FITS(os.path.join('/global/cscratch1/sd/myamamot/pizza-slice/v2/'+band+'_band/', pizza_f))
         epochs = coadd['epochs_info'].read()
         image_info = coadd['image_info'].read()
 
@@ -357,44 +374,63 @@ def main(argv):
     ccd_y_min = 48
     ccd_y_max = 4048
     piece_side = 32
-    ver = 'v2'
     x_side = int(np.ceil((ccd_x_max - ccd_x_min)/piece_side))
     y_side = int(np.ceil((ccd_y_max - ccd_y_min)/piece_side))
     num_ccd = 62
-    ccdres = {}
-    jk_sample = 500
 
-    ###################################################
-    # NEED TO CHANGE THE WAY TO READ INDIVIDUAL FILES.#
-    ################################################### 
-    f = fio.read(os.path.join(work, 'metadetect/'+ver+'/mdet_test_all_v2.fits'))
-    tilenames = np.unique(f['TILENAME'])
-    if just_plot:
+    # NEED TO WRITE THE CODE TO BE ABLE TO RUN FROM BOTH MASTER FLAT AND INDIVIDUAL FILES. 
+    mdet_f = open('/global/cscratch1/sd/myamamot/metadetect/fnames_test.txt', 'r')
+    mdet_fs = mdet_f.read().split('\n')[:-1]
+    mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
+    tilenames = [d.split('_')[0] for d in mdet_filenames] 
+
+    # f = fio.read(os.path.join(work, 'metadetect/'+ver+'/mdet_test_all_v2.fits'))
+    if not just_plot:
         
-        coadd_f = fio.read(os.path.join(work, 'pizza-slice/'+ver+'/pizza_slices_coadd_v2.fits')) # Made from make_download_files_v2.py
+        # Obtain file, tile, band information from information file queried from desoper. 
+        tilenames = ['DES0211-0624', 'DES0449-4623', 'DES2308-0124', 'DES0211-0707', 'DES0449-4706']
+        coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
         coadd_files = {t: [] for t in tilenames}
         bands = {t: [] for t in tilenames}
-        for coa in coadd_f:
-            tname = coa['FILENAME'][:12]
-            coadd_files[tname].append(coa['FILENAME'])
-            bands[tname].append(coa['BAND'])
+        # for coadd in coadd_info:
+        #     tname = coadd['FILENAME'].split('_')[0]
+        #     fname = coadd['FILENAME'] + coadd['COMPRESSION']
+        #     bandname = coadd['FILENAME'].split('_')[2]
+        #     coadd_files[tname].append(fname)
+        #     bands[tname].append(bandname)
+        coadd_files['DES0211-0624'].append('DES0211-0624_r5366p01_r_pizza-cutter-slices.fits.fz')
+        bands['DES0211-0624'].append('r')
+        coadd_files['DES0449-4623'].append('DES0449-4623_r5366p01_r_pizza-cutter-slices.fits.fz')
+        bands['DES0449-4623'].append('r')
+        coadd_files['DES2308-0124'].append('DES2308-0124_r5366p01_r_pizza-cutter-slices.fits.fz')
+        bands['DES2308-0124'].append('r')
+        coadd_files['DES0211-0707'].append('DES0211-0707_r5366p01_r_pizza-cutter-slices.fits.fz')
+        bands['DES0211-0707'].append('r')
+        coadd_files['DES0449-4706'].append('DES0449-4706_r5366p01_r_pizza-cutter-slices.fits.fz')
+        bands['DES0449-4706'].append('r')
 
-        # array_split = 5
-        # ii = int(sys.argv[2])
-        # split_tilenames = np.array_split(tilenames, array_split)[ii]
-        # print('Processing the '+str(ii)+' batch...')
-
+        # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
         for t in tqdm(tilenames):
             ccdres = {}
-            ccdres = spatial_variations(ccdres, f[f['TILENAME']==t], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
-            # with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+str(ii)+'.pickle', 'wb') as raw:
-            with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
+            d = fio.read(mdet_filenames[np.where(tilenames == t)[0]])
+            ccdres = spatial_variations(ccdres, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
+            with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
                 pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
-                print('saving dict to a file...', t)
     
     else:
         print('Plotting...')
-        # with open('./binshear_test/mdet_shear_focal_plane_0.pickle', 'rb') as handle:
+
+        # Add raw sums for all the tiles from individual tile file. 
+        ccdres_all = {}
+        for t in tqdm(tilenames):
+            with open('/data/des70.a/data/masaya/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                ccdres = pickle.load(handle)
+            ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
+        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
+            pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
+        
+        # Compute jackknife error estimate. 
+        jk_sample = len(tilenames)
         jk_x_g1 = []
         jk_y_g1 = []
         jk_x_g2 = []
@@ -407,7 +443,7 @@ def main(argv):
             for j,t in enumerate(tilenames):
                 if i == j:
                     continue
-                with open('/data/des70.a/data/masaya/metadetect/'+ver+'/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                with open('/data/des70.a/data/masaya/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
                     ccdres = pickle.load(handle)
                 x_data, y_data = plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=True)
                 x_g1.append(x_data[0])
