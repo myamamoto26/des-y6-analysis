@@ -150,10 +150,10 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
             xind, yind, msk_obj = _categorize_obj_in_ccd(piece_side, x_side, y_side, ccd_x_min, ccd_y_min, pos_x, pos_y, msk_obj)
             if (np.any(pos_x<=98) or np.any(pos_x>1950)):
                 print('No objects in the buffer of total 98 pixels.')
-                print(pos_x[((pos_x<=98) | (pos_x>1950))])
+                # print(pos_x[((pos_x<=98) | (pos_x>1950))])
             if (np.any(pos_y<=98) or np.any(pos_y>3998)):
                 print('No objects in the buffer of total 98 pixels.')
-                print(pos_y[((pos_y<=98) | (pos_y>3998))])
+                # print(pos_y[((pos_y<=98) | (pos_y>3998))])
             if ccdnum not in list(ccdres):
                 ccdres[ccdnum] = {}
             mdet_step = mdet_obj["mdet_step"][msk_obj]
