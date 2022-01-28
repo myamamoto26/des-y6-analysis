@@ -431,7 +431,7 @@ def bin_statistics_per_tile(fs, predef_bin, qa, plt_label, plt_fname):
     # Accumulate raw sums of shear and mean shear corrected with response per tile. 
     for fname in tqdm(filenames):
         mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
-        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mdet_s2n']<100) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>0.5) & (mdet_all['mask_flags']==0) & (mdet_all['mdet_T']<2.5))
+        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mdet_s2n']<100) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>0.5) & (mdet_all['mask_flags']==0) & (mdet_all['mdet_T']<1.2))
         mdet = mdet_all[msk_default]
         num_objects += len(mdet)
         res[fname.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
