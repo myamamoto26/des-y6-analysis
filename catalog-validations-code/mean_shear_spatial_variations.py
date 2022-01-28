@@ -19,6 +19,7 @@ from skimage.measure import block_reduce
 import drawDECam.drawDECam as dDECam
 import matplotlib
 import math
+from mpi4py import MPI
 
 def _get_ccd_num(image_path):
     return int(image_path.split('/')[1].split('_')[2][1:])
@@ -157,12 +158,12 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
             if ccdnum not in list(ccdres):
                 ccdres[ccdnum] = {}
             mdet_step = mdet_obj["mdet_step"][msk_obj]
-            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g"][:,0][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g"][:,1][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj["mdet_g"][:,0][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj["mdet_g"][:,0][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj["mdet_g"][:,1][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj["mdet_g"][:,1][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g_1"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g_2"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj["mdet_g_1"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj["mdet_g_1"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj["mdet_g_2"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj["mdet_g_2"][msk_obj], x_side, y_side)
 
     return ccdres
 
@@ -366,6 +367,10 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
 
 def main(argv):
 
+    # comm = MPI.COMM_WORLD
+    # rank = comm.Get_rank()
+    # size = comm.Get_size()
+
     just_plot = False
     work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
     work = '/global/cscratch1/sd/myamamot'
@@ -379,43 +384,33 @@ def main(argv):
     num_ccd = 62
 
     # NEED TO WRITE THE CODE TO BE ABLE TO RUN FROM BOTH MASTER FLAT AND INDIVIDUAL FILES. 
-    mdet_f = open('/global/cscratch1/sd/myamamot/metadetect/fnames_test.txt', 'r')
+    mdet_f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
     mdet_fs = mdet_f.read().split('\n')[:-1]
     mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
-    tilenames = [d.split('_')[0] for d in mdet_filenames] 
+    tilenames = [d.split('_')[0] for d in mdet_filenames]
 
-    # f = fio.read(os.path.join(work, 'metadetect/'+ver+'/mdet_test_all_v2.fits'))
     if not just_plot:
         
         # Obtain file, tile, band information from information file queried from desoper. 
-        tilenames = np.array(['DES0211-0624', 'DES0449-4623', 'DES2308-0124', 'DES0211-0707', 'DES0449-4706'])
         coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
         coadd_files = {t: [] for t in tilenames}
         bands = {t: [] for t in tilenames}
-        # for coadd in coadd_info:
-        #     tname = coadd['FILENAME'].split('_')[0]
-        #     fname = coadd['FILENAME'] + coadd['COMPRESSION']
-        #     bandname = coadd['FILENAME'].split('_')[2]
-        #     coadd_files[tname].append(fname)
-        #     bands[tname].append(bandname)
-        coadd_files['DES0211-0624'].append('DES0211-0624_r5366p01_r_pizza-cutter-slices.fits.fz')
-        bands['DES0211-0624'].append('r')
-        coadd_files['DES0449-4623'].append('DES0449-4623_r5366p01_r_pizza-cutter-slices.fits.fz')
-        bands['DES0449-4623'].append('r')
-        coadd_files['DES2308-0124'].append('DES2308-0124_r5366p01_r_pizza-cutter-slices.fits.fz')
-        bands['DES2308-0124'].append('r')
-        coadd_files['DES0211-0707'].append('DES0211-0707_r5366p01_r_pizza-cutter-slices.fits.fz')
-        bands['DES0211-0707'].append('r')
-        coadd_files['DES0449-4706'].append('DES0449-4706_r5366p01_r_pizza-cutter-slices.fits.fz')
-        bands['DES0449-4706'].append('r')
+        for coadd in coadd_info:
+            tname = coadd['FILENAME'].split('_')[0]
+            fname = coadd['FILENAME'] + coadd['COMPRESSION']
+            bandname = coadd['FILENAME'].split('_')[2]
+            coadd_files[tname].append(fname)
+            bands[tname].append(bandname)
 
         # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
-        for t in tqdm(tilenames):
-            ccdres = {}
-            d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(tilenames == t)[0][0]]))
-            ccdres = spatial_variations(ccdres, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
-            with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
-                pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
+        # When not using MPI, you can use for-loops (for t in tilenames)
+        t = tilenames[sys.argv[1]]
+        ccdres = {}
+        d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(tilenames == t)[0][0]]))
+        msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<2.5))
+        ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
+        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
+            pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
     
     else:
         print('Plotting...')
