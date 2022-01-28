@@ -11,7 +11,7 @@ import numpy as np
 import fitsio as fio
 
 # Figure 4; galaxy count, shear response, variance of e, shear weight as a function of S/N and size ratio.
-def inverse_variance_weight(steps, mdet_cat, more_cuts=None):
+def inverse_variance_weight(steps, fs, more_cuts=None):
 
     # Input: 
     #   steps = how many bins in each axis.
@@ -66,9 +66,9 @@ def inverse_variance_weight(steps, mdet_cat, more_cuts=None):
 
         plt.minorticks_off() 
         ax.set_xticks(np.array([0.6,0.7,0.8,0.9,1.,2.,3.,4.,]))
-        ax.set_xticklabels(np.array([r'6 x $10^{-1}$','','','',r'$10^{0}$',r'2 x $10^{0}$','',r'4 x $10^{0}$']))
+        ax.set_xticklabels(np.array([r'5 x $10^{-1}$','','','',r'$10^{0}$',r'2 x $10^{0}$','',r'4 x $10^{0}$']))
 
-    def mesh_average(quantity,indexx,indexy,steps,count):
+    def mesh_average(m, quantity,indexx,indexy,steps,count):
         m = np.zeros((steps,steps)) # revised version, was -1 before
         np.add.at(m,(indexx,indexy),quantity)
         m /= count
@@ -76,9 +76,9 @@ def inverse_variance_weight(steps, mdet_cat, more_cuts=None):
 
     def find_assign_grid(d, mdet_step, snmin, snmax, steps, sizemin, sizemax):
 
-        mask = ((d['FLAGS'] == 0) & (d['MDET_S2N'] > 10) & (d['MDET_T_RATIO'] > 1.2) & (d['MFRAC'] < 0.1) & (d['MASK_FLAGS'] == 0) & (d['MDET_STEP'] == mdet_step))
-        mastercat_snr = d[mask]['MDET_S2N']
-        mastercat_Tr = d[mask]['MDET_T_RATIO']
+        mask = (d['mdet_step']==mdet_step)
+        mastercat_snr = d['mdet_s2n']
+        mastercat_Tr = d['mdet_T_ratio']
         new_indexx,new_indexy = assign_loggrid(mastercat_snr, mastercat_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
         
         return new_indexx, new_indexy, mask
@@ -96,8 +96,43 @@ def inverse_variance_weight(steps, mdet_cat, more_cuts=None):
         
         return all_count
 
+    def accumulate_shear_per_tile(res, d, snmin, snmax, steps, sizemin, sizemax):
 
-    def mesh_response(d, snmin, snmax, steps, sizemin, sizemax):
+        g1p_indexx, g1p_indexy, mask_1p = find_assign_grid(d, '1p', snmin, snmax, steps, sizemin, sizemax)
+        g1p_count = find_bincount_2d(g1p_indexx, g1p_indexy, steps)
+        g1m_indexx, g1m_indexy, mask_1m = find_assign_grid(d, '1m', snmin, snmax, steps, sizemin, sizemax)
+        g1m_count = find_bincount_2d(g1m_indexx, g1m_indexy, steps)
+        g2p_indexx, g2p_indexy, mask_2p = find_assign_grid(d, '2p', snmin, snmax, steps, sizemin, sizemax)
+        g2p_count = find_bincount_2d(g2p_indexx, g2p_indexy, steps)
+        g2m_indexx, g2m_indexy, mask_2m = find_assign_grid(d, '2m', snmin, snmax, steps, sizemin, sizemax)
+        g2m_count = find_bincount_2d(g2m_indexx, g2m_indexy, steps)
+
+        np.add.at(res['g_1p'], (g1p_indexx, g1p_indexy), d[mask_1p]['mdet_g_1'])
+        np.add.at(res['g_1m'], (g1m_indexx, g1m_indexy), d[mask_1m]['mdet_g_1'])
+        np.add.at(res['g_2p'], (g2p_indexx, g2p_indexy), d[mask_2p]['mdet_g_2'])
+        np.add.at(res['g_2m'], (g2m_indexx, g2m_indexy), d[mask_2m]['mdet_g_2'])
+        
+        np.add.at(res['g1p_count'], (g1p_indexx, g1p_indexy), g1p_count)
+        np.add.at(res['g1m_count'], (g1m_indexx, g1m_indexy), g1m_count)
+        np.add.at(res['g2p_count'], (g2p_indexx, g2p_indexy), g2p_count)
+        np.add.at(res['g2m_count'], (g2m_indexx, g2m_indexy), g2m_count)
+
+        return res
+
+    def compute_mesh_response(res):
+        
+        g_1p = res['g_1p']/res['g1p_count']
+        g_1m = res['g_1m']/res['g1m_count']
+        g_2p = res['g_2p']/res['g2p_count']
+        g_2m = res['g_2m']/res['g2m_count']
+
+        R11 = (g_1p - g_1m)/0.02
+        R22 = (g_2p - g_2m)/0.02
+        new_response = (R11+R22)/2
+
+        return new_response
+
+    def mesh_response_master_cat(d, snmin, snmax, steps, sizemin, sizemax):
         
         g1p_indexx, g1p_indexy, mask_1p = find_assign_grid(d, '1p', snmin, snmax, steps, sizemin, sizemax)
         g1p_count = find_bincount_2d(g1p_indexx, g1p_indexy, steps)
@@ -112,10 +147,10 @@ def inverse_variance_weight(steps, mdet_cat, more_cuts=None):
         g_1m = np.zeros((steps, steps))
         g_2p = np.zeros((steps, steps))
         g_2m = np.zeros((steps, steps))
-        np.add.at(g_1p, (g1p_indexx, g1p_indexy), d[mask_1p]['MDET_G_1'])
-        np.add.at(g_1m, (g1m_indexx, g1m_indexy), d[mask_1m]['MDET_G_1'])
-        np.add.at(g_2p, (g2p_indexx, g2p_indexy), d[mask_2p]['MDET_G_2'])
-        np.add.at(g_2m, (g2m_indexx, g2m_indexy), d[mask_2m]['MDET_G_2'])
+        np.add.at(g_1p, (g1p_indexx, g1p_indexy), d[mask_1p]['mdet_g_1'])
+        np.add.at(g_1m, (g1m_indexx, g1m_indexy), d[mask_1m]['mdet_g_1'])
+        np.add.at(g_2p, (g2p_indexx, g2p_indexy), d[mask_2p]['mdet_g_2'])
+        np.add.at(g_2m, (g2m_indexx, g2m_indexy), d[mask_2m]['mdet_g_2'])
         g_1p /= g1p_count
         g_1m /= g1m_count
         g_2p /= g2p_count
@@ -126,37 +161,59 @@ def inverse_variance_weight(steps, mdet_cat, more_cuts=None):
         new_response = (R11+R22)/2
 
         return new_response
-    
-    d = fio.read(mdet_cat)
-    if more_cuts is None:
-        msk = ((d['FLAGS'] == 0) & (d['MDET_S2N'] > 10) & (d['MDET_T_RATIO'] > 1.2) & (d['MFRAC'] < 0.1) & (d['MASK_FLAGS'] == 0))
-    else:
-        msk_default = ((d['FLAGS'] == 0) & (d['MDET_S2N'] > 10) & (d['MDET_T_RATIO'] > 1.2) & (d['MFRAC'] < 0.1) & (d['MASK_FLAGS'] == 0))
-        msk = (more_cuts & msk_default)
-    mask_noshear = (msk & (d['MDET_STEP'] == 'noshear'))
-    mastercat_noshear_snr = d[mask_noshear]['MDET_S2N']
-    mastercat_noshear_Tr = d[mask_noshear]['MDET_T_RATIO']
-    new_e1 = d[mask_noshear]['MDET_G_1']
-    new_e2 = d[mask_noshear]['MDET_G_2']
 
     snmin=10
-    snmax=1000
-    sizemin=1.2
+    snmax=100
+    sizemin=0.5
     sizemax=3
     steps=steps
-    new_indexx,new_indexy = assign_loggrid(mastercat_noshear_snr, mastercat_noshear_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
-    new_count = np.zeros((steps,steps))
-    np.add.at(new_count,(new_indexx,new_indexy), 1)
+    count_all = np.zeros((steps,steps))
+    m = np.zeros((steps, steps))
+    
+    filenames = [fname.split('/')[-1] for fname in fs]
+    tilenames = [d.split('_')[0] for d in filenames]
+    res = {'g_1p': np.zeros((steps, steps)),
+           'g_1m': np.zeros((steps, steps)),
+           'g_2p': np.zeros((steps, steps)),
+           'g_2m': np.zeros((steps, steps)),
+           'g1p_count': np.zeros((steps, steps)),
+           'g_1m_count': np.zeros((steps, steps)),
+           'g_2p_count': np.zeros((steps, steps)),
+           'g_2m_count': np.zeros((steps, steps))}
+    # Accumulate raw sums of shear and mean shear corrected with response per tile. 
+    for fname in tqdm(filenames):
+        d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
+
+        if more_cuts is None:
+            msk = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] > 1.2) & (d['mfrac'] < 0.02) & (d['mask_flags'] == 0))
+        else:
+            msk_default = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] > 1.2) & (d['mfrac'] < 0.1) & (d['mask_flags'] == 0))
+            msk = (more_cuts & msk_default)
+        mask_noshear = (msk & (d['mdet_step'] == 'noshear'))
+        mastercat_noshear_snr = d[mask_noshear]['mdet_s2n']
+        mastercat_noshear_Tr = d[mask_noshear]['mdet_T_ratio']
+        new_e1 = d[mask_noshear]['mdet_g_1']
+        new_e2 = d[mask_noshear]['mdet_g_2']
+        
+        res = accumulate_shear_per_tile(res, d, snmin, snmax, steps, sizemin, sizemax)
+        new_indexx,new_indexy = assign_loggrid(mastercat_noshear_snr, mastercat_noshear_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
+        new_count = np.zeros((steps, steps))
+        np.add.at(new_count,(new_indexx,new_indexy), 1)
+        np.add.at(count_all,(new_indexx,new_indexy), 1)
+        np.add.at(m,(new_indexx,new_indexy), np.sqrt((new_e1**2+new_e2**2)/2))
+        # new_meanes = mesh_average(new_means, np.sqrt((new_e1**2+new_e2**2)/2),new_indexx,new_indexy,steps,new_count)
+
     H, xedges, yedges = np.histogram2d(mastercat_noshear_snr, mastercat_noshear_Tr, bins=[np.logspace(log10(snmin),log10(snmax),steps+1), np.logspace(log10(sizemin),log10(sizemax),steps+1)])
-    new_response = mesh_response(d[msk], snmin, snmax, steps, sizemin, sizemax)
-    new_meanes = mesh_average(np.sqrt((new_e1**2+new_e2**2)/2),new_indexx,new_indexy,steps,new_count)
+    # new_response = mesh_response_master_cat(d[msk], snmin, snmax, steps, sizemin, sizemax)
+    new_response = compute_mesh_response(res)
+    new_meanes = m/count_all
     new_shearweight = (new_response/new_meanes)**2
 
     # count
     fig=plt.figure(figsize=(12,10))
     ax = plt.subplot(221)
     X, Y = np.meshgrid(yedges, xedges)
-    im = ax.pcolormesh(X, Y, new_count/1.e5)
+    im = ax.pcolormesh(X, Y, count_all/1.e5)
     plt.xscale('log')
     plt.yscale('log')
     plt.ylabel("S/N")
@@ -199,10 +256,10 @@ def inverse_variance_weight(steps, mdet_cat, more_cuts=None):
     #plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment='right')
     plt.minorticks_off() 
     ax.set_xticks(np.array([1.2,1.3,1.4,1.5,1.6,1.7,2.,3.]))
-    ax.set_xticklabels(np.array([r'1.2 x $10^{0}$','','','','','',r'2 x $10^{0}$',r'3 x $10^{0}$']))
+    ax.set_xticklabels(np.array([r'0.5 x $10^{0}$','','','','','',r'2 x $10^{0}$',r'3 x $10^{0}$']))
     plt.tight_layout()
     plt.subplots_adjust(hspace=0.03)
-    plt.savefig('count_response_ellip_SNR_Tr_v6_cutsv1.pdf', bbox_inches='tight')
+    plt.savefig('count_response_ellip_SNR_Tr_cutsv2.pdf', bbox_inches='tight')
 
 
 # Figure 11; tangential and cross-component shear around bright and faint stars. 
@@ -471,27 +528,30 @@ def tangential_shear_field_center():
 
 def main(argv):
 
+    f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
+    fs = f.read().split('\n')[:-1]
+
     # f = open('/home/s1/masaya/des-y6-analysis/tiles.txt', 'r')
     # tilenames = f.read().split('\n')[:-1]
     # tilename_delete_list = ['DES0031+0001']
     # tilenames.remove('DES0031+0001')
-    work_mdet = os.path.join('/data/des70.a/data/masaya/', 'metadetect/v2')
-    work_pizza = os.path.join('/data/des70.a/data/masaya/', 'pizza-slice')
-    work_piff = os.path.join('/data/des70.a/data/masaya/', 'piff_models')
-    work_gold = os.path.join('/data/des70.a/data/masaya/', 'gold')
+    # work_mdet = os.path.join('/data/des70.a/data/masaya/', 'metadetect/v2')
+    # work_pizza = os.path.join('/data/des70.a/data/masaya/', 'pizza-slice')
+    # work_piff = os.path.join('/data/des70.a/data/masaya/', 'piff_models')
+    # work_gold = os.path.join('/data/des70.a/data/masaya/', 'gold')
 
-    mdet_cat = os.path.join(work_mdet, 'mdet_test_all_v2.fits')
-    gold_cat = os.path.join(work_gold, 'y6_gold_2_0_magnitudes.fits')
-    good_piff_models = os.path.join(work_piff, 'good_piffs_newcuts_query_test_v2.fits')
-    basic_piff_models = os.path.join(work_piff, 'basic_piffs_query_test_v2.fits')
-    piff_cat_r = os.path.join(work_piff, 'r_band/master_r_piff_models_newcuts_test_v2.fits')
-    piff_cat_i = os.path.join(work_piff, 'i_band/master_i_piff_models_newcuts_test_v2.fits')
-    piff_cat_z = os.path.join(work_piff, 'z_band/master_z_piff_models_newcuts_test_v2.fits')
-    piff_all_cat = os.path.join(work_piff, 'master_all_piff_models.fits')
+    # mdet_cat = os.path.join(work_mdet, 'mdet_test_all_v2.fits')
+    # gold_cat = os.path.join(work_gold, 'y6_gold_2_0_magnitudes.fits')
+    # good_piff_models = os.path.join(work_piff, 'good_piffs_newcuts_query_test_v2.fits')
+    # basic_piff_models = os.path.join(work_piff, 'basic_piffs_query_test_v2.fits')
+    # piff_cat_r = os.path.join(work_piff, 'r_band/master_r_piff_models_newcuts_test_v2.fits')
+    # piff_cat_i = os.path.join(work_piff, 'i_band/master_i_piff_models_newcuts_test_v2.fits')
+    # piff_cat_z = os.path.join(work_piff, 'z_band/master_z_piff_models_newcuts_test_v2.fits')
+    # piff_all_cat = os.path.join(work_piff, 'master_all_piff_models.fits')
 
     # combine_piff(['r', 'i', 'z'], work_piff, tilenames)
     # combine_gold(32, work_gold)
-    inverse_variance_weight(20, mdet_cat, more_cuts=None)
+    inverse_variance_weight(20, fs, more_cuts=None)
     # shear_stellar_contamination(mdet_cat, piff_all_cat)
     # tangential_shear_field_center() -> modify the input and output. 
 
