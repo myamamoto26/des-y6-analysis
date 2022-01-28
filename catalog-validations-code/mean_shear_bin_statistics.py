@@ -84,34 +84,35 @@ def _compute_g1_g2(res, binnum, method='all', tile=None):
         corrected_g1g2[bin, 1] = g2/R22
     return corrected_g1g2
 
-def _accum_shear_per_tile(res, tilename, g_step, g, g_qa, bin_low, bin_high, binnum):
+def _accum_shear_per_tile(res, tilename, g_step, g1, g2, g_qa, bin_low, bin_high, binnum):
     
     for step in ['noshear', '1p', '1m', '2p', '2m']:
         msk_s = np.where(g_step == step)[0]
         qa_masked = g_qa[msk_s]
-        g_masked = g[msk_s]
+        g1_masked = g1[msk_s]
+        g2_masked = g2[msk_s]
         
         for bin in range(binnum):
             msk_bin = np.where(((qa_masked >= bin_low[bin]) & (qa_masked <= bin_high[bin])))[0]
             np.add.at(
                 res[tilename][step], 
                 (bin, 0), 
-                np.sum(g_masked[msk_bin,0]),
+                np.sum(g1_masked[msk_bin]),
             )
             np.add.at(
                 res[tilename][step], 
                 (bin, 1), 
-                np.sum(g_masked[msk_bin,1]),
+                np.sum(g2_masked[msk_bin]),
             )
             np.add.at(
                 res[tilename]["num_" + step], 
                 (bin, 0), 
-                len(g_masked[msk_bin,0]),
+                len(g1_masked[msk_bin]),
             )
             np.add.at(
                 res[tilename]["num_" + step], 
                 (bin, 1), 
-                len(g_masked[msk_bin,1]),
+                len(g2_masked[msk_bin]),
             )
     
     return res
@@ -419,7 +420,7 @@ def statistics_per_tile_without_bins(fs):
         R22 = (np.mean(mdet_all['mdet_g'][(msk_default & msk_2p), 1]) - np.mean(mdet_all['mdet_g'][(msk_default & msk_2m), 1]))/0.02
     return 
 
-def bin_statistics_per_tile(fs, predef_bin, qa, plt_label, plt_fname, qa_psfg=None):
+def bin_statistics_per_tile(fs, predef_bin, qa, plt_label, plt_fname):
     
     res = {} # dictionary to accumulate raw sums. 
     res_tile_mean = {} # dictionary to accumulate mean shear for each tile. 
@@ -430,7 +431,7 @@ def bin_statistics_per_tile(fs, predef_bin, qa, plt_label, plt_fname, qa_psfg=No
     # Accumulate raw sums of shear and mean shear corrected with response per tile. 
     for fname in tqdm(filenames):
         mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
-        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
+        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mdet_s2n']<100) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>0.5) & (mdet_all['mask_flags']==0) & (mdet_all['mdet_T']<2.5))
         mdet = mdet_all[msk_default]
         num_objects += len(mdet)
         res[fname.split('_')[0]] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
@@ -438,12 +439,7 @@ def bin_statistics_per_tile(fs, predef_bin, qa, plt_label, plt_fname, qa_psfg=No
                                 '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
                                 '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                                 '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-        if qa=='psfrec_g' and qa_psfg==1:
-            res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa][:,0], predef_bin['low'], predef_bin['high'], binnum)
-        elif qa=='psfrec_g' and qa_psfg==2:
-            res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa][:,1], predef_bin['low'], predef_bin['high'], binnum)
-        else:
-            res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
+        res = _accum_shear_per_tile(res, fname.split('_')[0], mdet['mdet_step'], mdet['mdet_g_1'], mdet['mdet_g_2'], mdet[qa], predef_bin['low'], predef_bin['high'], binnum)
         tile_mean = _compute_g1_g2(res, binnum, method='tile', tile=fname.split('_')[0])
         res_tile_mean[fname.split('_')[0]] = tile_mean
 
@@ -503,22 +499,18 @@ def main(argv):
     # d = fio.read('/data/des70.a/data/masaya/metadetect/v2/mdet_test_all_v2.fits')
     # percentile_bin_statistics(d, 3000000, 'MDET_T')
     # sys.exit()
-    f = open('/global/cscratch1/sd/myamamot/metadetect/fnames.txt', 'r')
+
+    # NEED TO WRITE THE CODE TO BE ABLE TO RUN FROM BOTH MASTER FLAT AND INDIVIDUAL FILES. 
+    f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
     with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_'+sys.argv[1]+'.pickle', 'rb') as handle:
         predef_bin = pickle.load(handle)
     
-    predef_bin_name = sys.argv[1]
     column_name = sys.argv[2]
     xlabel = sys.argv[3]
     plot_fname = sys.argv[4]
 
-    if column_name=='psfrec_g' and predef_bin_name=='psfg1':
-        bin_statistics_per_tile(fs, predef_bin, column_name, xlabel, plot_fname, qa_psfg=1)
-    elif column_name=='psfrec_g' and predef_bin_name=='psfg2':
-        bin_statistics_per_tile(fs, predef_bin, column_name, xlabel, plot_fname, qa_psfg=2)
-    else:
-        bin_statistics_per_tile(fs, predef_bin, column_name, xlabel, plot_fname)
+    bin_statistics_per_tile(fs, predef_bin, column_name, xlabel, plot_fname)
 
 if __name__ == "__main__":
     main(sys.argv)
