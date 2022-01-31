@@ -107,10 +107,10 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
         g2m_indexx, g2m_indexy, mask_2m = find_assign_grid(d, '2m', snmin, snmax, steps, sizemin, sizemax)
         g2m_count = find_bincount_2d(g2m_indexx, g2m_indexy, steps)
 
-        np.add.at(res['g_1p'], (g1p_indexx, g1p_indexy), d[mask_1p]['mdet_g_1'])
-        np.add.at(res['g_1m'], (g1m_indexx, g1m_indexy), d[mask_1m]['mdet_g_1'])
-        np.add.at(res['g_2p'], (g2p_indexx, g2p_indexy), d[mask_2p]['mdet_g_2'])
-        np.add.at(res['g_2m'], (g2m_indexx, g2m_indexy), d[mask_2m]['mdet_g_2'])
+        np.add.at(res['g_1p'], (g1p_indexx, g1p_indexy), np.sum(d[mask_1p]['mdet_g_1']))
+        np.add.at(res['g_1m'], (g1m_indexx, g1m_indexy), np.sum(d[mask_1m]['mdet_g_1']))
+        np.add.at(res['g_2p'], (g2p_indexx, g2p_indexy), np.sum(d[mask_2p]['mdet_g_2']))
+        np.add.at(res['g_2m'], (g2m_indexx, g2m_indexy), np.sum(d[mask_2m]['mdet_g_2']))
         
         np.add.at(res['g1p_count'], (g1p_indexx, g1p_indexy), g1p_count)
         np.add.at(res['g1m_count'], (g1m_indexx, g1m_indexy), g1m_count)
