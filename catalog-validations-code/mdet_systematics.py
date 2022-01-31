@@ -107,8 +107,6 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
         g2m_indexx, g2m_indexy, mask_2m = find_assign_grid(d, '2m', snmin, snmax, steps, sizemin, sizemax)
         g2m_count = find_bincount_2d(g2m_indexx, g2m_indexy, steps)
 
-        print(g1p_indexx, len(g1p_indexx))
-        print(len(d[mask_1p]['mdet_g_1']))
         np.add.at(res['g_1p'], (g1p_indexx, g1p_indexy), d[mask_1p]['mdet_g_1'])
         np.add.at(res['g_1m'], (g1m_indexx, g1m_indexy), d[mask_1m]['mdet_g_1'])
         np.add.at(res['g_2p'], (g2p_indexx, g2p_indexy), d[mask_2p]['mdet_g_2'])
@@ -179,9 +177,9 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
            'g_2p': np.zeros((steps, steps)),
            'g_2m': np.zeros((steps, steps)),
            'g1p_count': np.zeros((steps, steps)),
-           'g_1m_count': np.zeros((steps, steps)),
-           'g_2p_count': np.zeros((steps, steps)),
-           'g_2m_count': np.zeros((steps, steps))}
+           'g1m_count': np.zeros((steps, steps)),
+           'g2p_count': np.zeros((steps, steps)),
+           'g2m_count': np.zeros((steps, steps))}
     # Accumulate raw sums of shear and mean shear corrected with response per tile. 
     for fname in tqdm(filenames):
         d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
