@@ -396,13 +396,13 @@ def main(argv):
         coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
         coadd_files = {t: [] for t in tilenames}
         bands = {t: [] for t in tilenames}
-        print(coadd_files)
         for coadd in coadd_info:
             tname = coadd['FILENAME'].split('_')[0]
             fname = coadd['FILENAME'] + coadd['COMPRESSION']
             bandname = coadd['FILENAME'].split('_')[2]
-            coadd_files[tname].append(fname)
-            bands[tname].append(bandname)
+            if tname in list(coadd_files.keys()):
+                coadd_files[tname].append(fname)
+                bands[tname].append(bandname)
 
         # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
         # When not using MPI, you can use for-loops (for t in tilenames)
