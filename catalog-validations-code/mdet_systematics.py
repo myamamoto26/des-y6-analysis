@@ -212,7 +212,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
 
     print('count', count_all/1.e5)
     # count
-    fig=plt.figure(figsize=(12,12))
+    fig=plt.figure(figsize=(14,12))
     ax = plt.subplot(221)
     X, Y = np.meshgrid(yedges, xedges)
     im = ax.pcolormesh(X, Y, count_all/1.e5)
@@ -247,7 +247,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
 
     ax = plt.subplot(224)
     X, Y = np.meshgrid(yedges, xedges)
-    im = ax.pcolormesh(X, Y, new_shearweight, vmin=0, vmax=100)
+    im = ax.pcolormesh(X, Y, new_shearweight, vmin=0, vmax=50)
     plt.xscale('log')
     plt.yscale('log')
     plt.ylabel("S/N")
@@ -256,7 +256,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
     fig.colorbar(im, ax=ax, label="shear weight")
 
     #plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment='right')
-    plt.minorticks_off() 
+    # plt.minorticks_off() 
     # ax.set_xticks(np.array([0.5,0.7,0.9,1.1,1.3,1.5,2.,3.]))
     # ax.set_xticklabels(np.array([r'0.5 x $10^{0}$','','','','','',r'2 x $10^{0}$',r'3 x $10^{0}$']))
     plt.tight_layout()
