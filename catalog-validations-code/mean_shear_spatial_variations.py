@@ -407,6 +407,7 @@ def main(argv):
         # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
         # When not using MPI, you can use for-loops (for t in tilenames)
         split_tilenames = np.array_split(tilenames, size)
+        print(tilenames)
         for t in split_tilenames[rank]:
             ccdres = {}
             print(t, np.where(tilenames == t))
