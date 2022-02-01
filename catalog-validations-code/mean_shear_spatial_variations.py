@@ -407,7 +407,7 @@ def main(argv):
         # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
         # When not using MPI, you can use for-loops (for t in tilenames)
         split_tilenames = np.array_split(tilenames, size)
-        for t in split_tilenames[rank]:
+        for t in tqdm(split_tilenames[rank]):
             ccdres = {}
             d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
             msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
