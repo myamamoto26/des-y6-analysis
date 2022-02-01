@@ -185,9 +185,9 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
         d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
 
         if more_cuts is None:
-            msk = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] > 1.2) & (d['mfrac'] < 0.02) & (d['mask_flags'] == 0))
+            msk = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] < 1.2) & (d['mfrac'] < 0.02) & (d['mask_flags'] == 0))
         else:
-            msk_default = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] > 1.2) & (d['mfrac'] < 0.1) & (d['mask_flags'] == 0))
+            msk_default = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] < 1.2) & (d['mfrac'] < 0.02) & (d['mask_flags'] == 0))
             msk = (more_cuts & msk_default)
         mask_noshear = (msk & (d['mdet_step'] == 'noshear'))
         mastercat_noshear_snr = d[mask_noshear]['mdet_s2n']
