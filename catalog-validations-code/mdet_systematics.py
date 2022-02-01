@@ -212,7 +212,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
 
     print('count', count_all/1.e5)
     # count
-    fig=plt.figure(figsize=(14,12))
+    fig=plt.figure(figsize=(16,12))
     ax = plt.subplot(221)
     X, Y = np.meshgrid(yedges, xedges)
     im = ax.pcolormesh(X, Y, count_all/1.e5)
@@ -237,7 +237,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
 
     ax = plt.subplot(223)
     X, Y = np.meshgrid(yedges, xedges)
-    im = ax.pcolormesh(X, Y, new_response, vmin=0.1, vmax=1.0)
+    im = ax.pcolormesh(X, Y, new_response, vmin=0.1, vmax=1.5)
     plt.xscale('log')
     plt.yscale('log')
     plt.ylabel("S/N")
@@ -247,7 +247,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
 
     ax = plt.subplot(224)
     X, Y = np.meshgrid(yedges, xedges)
-    im = ax.pcolormesh(X, Y, new_shearweight, vmin=0, vmax=50)
+    im = ax.pcolormesh(X, Y, new_shearweight, vmin=0, vmax=40)
     plt.xscale('log')
     plt.yscale('log')
     plt.ylabel("S/N")
