@@ -407,11 +407,9 @@ def main(argv):
         # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
         # When not using MPI, you can use for-loops (for t in tilenames)
         split_tilenames = np.array_split(tilenames, size)
-        print(tilenames)
         for t in split_tilenames[rank]:
             ccdres = {}
-            print(t, np.where(tilenames == t))
-            d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(tilenames == t)[0][0]]))
+            d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
             msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
             ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
             with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
