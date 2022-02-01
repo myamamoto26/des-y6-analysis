@@ -396,6 +396,7 @@ def main(argv):
         coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
         coadd_files = {t: [] for t in tilenames}
         bands = {t: [] for t in tilenames}
+        print(coadd_files)
         for coadd in coadd_info:
             tname = coadd['FILENAME'].split('_')[0]
             fname = coadd['FILENAME'] + coadd['COMPRESSION']
