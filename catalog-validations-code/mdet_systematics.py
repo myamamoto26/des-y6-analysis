@@ -200,7 +200,6 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
         new_indexx,new_indexy = assign_loggrid(mastercat_noshear_snr, mastercat_noshear_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
         new_count = np.zeros((steps, steps))
         np.add.at(new_count,(new_indexx,new_indexy), 1)
-        print(new_count)
         np.add.at(count_all,(), new_count)
         np.add.at(m,(new_indexx,new_indexy), np.sqrt((new_e1**2+new_e2**2)/2))
         # new_meanes = mesh_average(new_means, np.sqrt((new_e1**2+new_e2**2)/2),new_indexx,new_indexy,steps,new_count)
