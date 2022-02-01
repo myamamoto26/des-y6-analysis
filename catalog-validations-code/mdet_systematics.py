@@ -195,11 +195,13 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
         new_e1 = d[mask_noshear]['mdet_g_1']
         new_e2 = d[mask_noshear]['mdet_g_2']
         
+        # Need raw sums of shear for shear response. 
         res = accumulate_shear_per_tile(res, d, snmin, snmax, steps, sizemin, sizemax)
         new_indexx,new_indexy = assign_loggrid(mastercat_noshear_snr, mastercat_noshear_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
         new_count = np.zeros((steps, steps))
         np.add.at(new_count,(new_indexx,new_indexy), 1)
-        np.add.at(count_all,(new_indexx,new_indexy), 1)
+        print(new_count)
+        np.add.at(count_all,(), new_count)
         np.add.at(m,(new_indexx,new_indexy), np.sqrt((new_e1**2+new_e2**2)/2))
         # new_meanes = mesh_average(new_means, np.sqrt((new_e1**2+new_e2**2)/2),new_indexx,new_indexy,steps,new_count)
 
@@ -209,8 +211,9 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
     new_meanes = m/count_all
     new_shearweight = (new_response/new_meanes)**2
 
+    print('count', count_all/1.e5)
     # count
-    fig=plt.figure(figsize=(12,10))
+    fig=plt.figure(figsize=(12,12))
     ax = plt.subplot(221)
     X, Y = np.meshgrid(yedges, xedges)
     im = ax.pcolormesh(X, Y, count_all/1.e5)
@@ -255,10 +258,10 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
 
     #plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment='right')
     plt.minorticks_off() 
-    ax.set_xticks(np.array([1.2,1.3,1.4,1.5,1.6,1.7,2.,3.]))
-    ax.set_xticklabels(np.array([r'0.5 x $10^{0}$','','','','','',r'2 x $10^{0}$',r'3 x $10^{0}$']))
+    # ax.set_xticks(np.array([0.5,0.7,0.9,1.1,1.3,1.5,2.,3.]))
+    # ax.set_xticklabels(np.array([r'0.5 x $10^{0}$','','','','','',r'2 x $10^{0}$',r'3 x $10^{0}$']))
     plt.tight_layout()
-    plt.subplots_adjust(hspace=0.03)
+    plt.subplots_adjust(hspace=0.1)
     plt.savefig('count_response_ellip_SNR_Tr_cutsv2.pdf', bbox_inches='tight')
 
 
