@@ -367,9 +367,10 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
 
 def main(argv):
 
-    # comm = MPI.COMM_WORLD
-    # rank = comm.Get_rank()
-    # size = comm.Get_size()
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+    print('mpi', rank, size)
 
     just_plot = False
     work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
@@ -404,13 +405,14 @@ def main(argv):
 
         # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
         # When not using MPI, you can use for-loops (for t in tilenames)
-        t = tilenames[sys.argv[1]]
-        ccdres = {}
-        d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(tilenames == t)[0][0]]))
-        msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
-        ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
-        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
-            pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
+        split_tilenames = np.array_split(tilenames, size)
+        for t in split_tilenames[rank]:
+            ccdres = {}
+            d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(tilenames == t)[0][0]]))
+            msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
+            ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
+            with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
+                pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
     
     else:
         print('Plotting...')
