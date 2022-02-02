@@ -414,7 +414,6 @@ def main(argv):
             ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
             with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
                 pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
-    
     else:
         print('Plotting...')
 
@@ -461,6 +460,8 @@ def main(argv):
         with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
             ccdres = pickle.load(handle)
             plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
+    comm.Barrier()
 
+    
 if __name__ == "__main__":
     main(sys.argv)
