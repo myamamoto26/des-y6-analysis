@@ -466,10 +466,6 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
 # if __name__ == "__main__":
 #     main(sys.argv)
 
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-size = comm.Get_size()
-print('mpi', rank, size)
 
 just_plot = False
 work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
@@ -506,11 +502,20 @@ if not just_plot:
 # When not using MPI, you can use for-loops (for t in tilenames)
 tile_count = 0
 num_tiles = len(tilenames)
-split_tilenames = np.array_split(tilenames, size)
-for t in tqdm(split_tilenames[rank]):
+while tile_count < num_tiles:
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+    print('mpi', rank, size)
+
     ccdres = {}
-    d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
-    msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
-    ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
-    with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
-        pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
+    if tile_count+rank < num_tiles:
+        t = tilenames[rank]
+        d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
+        msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
+        ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
+        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
+            pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
+        tile_count += size
+        comm.bcast(tile_count, root=0)
+        comm.Barrier()
