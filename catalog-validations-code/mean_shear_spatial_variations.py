@@ -365,103 +365,152 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
     else:
         return None
 
-def main(argv):
+# def main(argv):
 
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
-    print('mpi', rank, size)
+#     comm = MPI.COMM_WORLD
+#     rank = comm.Get_rank()
+#     size = comm.Get_size()
+#     print('mpi', rank, size)
 
-    just_plot = False
-    work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
-    work = '/global/cscratch1/sd/myamamot'
-    ccd_x_min = 48
-    ccd_x_max = 2000
-    ccd_y_min = 48
-    ccd_y_max = 4048
-    piece_side = 32
-    x_side = int(np.ceil((ccd_x_max - ccd_x_min)/piece_side))
-    y_side = int(np.ceil((ccd_y_max - ccd_y_min)/piece_side))
-    num_ccd = 62
+#     just_plot = False
+#     work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
+#     work = '/global/cscratch1/sd/myamamot'
+#     ccd_x_min = 48
+#     ccd_x_max = 2000
+#     ccd_y_min = 48
+#     ccd_y_max = 4048
+#     piece_side = 32
+#     x_side = int(np.ceil((ccd_x_max - ccd_x_min)/piece_side))
+#     y_side = int(np.ceil((ccd_y_max - ccd_y_min)/piece_side))
+#     num_ccd = 62
 
-    # NEED TO WRITE THE CODE TO BE ABLE TO RUN FROM BOTH MASTER FLAT AND INDIVIDUAL FILES. 
-    mdet_f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
-    mdet_fs = mdet_f.read().split('\n')[:-1]
-    mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
-    tilenames = [d.split('_')[0] for d in mdet_filenames]
+#     # NEED TO WRITE THE CODE TO BE ABLE TO RUN FROM BOTH MASTER FLAT AND INDIVIDUAL FILES. 
+#     mdet_f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
+#     mdet_fs = mdet_f.read().split('\n')[:-1]
+#     mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
+#     tilenames = [d.split('_')[0] for d in mdet_filenames]
 
-    if not just_plot:
+#     if not just_plot:
         
-        # Obtain file, tile, band information from information file queried from desoper. 
-        coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
-        coadd_files = {t: [] for t in tilenames}
-        bands = {t: [] for t in tilenames}
-        for coadd in coadd_info:
-            tname = coadd['FILENAME'].split('_')[0]
-            fname = coadd['FILENAME'] + coadd['COMPRESSION']
-            bandname = coadd['FILENAME'].split('_')[2]
-            if tname in list(coadd_files.keys()):
-                coadd_files[tname].append(fname)
-                bands[tname].append(bandname)
+#         # Obtain file, tile, band information from information file queried from desoper. 
+#         coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
+#         coadd_files = {t: [] for t in tilenames}
+#         bands = {t: [] for t in tilenames}
+#         for coadd in coadd_info:
+#             tname = coadd['FILENAME'].split('_')[0]
+#             fname = coadd['FILENAME'] + coadd['COMPRESSION']
+#             bandname = coadd['FILENAME'].split('_')[2]
+#             if tname in list(coadd_files.keys()):
+#                 coadd_files[tname].append(fname)
+#                 bands[tname].append(bandname)
 
-        # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
-        # When not using MPI, you can use for-loops (for t in tilenames)
-        split_tilenames = np.array_split(tilenames, size)
-        for t in tqdm(split_tilenames[rank]):
-            ccdres = {}
-            d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
-            msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
-            ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
-            with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
-                pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
-    else:
-        print('Plotting...')
+#         # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
+#         # When not using MPI, you can use for-loops (for t in tilenames)
+#         split_tilenames = np.array_split(tilenames, size)
+#         for t in tqdm(split_tilenames[rank]):
+#             ccdres = {}
+#             d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
+#             msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
+#             ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
+#             with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
+#                 pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
+#     else:
+#         print('Plotting...')
 
-        # Add raw sums for all the tiles from individual tile file. 
-        ccdres_all = {}
-        for t in tqdm(tilenames):
-            with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-                ccdres = pickle.load(handle)
-            ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
-        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
-            pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
-        # plot for all the CCDs. 
-        plot_shear_vaiations_ccd(x_side, y_side, ccdres_all, num_ccd, jk=False)
+#         # Add raw sums for all the tiles from individual tile file. 
+#         ccdres_all = {}
+#         for t in tqdm(tilenames):
+#             with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+#                 ccdres = pickle.load(handle)
+#             ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
+#         with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
+#             pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
+#         # plot for all the CCDs. 
+#         plot_shear_vaiations_ccd(x_side, y_side, ccdres_all, num_ccd, jk=False)
         
-        # Compute jackknife error estimate. 
-        jk_sample = len(tilenames)
-        jk_x_g1 = []
-        jk_y_g1 = []
-        jk_x_g2 = []
-        jk_y_g2 = []
-        for i in tqdm(range(len(tilenames))):
-            x_g1 = []
-            y_g1 = []
-            x_g2 = []
-            y_g2 = []
-            for j,t in enumerate(tilenames):
-                if i == j:
-                    continue
-                with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-                    ccdres = pickle.load(handle)
-                x_data, y_data = plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=True)
-                x_g1.append(x_data[0])
-                y_g1.append(y_data[0])
-                x_g2.append(x_data[1])
-                y_g2.append(y_data[1])
+#         # Compute jackknife error estimate. 
+#         jk_sample = len(tilenames)
+#         jk_x_g1 = []
+#         jk_y_g1 = []
+#         jk_x_g2 = []
+#         jk_y_g2 = []
+#         for i in tqdm(range(len(tilenames))):
+#             x_g1 = []
+#             y_g1 = []
+#             x_g2 = []
+#             y_g2 = []
+#             for j,t in enumerate(tilenames):
+#                 if i == j:
+#                     continue
+#                 with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+#                     ccdres = pickle.load(handle)
+#                 x_data, y_data = plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=True)
+#                 x_g1.append(x_data[0])
+#                 y_g1.append(y_data[0])
+#                 x_g2.append(x_data[1])
+#                 y_g2.append(y_data[1])
 
-            jk_x_g1.append(np.sum(x_g1, axis=0)/(jk_sample-1))
-            jk_y_g1.append(np.sum(y_g1, axis=0)/(jk_sample-1))
-            jk_x_g2.append(np.sum(x_g2, axis=0)/(jk_sample-1))
-            jk_y_g2.append(np.sum(y_g2, axis=0)/(jk_sample-1))
-        jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
-        print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
+#             jk_x_g1.append(np.sum(x_g1, axis=0)/(jk_sample-1))
+#             jk_y_g1.append(np.sum(y_g1, axis=0)/(jk_sample-1))
+#             jk_x_g2.append(np.sum(x_g2, axis=0)/(jk_sample-1))
+#             jk_y_g2.append(np.sum(y_g2, axis=0)/(jk_sample-1))
+#         jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
+#         print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
 
-        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
-            ccdres = pickle.load(handle)
-            plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
-    comm.Barrier()
+#         with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
+#             ccdres = pickle.load(handle)
+#             plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
+#     comm.Barrier()
 
     
-if __name__ == "__main__":
-    main(sys.argv)
+# if __name__ == "__main__":
+#     main(sys.argv)
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+print('mpi', rank, size)
+
+just_plot = False
+work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
+work = '/global/cscratch1/sd/myamamot'
+ccd_x_min = 48
+ccd_x_max = 2000
+ccd_y_min = 48
+ccd_y_max = 4048
+piece_side = 32
+x_side = int(np.ceil((ccd_x_max - ccd_x_min)/piece_side))
+y_side = int(np.ceil((ccd_y_max - ccd_y_min)/piece_side))
+num_ccd = 62
+
+# NEED TO WRITE THE CODE TO BE ABLE TO RUN FROM BOTH MASTER FLAT AND INDIVIDUAL FILES. 
+mdet_f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
+mdet_fs = mdet_f.read().split('\n')[:-1]
+mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
+tilenames = [d.split('_')[0] for d in mdet_filenames]
+
+if not just_plot:
+    # Obtain file, tile, band information from information file queried from desoper. 
+    coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
+    coadd_files = {t: [] for t in tilenames}
+    bands = {t: [] for t in tilenames}
+    for coadd in coadd_info:
+        tname = coadd['FILENAME'].split('_')[0]
+        fname = coadd['FILENAME'] + coadd['COMPRESSION']
+        bandname = coadd['FILENAME'].split('_')[2]
+        if tname in list(coadd_files.keys()):
+            coadd_files[tname].append(fname)
+            bands[tname].append(bandname)
+
+# Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
+# When not using MPI, you can use for-loops (for t in tilenames)
+tile_count = 0
+num_tiles = len(tilenames)
+split_tilenames = np.array_split(tilenames, size)
+for t in tqdm(split_tilenames[rank]):
+    ccdres = {}
+    d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
+    msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
+    ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
+    with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
+        pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
