@@ -510,6 +510,7 @@ while tile_count < num_tiles:
     ccdres = {}
     if tile_count+rank < num_tiles:
         t = tilenames[rank]
+        print(t)
         # d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
         # msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
         # ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
