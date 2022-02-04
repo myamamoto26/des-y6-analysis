@@ -115,8 +115,11 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
     # How this function works: Collect info (id, ra, dec, CCD coord, mean property values), save it, and plot later. 
     for pizza_f,band in zip(coadd_files, bands):
         coadd = fio.FITS(os.path.join('/global/cscratch1/sd/myamamot/pizza-slice/griz', pizza_f))
-        epochs = coadd['epochs_info'].read()
-        image_info = coadd['image_info'].read()
+        try:
+            epochs = coadd['epochs_info'].read()
+            image_info = coadd['image_info'].read()
+        except OSError:
+            print('Corrupt file.?', pizza_f)
 
         # For each metadetect object, find the slice and single epochs that it is in, 
         # and get the wcs the object is in, and convert the object's ra/dec into CCD coordinates.
