@@ -387,7 +387,7 @@ def main(argv):
     mdet_f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
     mdet_fs = mdet_f.read().split('\n')[:-1]
     mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
-    tilenames = [d.split('_')[0] for d in mdet_filenames][:10]
+    tilenames = [d.split('_')[0] for d in mdet_filenames]
 
     if not just_plot:
         from mpi4py import MPI
