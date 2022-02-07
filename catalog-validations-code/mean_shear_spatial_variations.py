@@ -120,6 +120,7 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
             image_info = coadd['image_info'].read()
         except OSError:
             print('Corrupt file.?', pizza_f)
+            raise OSError
 
         # For each metadetect object, find the slice and single epochs that it is in, 
         # and get the wcs the object is in, and convert the object's ra/dec into CCD coordinates.
@@ -369,7 +370,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
 
 def main(argv):
 
-    just_plot = False
+    just_plot = True
     work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
     work = '/global/cscratch1/sd/myamamot'
     ccd_x_min = 48
@@ -419,6 +420,7 @@ def main(argv):
                     pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
             else:
                 print('Already made this tile.', t)
+        comm.Barrier()
     else:
         print('Plotting...')
 
@@ -465,7 +467,6 @@ def main(argv):
         with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
             ccdres = pickle.load(handle)
             plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
-    comm.Barrier()
 
     
 if __name__ == "__main__":
