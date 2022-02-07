@@ -369,11 +369,6 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
 
 def main(argv):
 
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
-    print('mpi', rank, size)
-
     just_plot = False
     work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
     work = '/global/cscratch1/sd/myamamot'
@@ -393,6 +388,11 @@ def main(argv):
     tilenames = [d.split('_')[0] for d in mdet_filenames]
 
     if not just_plot:
+
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        size = comm.Get_size()
+        print('mpi', rank, size)
         
         # Obtain file, tile, band information from information file queried from desoper. 
         coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
@@ -432,7 +432,7 @@ def main(argv):
             pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
         # plot for all the CCDs. 
         plot_shear_vaiations_ccd(x_side, y_side, ccdres_all, num_ccd, jk=False)
-        
+        sys.exit()
         # Compute jackknife error estimate. 
         jk_sample = len(tilenames)
         jk_x_g1 = []
