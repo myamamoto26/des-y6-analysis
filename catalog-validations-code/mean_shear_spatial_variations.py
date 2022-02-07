@@ -369,7 +369,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=None)
 
 def main(argv):
 
-    just_plot = True
+    just_plot = False
     work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
     work = '/global/cscratch1/sd/myamamot'
     ccd_x_min = 48
@@ -385,7 +385,7 @@ def main(argv):
     mdet_f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
     mdet_fs = mdet_f.read().split('\n')[:-1]
     mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
-    tilenames = [d.split('_')[0] for d in mdet_filenames]
+    tilenames = [d.split('_')[0] for d in mdet_filenames][:10]
 
     if not just_plot:
         from mpi4py import MPI
@@ -414,6 +414,7 @@ def main(argv):
             if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle'):
                 d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
                 msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
+                print(d[msk], coadd_files[t], bands[t])
                 ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
                 with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
                     pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
