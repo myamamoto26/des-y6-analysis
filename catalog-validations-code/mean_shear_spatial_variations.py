@@ -18,7 +18,6 @@ from skimage.measure import block_reduce
 import drawDECam.drawDECam as dDECam
 import matplotlib
 import math
-from mpi4py import MPI
 
 def _get_ccd_num(image_path):
     return int(image_path.split('/')[1].split('_')[2][1:])
@@ -389,7 +388,7 @@ def main(argv):
     tilenames = [d.split('_')[0] for d in mdet_filenames]
 
     if not just_plot:
-
+        from mpi4py import MPI
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         size = comm.Get_size()
