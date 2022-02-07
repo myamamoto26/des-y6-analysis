@@ -152,7 +152,6 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
             pos_y = pos_y - position_offset
             ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
             xind, yind, msk_obj = _categorize_obj_in_ccd(piece_side, x_side, y_side, ccd_x_min, ccd_y_min, pos_x, pos_y, msk_obj)
-            print(xind, yind)
             if (np.any(pos_x<=98) or np.any(pos_x>1950)):
                 print('No objects in the buffer of total 98 pixels.')
                 # print(pos_x[((pos_x<=98) | (pos_x>1950))])
