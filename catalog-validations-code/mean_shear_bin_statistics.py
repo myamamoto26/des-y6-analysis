@@ -78,7 +78,19 @@ def _compute_g1_g2(res, binnum, method='all', tile=None):
             g2p = res['all']['2p'][bin][1] / res['all']['num_2p'][bin][1]
             g2m = res['all']['2m'][bin][1] / res['all']['num_2m'][bin][1]
             R22 = (g2p - g2m) / 2 / 0.01
-            print('shear response: ', R11, R22)
+
+        elif method=='just_response':
+            g1 = res['noshear'][bin][0] / res['num_noshear'][bin][0]
+            g1p = res['1p'][bin][0] / res['num_1p'][bin][0]
+            g1m = res['1m'][bin][0] / res['num_1m'][bin][0]
+            R11 = (g1p - g1m) / 2 / 0.01
+
+            g2 = res['noshear'][bin][1] / res['num_noshear'][bin][1]
+            g2p = res['2p'][bin][1] / res['num_2p'][bin][1]
+            g2m = res['2m'][bin][1] / res['num_2m'][bin][1]
+            R22 = (g2p - g2m) / 2 / 0.01
+            
+            return R11, R22
 
         corrected_g1g2[bin, 0] = g1/R11
         corrected_g1g2[bin, 1] = g2/R22
@@ -146,32 +158,31 @@ def _accum_shear_all(res, tilename, binnum):
             )
     return res
 
-def _accum_shear_per_tile_without_bin(res, tilename, g_step, g, bin):
+def _accum_shear_per_tile_without_bin(res, mdet_step, g1, g2, bin):
 
     # Function to compute mean shear without any bins.
-
     for step in ['noshear', '1p', '1m', '2p', '2m']:
-        msk_s = np.where(g_step == step)[0]
+        msk_s = np.where(mdet_step == step)[0]
         
         np.add.at(
-            res[tilename][step], 
+            res[step], 
             (bin, 0), 
-            np.sum(g[msk_s,0]),
+            np.sum(g1[msk_s]),
         )
         np.add.at(
-            res[tilename][step], 
+            res[step], 
             (bin, 1), 
-            np.sum(g[msk_s,1]),
+            np.sum(g2[msk_s]),
         )
         np.add.at(
-            res[tilename]["num_" + step], 
+            res["num_" + step], 
             (bin, 0), 
-            len(g[msk_s,0]),
+            len(g1[msk_s]),
         )
         np.add.at(
-            res[tilename]["num_" + step], 
+            res["num_" + step], 
             (bin, 1), 
-            len(g[msk_s,1]),
+            len(g2[msk_s]),
         )
     return res
 
@@ -405,20 +416,24 @@ def bin_statistics_from_master(d, nperbin, x):
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v2_SNR_1000.pdf', bbox_inches='tight')
 
-def statistics_per_tile_without_bins(fs):
+def statistics_per_tile_without_bins(fs, msk):
 
     filenames = [fname.split('/')[-1] for fname in fs]
     binnum = 1
+    res = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
+           '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
+           '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
+           '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
+           '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
     for fname in tqdm(filenames):
-        mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
-        msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
-        msk_1p = (mdet_all['mdet_step'] == '1p')
-        msk_1m = (mdet_all['mdet_step'] == '1m')
-        msk_2p = (mdet_all['mdet_step'] == '2p')
-        msk_2m = (mdet_all['mdet_step'] == '2m')
-        R11 = (np.mean(mdet_all['mdet_g'][(msk_default & msk_1p), 0]) - np.mean(mdet_all['mdet_g'][(msk_default & msk_1m), 0]))/0.02
-        R22 = (np.mean(mdet_all['mdet_g'][(msk_default & msk_2p), 1]) - np.mean(mdet_all['mdet_g'][(msk_default & msk_2m), 1]))/0.02
-    return 
+        mdet_tile = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
+        msk_default = msk
+        d = mdet_tile[msk_default]
+
+        res = _accum_shear_per_tile_without_bin(res, d['mdet_step'], d['mdet_g_1'], d['mdet_g_2'], binnum)
+    R11, R22 = _compute_g1_g2(res, binnum, method='just_response')
+    
+    return R11, R22
 
 def bin_statistics_per_tile(fs, predef_bin, qa, plt_label, plt_fname):
     
@@ -511,6 +526,10 @@ def main(argv):
     plot_fname = sys.argv[4]
 
     bin_statistics_per_tile(fs, predef_bin, column_name, xlabel, plot_fname)
+
+    # Function to produce shear response over all the tiles.
+    # msk = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
+    # statistics_per_tile_without_bins(fs, msk)
 
 if __name__ == "__main__":
     main(sys.argv)
