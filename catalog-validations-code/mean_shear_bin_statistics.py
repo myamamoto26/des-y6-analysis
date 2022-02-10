@@ -416,7 +416,7 @@ def bin_statistics_from_master(d, nperbin, x):
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v2_SNR_1000.pdf', bbox_inches='tight')
 
-def statistics_per_tile_without_bins(fs, msk):
+def statistics_per_tile_without_bins(fs):
 
     filenames = [fname.split('/')[-1] for fname in fs]
     binnum = 1
@@ -427,7 +427,7 @@ def statistics_per_tile_without_bins(fs, msk):
            '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
     for fname in tqdm(filenames):
         mdet_tile = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
-        msk_default = msk
+        msk_default = ((mdet_tile['flags']==0) & (mdet_tile['mdet_s2n']>10) & (mdet_tile['mfrac']<0.02) & (mdet_tile['mdet_T_ratio']>1.2) & (mdet_tile['mask_flags']==0))
         d = mdet_tile[msk_default]
 
         res = _accum_shear_per_tile_without_bin(res, d['mdet_step'], d['mdet_g_1'], d['mdet_g_2'], binnum)
@@ -528,8 +528,7 @@ def main(argv):
     bin_statistics_per_tile(fs, predef_bin, column_name, xlabel, plot_fname)
 
     # Function to produce shear response over all the tiles.
-    # msk = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>1.2) & (mdet_all['mask_flags']==0))
-    # statistics_per_tile_without_bins(fs, msk)
+    # statistics_per_tile_without_bins(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
