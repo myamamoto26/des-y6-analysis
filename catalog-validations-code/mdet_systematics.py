@@ -380,6 +380,11 @@ def shear_stellar_contamination(mdet_cat, piff_all_cat):
 # Figure 14; Tangential shear around field center
 def tangential_shear_field_center():
 
+    # step 1. Create a fits file that contains the exposure number and field centers (RA, DEC) from desoper. 
+    # step 2. Create a file that contains the exposure number, RA, DEC, g1, g2 (corrected with the average shear response for the whole survey). 
+    # -> Loop through each metadetect file, and create individual files which contain necessary info (use MPI).
+    # -> How do I use these individual files to compute treecorr? Since I will only be using noshear catalog, this should be fine.
+
     import treecorr
     from matplotlib import pyplot as plt
     import tqdm
@@ -387,35 +392,57 @@ def tangential_shear_field_center():
     import json
     import pickle
     from tqdm import tqdm
+    from mean_shear_bin_statistics import statistics_per_tile_without_bins
 
-    CCD28 = np.array([12289, 14336, 12289, 16384])
-    CCD35 = np.array([14337, 16384, 12289, 16384])
+    def find_exposure_numbers(mdet_fs):
+
+        mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
+        tilenames = [d.split('_')[0] for d in mdet_filenames]
+
+        coadd_info = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/pizza-cutter-coadds-info.fits')
+        coadd_files = {t: [] for t in tilenames}
+        bands = {t: [] for t in tilenames}
+        for coadd in coadd_info:
+            tname = coadd['FILENAME'].split('_')[0]
+            fname = coadd['FILENAME'] + coadd['COMPRESSION']
+            bandname = coadd['FILENAME'].split('_')[2]
+            if tname in list(coadd_files.keys()):
+                coadd_files[tname].append(fname)
+                bands[tname].append(bandname)
+
+        ccd_exp_num = []
+        for pizza_f in coadd_files:
+            coadd = fio.FITS(os.path.join('/global/cscratch1/sd/myamamot/pizza-slice/griz', pizza_f))
+            try:
+                epochs = coadd['epochs_info'].read()
+                image_info = coadd['image_info'].read()
+            except OSError:
+                print('Corrupt file.?', pizza_f)
+                raise OSError
+                
+            image_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
+            image_id = image_id[image_id != 0]
+            for iid in image_id:
+                msk_im = np.where(image_info['image_id'] == iid)
+                ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
+                expnum = _get_exp_num(image_info['image_path'][msk_im][0])
+                ccd_exp_num.append([ccdnum, expnum])
+        ccd_exp_num = np.array(ccd_exp_num)
+        total_exp_num = len(ccd_exp_num[:,1])
+        print('total exposure number', total_exp_num)
+
+        with open('ccd_exp_num.txt', 'w') as f:
+            for l in ccd_exp_num:
+                f.write(str(l[0])+' '+str(l[1]))
+                f.write('\n')
+
+        return None
     
-    def _make_cuts(d, shear):
+    def _get_exp_num(image_path):
+        return int(image_path.split('/')[1].split('_')[0][3:])
 
-        msk = (
-            (d['flags'] == 0)
-            & (d['mdet_s2n'] > 10)
-            & (d['mdet_T_ratio'] > 1.2)
-            & (d['mfrac'] < 0.1)
-            & (d['mdet_step'] == shear)
-        )
-        
-        return np.mean(d['mdet_g'][msk, :], axis=0), msk
-
-    def calculate_response(d):
-
-        g_noshear, mask_noshear = _make_cuts(d, 'noshear')
-        g_1p, mask_1p = _make_cuts(d, '1p')
-        g_1m, mask_1m = _make_cuts(d, '1m')
-        g_2p, mask_2p = _make_cuts(d, '2p')
-        g_2m, mask_2m = _make_cuts(d, '2m')
-
-        R11 = (g_1p[0] - g_1m[0])/0.02
-        R22 = (g_2p[1] - g_2m[1])/0.02
-        R = [R11, R22]
-
-        return R, mask_noshear
+    def _get_ccd_num(image_path):
+        return int(image_path.split('/')[1].split('_')[2][1:])
     
     def find_field_centres(work_mdet, tilenames, centre_x, centre_y, bands=['r','i','z'], save=False):
 
@@ -480,8 +507,20 @@ def tangential_shear_field_center():
             radec_centres['dec'][i] = dec
 
         return radec_centres
-            
 
+    CCD28 = np.array([12289, 14336, 12289, 16384])
+    CCD35 = np.array([14337, 16384, 12289, 16384])
+
+    # Compute the shear response over all the tiles. 
+    f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
+    fs = f.read().split('\n')[:-1]
+    R11, R22 = statistics_per_tile_without_bins(fs)  
+
+    # Create ccdnum and expnum text file if it has not been created yet. 
+    if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
+        find_exposure_numbers(fs)
+
+    sys.exit()
     shear_catalog = fio.read(os.path.join(work_mdet, 'mdet_test_all.fits'))
     full_response, mask_noshear = calculate_response(shear_catalog)
     ra = shear_catalog[mask_noshear]['ra']
@@ -553,9 +592,9 @@ def main(argv):
 
     # combine_piff(['r', 'i', 'z'], work_piff, tilenames)
     # combine_gold(32, work_gold)
-    inverse_variance_weight(20, fs, more_cuts=None)
+    # inverse_variance_weight(20, fs, more_cuts=None)
     # shear_stellar_contamination(mdet_cat, piff_all_cat)
-    # tangential_shear_field_center() -> modify the input and output. 
+    tangential_shear_field_center()
 
 if __name__ == "__main__":
     main(sys.argv)
