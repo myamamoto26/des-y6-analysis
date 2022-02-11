@@ -5,6 +5,7 @@ import healpy as hp
 import sys
 import fitsio as fio
 import numpy as np
+from tqdm import tqdm
 
 def get_coaddtile_geom(section, query, out_fname):
     ## Query Gaia stars and PSF model from DESDM database. 
@@ -147,26 +148,35 @@ def main(argv):
         f = open('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 'r')
         en = f.read().split('\n')[:-1]
 
-        query = """
-        select 
-            i.expnum,
-            count(*) as cnt,
-            avg(i.ra_cent),
-            avg(i.dec_cent) 
-        from 
-            IMAGE i, proctag t
-        where 
-            t.tag='Y6A1_COADD_INPUT'
-            and t.pfw_attempt_id=i.pfw_attempt_id
-            and i.filetype='red_immask'
-            and i.expnum in %s;
-        """ % (tuple(en), )
-        ################################################################
-        ## ERROR HAPPENING HERE.                                      ##
-        ## ORA-01795: maximum number of expressions in a list is 1000 ##
-        ################################################################
-        out_fname = '/data/des70.a/data/masaya/metadetect/exposure_field_centers.fits'
-        get_coaddtile_geom('desoper', query, out_fname)
+        split_en = np.array_split(en, int(sys.argv[2]))
+        fc_all = []
+        for ii, exp in tqdm(enumerate(split_en)):
+            query = """
+            select 
+                i.expnum,
+                count(*) as cnt,
+                avg(i.ra_cent),
+                avg(i.dec_cent) 
+            from 
+                IMAGE i, proctag t
+            where 
+                t.tag='Y6A1_COADD_INPUT'
+                and t.pfw_attempt_id=i.pfw_attempt_id
+                and i.filetype='red_immask'
+                and i.expnum in %s;
+            """ % (tuple(exp), )
+            ################################################################
+            ## ERROR HAPPENING HERE.                                      ##
+            ## ORA-01795: maximum number of expressions in a list is 1000 ##
+            ################################################################
+            out_fname = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers_'+str(ii)+'.fits'
+            get_coaddtile_geom('desoper', query, out_fname)
+
+            fc = fio.read(out_fname)
+            fc_all.append(fc)
+        fc_all = np.concatenate(fc, axis=0)
+        fio.write('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits', fc_all)
+
 
     elif sys.argv[1] == 'None':
         good_piffs = fio.read('/data/des70.a/data/masaya/piff_models/good_piffs_newcuts_query_test_v2.fits')
