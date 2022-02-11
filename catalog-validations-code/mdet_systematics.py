@@ -411,22 +411,23 @@ def tangential_shear_field_center():
                 bands[tname].append(bandname)
 
         ccd_exp_num = []
-        for pizza_f in coadd_files:
-            coadd = fio.FITS(os.path.join('/global/cscratch1/sd/myamamot/pizza-slice/griz', pizza_f))
-            try:
-                epochs = coadd['epochs_info'].read()
-                image_info = coadd['image_info'].read()
-            except OSError:
-                print('Corrupt file.?', pizza_f)
-                raise OSError
-                
-            image_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
-            image_id = image_id[image_id != 0]
-            for iid in image_id:
-                msk_im = np.where(image_info['image_id'] == iid)
-                ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
-                expnum = _get_exp_num(image_info['image_path'][msk_im][0])
-                ccd_exp_num.append([ccdnum, expnum])
+        for t in tqdm(tilenames):
+            for pizza_f in coadd_files[t]:
+                coadd = fio.FITS(os.path.join('/global/cscratch1/sd/myamamot/pizza-slice/griz', pizza_f))
+                try:
+                    epochs = coadd['epochs_info'].read()
+                    image_info = coadd['image_info'].read()
+                except OSError:
+                    print('Corrupt file.?', pizza_f)
+                    raise OSError
+                    
+                image_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
+                image_id = image_id[image_id != 0]
+                for iid in image_id:
+                    msk_im = np.where(image_info['image_id'] == iid)
+                    ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
+                    expnum = _get_exp_num(image_info['image_path'][msk_im][0])
+                    ccd_exp_num.append([ccdnum, expnum])
         ccd_exp_num = np.array(ccd_exp_num)
         total_exp_num = len(ccd_exp_num[:,1])
         print('total exposure number', total_exp_num)
