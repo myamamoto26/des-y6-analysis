@@ -514,7 +514,7 @@ def tangential_shear_field_center():
     # Compute the shear response over all the tiles. 
     f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
-    R11, R22 = statistics_per_tile_without_bins(fs)  
+    # R11, R22 = statistics_per_tile_without_bins(fs)  
 
     # Create ccdnum and expnum text file if it has not been created yet. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
