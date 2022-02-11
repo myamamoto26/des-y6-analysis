@@ -149,7 +149,7 @@ def main(argv):
         en = f.read().split('\n')[:-1]
 
         split_en = np.array_split(en, int(sys.argv[2]))
-        fc_all = ()
+        fc_all = []
         for ii, exp in tqdm(enumerate(split_en)):
             query = """
             select 
@@ -175,8 +175,7 @@ def main(argv):
 
             fc = fio.read(out_fname)
             fc_all.append(fc)
-
-        fc_all = np.concatenate(fc)
+        fc_all = np.concatenate(fc_all, axis=0)
         fio.write('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits', fc_all)
 
 
