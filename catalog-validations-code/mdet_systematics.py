@@ -410,7 +410,7 @@ def tangential_shear_field_center():
                 coadd_files[tname].append(fname)
                 bands[tname].append(bandname)
 
-        ccd_exp_num = []
+        exp_num = []
         for t in tqdm(tilenames):
             for pizza_f in coadd_files[t]:
                 coadd = fio.FITS(os.path.join('/global/cscratch1/sd/myamamot/pizza-slice/griz', pizza_f))
@@ -425,16 +425,16 @@ def tangential_shear_field_center():
                 image_id = image_id[image_id != 0]
                 for iid in image_id:
                     msk_im = np.where(image_info['image_id'] == iid)
-                    ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
+                    # ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
                     expnum = _get_exp_num(image_info['image_path'][msk_im][0])
-                    ccd_exp_num.append([ccdnum, expnum])
-        ccd_exp_num = np.array(ccd_exp_num)
-        total_exp_num = len(ccd_exp_num[:,1])
+                    exp_num.append(expnum)
+        exp_num = np.unique(np.array(exp_num))
+        total_exp_num = len(exp_num)
         print('total exposure number', total_exp_num)
 
         with open('ccd_exp_num.txt', 'w') as f:
-            for l in ccd_exp_num:
-                f.write(str(l[0])+' '+str(l[1]))
+            for l in exp_num:
+                f.write(str(l[1]))
                 f.write('\n')
 
         return None
