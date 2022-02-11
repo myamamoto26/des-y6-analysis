@@ -430,7 +430,7 @@ def statistics_per_tile_without_bins(fs):
         msk_default = ((mdet_tile['flags']==0) & (mdet_tile['mdet_s2n']>10) & (mdet_tile['mfrac']<0.02) & (mdet_tile['mdet_T_ratio']>1.2) & (mdet_tile['mask_flags']==0))
         d = mdet_tile[msk_default]
 
-        res = _accum_shear_per_tile_without_bin(res, d['mdet_step'], d['mdet_g_1'], d['mdet_g_2'], binnum)
+        res = _accum_shear_per_tile_without_bin(res, d['mdet_step'], d['mdet_g_1'], d['mdet_g_2'], 0)
     R11, R22 = _compute_g1_g2(res, binnum, method='just_response')
     
     return R11, R22
