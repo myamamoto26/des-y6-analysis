@@ -164,7 +164,7 @@ def main(argv):
                 and t.pfw_attempt_id=i.pfw_attempt_id
                 and i.filetype='red_immask'
                 and i.expnum in %s
-            grop by i.expnum;
+            group by i.expnum;
             """ % (tuple(exp), )
             ################################################################
             ## ERROR HAPPENING HERE.                                      ##
