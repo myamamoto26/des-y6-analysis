@@ -466,13 +466,12 @@ def main(argv):
         print('Plotting...')
 
         # Add raw sums for all the tiles from individual tile file. 
-        ccdres_all = {}
-        for t in tqdm(tilenames):
-            with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-                ccdres = pickle.load(handle)
-            ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
-
         if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle'):
+            ccdres_all = {}
+            for t in tqdm(tilenames):
+                with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                    ccdres = pickle.load(handle)
+            ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
             with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
                 pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
         else:
