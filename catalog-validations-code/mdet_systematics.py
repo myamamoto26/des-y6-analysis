@@ -393,7 +393,7 @@ def tangential_shear_field_center():
     import pickle
     from tqdm import tqdm
     from mean_shear_bin_statistics import statistics_per_tile_without_bins
-    from ..download-query-concatenation-code.query_examples import query_field_centers
+    from .download-query-concatenation-code.query_examples import query_field_centers
 
     def find_exposure_numbers(mdet_fs):
 
