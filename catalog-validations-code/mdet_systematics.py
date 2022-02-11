@@ -393,6 +393,7 @@ def tangential_shear_field_center():
     import pickle
     from tqdm import tqdm
     from mean_shear_bin_statistics import statistics_per_tile_without_bins
+    from DES.des-y6-analysis.download-query-concatenation-code.query_examples import query_field_centers
 
     def find_exposure_numbers(mdet_fs):
 
@@ -520,6 +521,7 @@ def tangential_shear_field_center():
     # Create ccdnum and expnum text file if it has not been created yet. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
         find_exposure_numbers(fs)
+    query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 30)
 
     sys.exit()
     shear_catalog = fio.read(os.path.join(work_mdet, 'mdet_test_all.fits'))
