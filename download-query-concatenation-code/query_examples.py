@@ -155,8 +155,8 @@ def main(argv):
             select 
                 i.expnum,
                 count(*) as cnt,
-                avg(i.ra_cent),
-                avg(i.dec_cent) 
+                avg(i.ra_cent) as ra_cent,
+                avg(i.dec_cent) as dec_cent 
             from 
                 IMAGE i, proctag t
             where 
@@ -175,8 +175,8 @@ def main(argv):
 
             fc = fio.read(out_fname)
             fc_all.append(fc)
-        print(fc_all)
-        fc_all = np.concatenate(fc, axis=0)
+
+        fc_all = np.concatenate(fc)
         fio.write('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits', fc_all)
 
 
