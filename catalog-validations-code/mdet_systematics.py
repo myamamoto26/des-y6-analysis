@@ -432,7 +432,7 @@ def tangential_shear_field_center():
         total_exp_num = len(exp_num)
         print('total exposure number', total_exp_num)
 
-        with open('ccd_exp_num.txt', 'w') as f:
+        with open('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 'w') as f:
             for l in exp_num:
                 f.write(str(l[1]))
                 f.write('\n')
