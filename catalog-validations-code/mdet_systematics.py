@@ -434,7 +434,7 @@ def tangential_shear_field_center():
 
         with open('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 'w') as f:
             for l in exp_num:
-                f.write(str(l[0]))
+                f.write(str(l))
                 f.write('\n')
 
         return None
