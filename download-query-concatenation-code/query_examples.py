@@ -163,7 +163,8 @@ def main(argv):
                 t.tag='Y6A1_COADD_INPUT'
                 and t.pfw_attempt_id=i.pfw_attempt_id
                 and i.filetype='red_immask'
-                and i.expnum in %s;
+                and i.expnum in %s
+            grop by i.expnum;
             """ % (tuple(exp), )
             ################################################################
             ## ERROR HAPPENING HERE.                                      ##
