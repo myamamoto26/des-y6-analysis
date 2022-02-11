@@ -171,10 +171,11 @@ def main(argv):
             ## ORA-01795: maximum number of expressions in a list is 1000 ##
             ################################################################
             out_fname = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers_'+str(ii)+'.fits'
-            get_coaddtile_geom('desoper', query, out_fname)
+            # get_coaddtile_geom('desoper', query, out_fname)
 
             fc = fio.read(out_fname)
             fc_all.append(fc)
+        print(fc_all)
         fc_all = np.concatenate(fc, axis=0)
         fio.write('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits', fc_all)
 
