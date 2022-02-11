@@ -40,6 +40,42 @@ def get_coaddtile_geom(section, query, out_fname):
     curs = conn.cursor()
     conn.query_and_save(query, out_fname)
 
+def query_field_centers(fname, split_number):
+
+    f = open(fname, 'r')
+    en = f.read().split('\n')[:-1]
+
+    split_en = np.array_split(en, int(split_number))
+    fc_all = []
+    for ii, exp in tqdm(enumerate(split_en)):
+        query = """
+        select 
+            i.expnum,
+            count(*) as cnt,
+            avg(i.ra_cent) as ra_cent,
+            avg(i.dec_cent) as dec_cent 
+        from 
+            IMAGE i, proctag t
+        where 
+            t.tag='Y6A1_COADD_INPUT'
+            and t.pfw_attempt_id=i.pfw_attempt_id
+            and i.filetype='red_immask'
+            and i.expnum in %s
+        group by i.expnum;
+        """ % (tuple(exp), )
+        ################################################################
+        ## ERROR HAPPENING HERE.                                      ##
+        ## ORA-01795: maximum number of expressions in a list is 1000 ##
+        ################################################################
+        out_fname = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers_'+str(ii)+'.fits'
+        get_coaddtile_geom('desoper', query, out_fname)
+
+        fc = fio.read(out_fname)
+        fc_all.append(fc)
+    fc_all = np.concatenate(fc_all, axis=0)
+    fio.write('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits', fc_all)
+
+
 def main(argv):
 
     if sys.argv[1] == 'mdet':
@@ -142,42 +178,6 @@ def main(argv):
             """ % (radec[0], radec[1], radec[2], radec[3])
             out_fname = '/data/des70.a/data/masaya/gold/gold_2_0_magnitudes_%s.fits' % i
             get_coaddtile_geom('dessci', query_gold, out_fname)
-
-    elif sys.argv[1] == 'field_centers':
-
-        f = open('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 'r')
-        en = f.read().split('\n')[:-1]
-
-        split_en = np.array_split(en, int(sys.argv[2]))
-        fc_all = []
-        for ii, exp in tqdm(enumerate(split_en)):
-            query = """
-            select 
-                i.expnum,
-                count(*) as cnt,
-                avg(i.ra_cent) as ra_cent,
-                avg(i.dec_cent) as dec_cent 
-            from 
-                IMAGE i, proctag t
-            where 
-                t.tag='Y6A1_COADD_INPUT'
-                and t.pfw_attempt_id=i.pfw_attempt_id
-                and i.filetype='red_immask'
-                and i.expnum in %s
-            group by i.expnum;
-            """ % (tuple(exp), )
-            ################################################################
-            ## ERROR HAPPENING HERE.                                      ##
-            ## ORA-01795: maximum number of expressions in a list is 1000 ##
-            ################################################################
-            out_fname = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers_'+str(ii)+'.fits'
-            # get_coaddtile_geom('desoper', query, out_fname)
-
-            fc = fio.read(out_fname)
-            fc_all.append(fc)
-        fc_all = np.concatenate(fc_all, axis=0)
-        fio.write('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits', fc_all)
-
 
     elif sys.argv[1] == 'None':
         good_piffs = fio.read('/data/des70.a/data/masaya/piff_models/good_piffs_newcuts_query_test_v2.fits')
