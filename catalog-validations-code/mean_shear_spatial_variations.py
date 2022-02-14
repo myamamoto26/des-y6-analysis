@@ -202,22 +202,26 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
                 continue
 
             if k < 32:
-                stack_north_g1 = np.nansum(np.dstack((stack_north_g1, g1)), 2)
+                # stack_north_g1 = np.nansum(np.dstack((stack_north_g1, g1)), 2)
                 rows,cols = np.where(~np.isnan(g1))
+                np.add.at(stack_north_g1, (rows, cols), g1[rows, cols])
                 np.add.at(num_north_g1, (rows, cols), 1)
 
-                stack_north_g2 = np.nansum(np.dstack((stack_north_g2, g2)), 2)
+                # stack_north_g2 = np.nansum(np.dstack((stack_north_g2, g2)), 2)
                 rows,cols = np.where(~np.isnan(g2))
+                np.add.at(stack_north_g2, (rows, cols), g2[rows, cols])
                 np.add.at(num_north_g2, (rows, cols), 1)
             else:
                 # g1 = np.flip(g1, 0)
-                stack_south_g1 = np.nansum(np.dstack((stack_south_g1, g1)), 2)
+                # stack_south_g1 = np.nansum(np.dstack((stack_south_g1, g1)), 2)
                 rows,cols = np.where(~np.isnan(g1))
+                np.add.at(stack_south_g1, (rows, cols), g1[rows, cols])
                 np.add.at(num_south_g1, (rows, cols), 1)
 
                 # g2 = np.flip(g2, 0)
-                stack_south_g2 = np.nansum(np.dstack((stack_south_g2, g2)), 2)
+                # stack_south_g2 = np.nansum(np.dstack((stack_south_g2, g2)), 2)
                 rows,cols = np.where(~np.isnan(g2))
+                np.add.at(stack_south_g2, (rows, cols), g2[rows, cols])
                 np.add.at(num_south_g2, (rows, cols), 1)
         mean_north_g1 = np.rot90(stack_north_g1/num_north_g1)
         mean_north_g2 = np.rot90(stack_north_g2/num_north_g2)
@@ -249,35 +253,35 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
             piece_side = 32
             X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
             
-            mesh = ax1[0,0].pcolormesh(X,Y,mean_g1[0], vmin=-0.05, vmax=0.05, cmap=cmap)
+            mesh = ax1[0,0].pcolormesh(X,Y,mean_g1[0], vmin=-0.005, vmax=0.005, cmap=cmap)
             ax1[0,0].set_aspect(1)
             ax1[0,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
             ax1[0,0].set_xticks([])
             ax1[0,0].set_yticks([])
-            ax1[0,0].set_ylabel('North')
+            ax1[0,0].set_ylabel('North', fontsize=25)
             plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
 
-            mesh = ax1[0,1].pcolormesh(X,Y,mean_g2[0], vmin=-0.05, vmax=0.05, cmap=cmap)
+            mesh = ax1[0,1].pcolormesh(X,Y,mean_g2[0], vmin=-0.005, vmax=0.005, cmap=cmap)
             ax1[0,1].set_aspect(1)
             ax1[0,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
             ax1[0,1].set_xticks([])
             ax1[0,1].set_yticks([])
-            plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
+            # plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
 
-            mesh = ax1[1,0].pcolormesh(X,Y,mean_g1[1], vmin=-0.05, vmax=0.05, cmap=cmap)
+            mesh = ax1[1,0].pcolormesh(X,Y,mean_g1[1], vmin=-0.005, vmax=0.005, cmap=cmap)
             ax1[1,0].set_aspect(1)
             ax1[1,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
             ax1[1,0].set_xticks([])
             ax1[1,0].set_yticks([])
-            ax1[1,0].set_ylabel('South')
+            ax1[1,0].set_ylabel('South', fontsize=25)
             plt.colorbar(mesh, orientation='horizontal', ax=ax1[1], pad=0.03)
 
-            mesh = ax1[1,1].pcolormesh(X,Y,mean_g2[1], vmin=-0.05, vmax=0.05, cmap=cmap)
+            mesh = ax1[1,1].pcolormesh(X,Y,mean_g2[1], vmin=-0.005, vmax=0.005, cmap=cmap)
             ax1[1,1].set_aspect(1)
             ax1[1,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
             ax1[1,1].set_xticks([])
             ax1[1,1].set_yticks([])
-            plt.colorbar(mesh, orientation='horizontal', ax=ax1[1], pad=0.03)
+            # plt.colorbar(mesh, orientation='horizontal', ax=ax1[1], pad=0.03)
 
             ## stack this 61x125 CCD in 10 bins along the x or y directions.
             # xbin_num = 25
@@ -312,8 +316,9 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
             # ax1[1,1].set_ylabel(r'$\langle e_{2} \rangle$')
             # ax1[1,1].set_xticks([])
 
-            plt.legend(fontsize='large')
-            plt.savefig('mdet_shear_variations_focal_plane_stacked.pdf')
+            # plt.legend(fontsize='large')
+            plt.tight_layout()
+            plt.savefig('mdet_shear_variations_focal_plane_stacked.pdf', bbox_inches='tight')
             return None
 
     name = ['g1', 'g2']
@@ -466,7 +471,7 @@ def main(argv):
         print('Plotting...')
 
         # Add raw sums for all the tiles from individual tile file. 
-        if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle'):
+        if True: # not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle'):
             ccdres_all = {}
             for t in tqdm(tilenames):
                 with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
