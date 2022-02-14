@@ -287,7 +287,7 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
             ax1[1,0].set_ylabel('South (CCD32-62)', fontsize=25)
             plt.colorbar(mesh, ax=ax1[1,0], pad=0.01)
 
-            mean = np.nanmean(mean_g2[1])
+            mean = np.mean(mean_g2[1], where=~np.isnan(mean_g2[1]))
             sig = np.nanstd(mean_g2[1]) / np.sqrt(mean_g2[1].size)
             print(mean, sig)
             mesh = ax1[1,1].pcolormesh(X,Y,mean_g2[1], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
