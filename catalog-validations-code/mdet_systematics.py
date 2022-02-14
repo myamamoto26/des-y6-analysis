@@ -461,7 +461,7 @@ def tangential_shear_field_center():
     expnum_field_centers = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits')
 
     sys.exit()
-    for t in tilenames:
+    # for t in tilenames:
         # What is the best way to store ra, dec, g1, g2 for all the tiles?
         # Create dictionary for each exposure?
     shear_catalog = fio.read(os.path.join(work_mdet, 'mdet_test_all.fits'))
