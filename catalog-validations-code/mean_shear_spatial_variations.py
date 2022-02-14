@@ -206,6 +206,7 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
                 rows,cols = np.where(~np.isnan(g1))
                 np.add.at(stack_north_g1, (rows, cols), g1[rows, cols])
                 np.add.at(num_north_g1, (rows, cols), 1)
+                print(g1[rows, cols], num_north_g1)
 
                 # stack_north_g2 = np.nansum(np.dstack((stack_north_g2, g2)), 2)
                 rows,cols = np.where(~np.isnan(g2))
@@ -223,11 +224,13 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
                 rows,cols = np.where(~np.isnan(g2))
                 np.add.at(stack_south_g2, (rows, cols), g2[rows, cols])
                 np.add.at(num_south_g2, (rows, cols), 1)
-        mean_north_g1 = np.rot90(stack_north_g1/num_north_g1)
-        mean_north_g2 = np.rot90(stack_north_g2/num_north_g2)
-        mean_south_g1 = np.rot90(stack_south_g1/num_south_g1)
-        mean_south_g2 = np.rot90(stack_south_g2/num_south_g2)
+        print(stack_north_g1, num_north_g1)
+        mean_north_g1 = np.rot90(stack_north_g1/num_north_g1, 3)
+        mean_north_g2 = np.rot90(stack_north_g2/num_north_g2, 3)
+        mean_south_g1 = np.rot90(stack_south_g1/num_south_g1, 3)
+        mean_south_g2 = np.rot90(stack_south_g2/num_south_g2, 3)
 
+        print(mean_north_g1)
         mean_g1 = [mean_north_g1, mean_south_g1]
         mean_g2 = [mean_north_g2, mean_south_g2]
         if jk:
@@ -283,6 +286,17 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
             ax1[1,1].set_yticks([])
             # plt.colorbar(mesh, orientation='horizontal', ax=ax1[1], pad=0.03)
 
+            plt.subplots_adjust(hspace=0.1,wspace=0.2)
+            plt.savefig('mdet_shear_variations_focal_plane_stacked.pdf', bbox_inches='tight')
+            plt.clf()
+
+            fig, ax1 = plt.subplots(2,2,figsize=(35,18))
+            # plt.style.use('default')
+            matplotlib.rcParams.update({'font.size': 28})
+            cmap = plt.get_cmap('viridis')
+            cmap.set_bad(color='k', alpha=1.)
+            piece_side = 32
+            X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
             ## stack this 61x125 CCD in 10 bins along the x or y directions.
             # xbin_num = 25
             # ybin_num = 15
@@ -317,8 +331,8 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
             # ax1[1,1].set_xticks([])
 
             # plt.legend(fontsize='large')
-            plt.tight_layout()
-            plt.savefig('mdet_shear_variations_focal_plane_stacked.pdf', bbox_inches='tight')
+            # plt.tight_layout()
+            # plt.savefig('mdet_shear_variations_focal_plane_stacked.pdf', bbox_inches='tight')
             return None
 
     name = ['g1', 'g2']
