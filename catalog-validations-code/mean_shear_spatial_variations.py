@@ -256,8 +256,8 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
             
             mean = np.nanmean(mean_g1[0])
             sig = np.nanstd(mean_g1[0]) 
-            print(mean, sig)
-            mesh = ax1[0,0].pcolormesh(X,Y,mean_g1[0], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
+            print(mean_g1[0], mean, sig)
+            mesh = ax1[0,0].pcolormesh(X,Y,mean_g1[0], vmin=-0.02, vmax=0.02, cmap=cmap)
             ax1[0,0].set_aspect(1)
             ax1[0,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
             ax1[0,0].set_xticks([])
@@ -440,9 +440,9 @@ def main(argv):
     ccd_x_max = 2000
     ccd_y_min = 48
     ccd_y_max = 4048
-    piece_side = 32
-    x_side = int(np.ceil((ccd_x_max - ccd_x_min)/piece_side))
-    y_side = int(np.ceil((ccd_y_max - ccd_y_min)/piece_side))
+    cell_side = 32
+    x_side = int(np.ceil((ccd_x_max - ccd_x_min)/cell_side))
+    y_side = int(np.ceil((ccd_y_max - ccd_y_min)/cell_side))
     num_ccd = 62
 
     # NEED TO WRITE THE CODE TO BE ABLE TO RUN FROM BOTH MASTER FLAT AND INDIVIDUAL FILES. 
@@ -479,7 +479,7 @@ def main(argv):
             if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle'):
                 d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
                 msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
-                ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands[t])
+                ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, t, bands[t])
                 for c in list(ccdres.keys()):
                     obj_num += np.sum(ccdres[c]['num_g1'])
                 print('number of objects in this tile, ', obj_num)
