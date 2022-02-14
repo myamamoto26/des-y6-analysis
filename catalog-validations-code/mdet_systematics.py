@@ -528,9 +528,9 @@ def main(argv):
 
     # combine_piff(['r', 'i', 'z'], work_piff, tilenames)
     # combine_gold(32, work_gold)
-    # inverse_variance_weight(20, fs, more_cuts=None)
+    inverse_variance_weight(20, fs, more_cuts=None)
     # shear_stellar_contamination(mdet_cat, piff_all_cat)
-    tangential_shear_field_center()
+    # tangential_shear_field_center()
 
 if __name__ == "__main__":
     main(sys.argv)
