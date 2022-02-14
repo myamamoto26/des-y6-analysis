@@ -256,37 +256,37 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
             piece_side = 32
             X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
             
-            mesh = ax1[0,0].pcolormesh(X,Y,mean_g1[0], vmin=-0.01, vmax=0.01, cmap=cmap)
+            mesh = ax1[0,0].pcolormesh(X,Y,mean_g1[0], vmin=-0.01, vmax=0.03, cmap=cmap)
             ax1[0,0].set_aspect(1)
             ax1[0,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
             ax1[0,0].set_xticks([])
             ax1[0,0].set_yticks([])
             ax1[0,0].set_ylabel('North', fontsize=25)
-            plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.01)
+            plt.colorbar(mesh, ax=ax1[0,0], pad=0.01)
 
-            mesh = ax1[0,1].pcolormesh(X,Y,mean_g2[0], vmin=-0.01, vmax=0.01, cmap=cmap)
+            mesh = ax1[0,1].pcolormesh(X,Y,mean_g2[0], vmin=-0.01, vmax=0.03, cmap=cmap)
             ax1[0,1].set_aspect(1)
             ax1[0,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
             ax1[0,1].set_xticks([])
             ax1[0,1].set_yticks([])
-            # plt.colorbar(mesh, orientation='horizontal', ax=ax1[0], pad=0.03)
+            plt.colorbar(mesh, ax=ax1[0,1], pad=0.01)
 
-            mesh = ax1[1,0].pcolormesh(X,Y,mean_g1[1], vmin=-0.01, vmax=0.01, cmap=cmap)
+            mesh = ax1[1,0].pcolormesh(X,Y,mean_g1[1], vmin=-0.01, vmax=0.03, cmap=cmap)
             ax1[1,0].set_aspect(1)
             ax1[1,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
             ax1[1,0].set_xticks([])
             ax1[1,0].set_yticks([])
             ax1[1,0].set_ylabel('South', fontsize=25)
-            plt.colorbar(mesh, orientation='horizontal', ax=ax1[1], pad=0.01)
+            plt.colorbar(mesh, ax=ax1[1,0], pad=0.01)
 
-            mesh = ax1[1,1].pcolormesh(X,Y,mean_g2[1], vmin=-0.01, vmax=0.01, cmap=cmap)
+            mesh = ax1[1,1].pcolormesh(X,Y,mean_g2[1], vmin=-0.01, vmax=0.03, cmap=cmap)
             ax1[1,1].set_aspect(1)
             ax1[1,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
             ax1[1,1].set_xticks([])
             ax1[1,1].set_yticks([])
-            # plt.colorbar(mesh, orientation='horizontal', ax=ax1[1], pad=0.03)
+            plt.colorbar(mesh, ax=ax1[1,1], pad=0.01)
 
-            plt.subplots_adjust(hspace=0.4,wspace=0.1)
+            plt.subplots_adjust(hspace=0.6,wspace=0.1)
             plt.savefig('mdet_shear_variations_focal_plane_stacked.pdf', bbox_inches='tight')
             plt.clf()
 
@@ -490,7 +490,8 @@ def main(argv):
             for t in tqdm(tilenames):
                 with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
                     ccdres = pickle.load(handle)
-            ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
+                ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
+            print(list(ccdres_all))
             with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
                 pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
         else:
