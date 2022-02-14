@@ -289,6 +289,7 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
 
             mean = np.nanmean(mean_g2[1])
             sig = np.nanstd(mean_g2[1]) / np.sqrt(mean_g2[1].size)
+            print(mean, sig)
             mesh = ax1[1,1].pcolormesh(X,Y,mean_g2[1], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
             ax1[1,1].set_aspect(1)
             ax1[1,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
