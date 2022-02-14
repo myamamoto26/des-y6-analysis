@@ -255,7 +255,7 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
             X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
             
             mean = np.nanmean(mean_g1[0])
-            sig = np.nanstd(mean_g1[0]) / len(mean_g1[0])
+            sig = np.nanstd(mean_g1[0]) / mean_g1[0].size
             print(mean, sig)
             mesh = ax1[0,0].pcolormesh(X,Y,mean_g1[0], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
             ax1[0,0].set_aspect(1)
@@ -266,7 +266,7 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
             plt.colorbar(mesh, ax=ax1[0,0], pad=0.01)
 
             mean = np.nanmean(mean_g2[0])
-            sig = np.nanstd(mean_g2[0])/ len(mean_g2[0])
+            sig = np.nanstd(mean_g2[0])/ mean_g2[0].size
             mesh = ax1[0,1].pcolormesh(X,Y,mean_g2[0], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
             ax1[0,1].set_aspect(1)
             ax1[0,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
@@ -275,7 +275,7 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
             plt.colorbar(mesh, ax=ax1[0,1], pad=0.01)
 
             mean = np.nanmean(mean_g1[1])
-            sig = np.nanstd(mean_g1[1])/ len(mean_g1[1])
+            sig = np.nanstd(mean_g1[1])/ mean_g1[1].size
             mesh = ax1[1,0].pcolormesh(X,Y,mean_g1[1], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
             ax1[1,0].set_aspect(1)
             ax1[1,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
@@ -285,7 +285,7 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
             plt.colorbar(mesh, ax=ax1[1,0], pad=0.01)
 
             mean = np.nanmean(mean_g2[1])
-            sig = np.nanstd(mean_g2[1])/ len(mean_g2[1])
+            sig = np.nanstd(mean_g2[1])/ mean_g2[1].size
             mesh = ax1[1,1].pcolormesh(X,Y,mean_g2[1], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
             ax1[1,1].set_aspect(1)
             ax1[1,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
