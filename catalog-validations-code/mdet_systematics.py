@@ -185,7 +185,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
         d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
 
         if more_cuts is None:
-            msk = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] < 1.2) & (d['mfrac'] < 0.02) & (d['mask_flags'] == 0))
+            msk = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] < 1.2) & (d['mfrac'] < 0.02) & (d['mask_flags'] == 0) & (d['mdet_T_ratio'] < 3.0))
         else:
             msk_default = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] < 1.2) & (d['mfrac'] < 0.02) & (d['mask_flags'] == 0))
             msk = (more_cuts & msk_default)
@@ -210,7 +210,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
     new_meanes = m/count_all
     new_shearweight = (new_response/new_meanes)**2
 
-    print('count', count_all/1.e5)
+    print('total number count', np.sum(count_all))
     # count
     fig=plt.figure(figsize=(16,12))
     ax = plt.subplot(221)
@@ -261,7 +261,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
     # ax.set_xticklabels(np.array([r'0.5 x $10^{0}$','','','','','',r'2 x $10^{0}$',r'3 x $10^{0}$']))
     plt.tight_layout()
     plt.subplots_adjust(hspace=0.1)
-    plt.savefig('count_response_ellip_SNR_Tr_cutsv2.pdf', bbox_inches='tight')
+    plt.savefig('count_response_ellip_SNR_Tr_cutsv3.pdf', bbox_inches='tight')
 
 
 # Figure 11; tangential and cross-component shear around bright and faint stars. 
@@ -446,85 +446,24 @@ def tangential_shear_field_center():
 
     def _get_ccd_num(image_path):
         return int(image_path.split('/')[1].split('_')[2][1:])
-    
-    def find_field_centres(work_mdet, tilenames, centre_x, centre_y, bands=['r','i','z'], save=False):
-
-        ################################################################################################################
-        ## THIS IS BEING LEFT UNDONE.                                                                                 ##
-        ## TASK:  MODIFY THE CODE TO READ IN EXPOSURE NUMBER FILE AND CENTER RA, DEC FILE MADE IN QUERY_GOOD_PIFF.PY. ##
-        ################################################################################################################
-        if save:
-            output = {}
-            en_list = []
-            for tilename in tqdm(tilenames):
-                f_mdet = os.path.join(work_mdet, tilename+'_metadetect-v3_mdetcat_part0000.fits')
-
-                coadd_band_exist = {band: None for band in bands}
-                for band in bands:
-                    f = os.path.join(work_pizza, band+'_band/'+tilename+'_r5227p01_'+band+'_pizza-cutter-slices.fits.fz')
-                    if os.path.exists(f):
-                        coadd_band_exist[band] = f
-                    else:
-                        f = os.path.join(work_pizza, band+'_band/'+tilename+'_r5227p03_'+band+'_pizza-cutter-slices.fits.fz')
-                        if os.path.exists(f):
-                            coadd_band_exist[band] = f
-                
-                if (not os.path.exists(f_mdet)) or np.all(np.where(list(coadd_band_exist.values()))):
-                    print('this tilename ', tilename, ' does not have either mdet cat or coadd info.')
-                    continue
-
-                mdet_cat = fio.read(f_mdet)
-                for obj in range(len(mdet_cat)):
-                    for band in bands:
-                        if coadd_band_exist[band] is None:
-                            continue
-                        coadd = fio.FITS(coadd_band_exist[band])
-                        epochs = coadd['epochs_info'].read()
-                        image_info = coadd['image_info'].read()
-                        slice_id = mdet_cat['slice_id'][obj]
-                        single_epochs = epochs[epochs['id']==slice_id]
-                        file_id = single_epochs[single_epochs['flags']==0]['file_id']
-
-                        for f in enumerate(file_id):
-                            en = int(image_info['image_path'][f][5:13].lstrip("0"))
-                            if en not in en_list:
-                                en_list.append(en)
-                                # wcs = eu.wcsutil.WCS(json.loads(image_info['wcs'][f]))
-                                # position_offset = image_info['position_offset'][f]
-                                # output[en] = {'wcs': wcs, 'offset': position_offset}
-                # for e in en:
-                    # get ra, dec in ccd28 and 35 for each exposure and average them. 
-                
-                with open(os.path.join(work_pizza, 'expnum_wcs_riz.pickle'), 'wb') as handle:
-                    pickle.dump(output, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        else:
-            with open(os.path.join(work_pizza, 'expnum_wcs_riz.pickle'), 'rb') as handle:
-                output = pickle.load(handle)
-
-        radec_centres = np.zeros(len(list(output.keys())), dtype=[('ra', float), ('dec', float)])
-        for i, expnum in enumerate(list(output.keys())):
-            wcs = output[expnum]['wcs']
-            position_offset = output[expnum]['offset']
-            ra, dec = wcs.image2sky(centre_x+position_offset, centre_y+position_offset)
-            radec_centres['ra'][i] = ra
-            radec_centres['dec'][i] = dec
-
-        return radec_centres
-
-    CCD28 = np.array([12289, 14336, 12289, 16384])
-    CCD35 = np.array([14337, 16384, 12289, 16384])
-
+        
     # Compute the shear response over all the tiles. 
     f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
-    # R11, R22 = statistics_per_tile_without_bins(fs)  
+    filenames = [fname.split('/')[-1] for fname in fs]
+    tilenames = [d.split('_')[0] for d in filenames] 
+    R11, R22 = statistics_per_tile_without_bins(fs)
 
     # Create ccdnum and expnum text file if it has not been created yet. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
         find_exposure_numbers(fs)
     query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 30)
+    expnum_field_centers = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits')
 
     sys.exit()
+    for t in tilenames:
+        # What is the best way to store ra, dec, g1, g2 for all the tiles?
+        # Create dictionary for each exposure?
     shear_catalog = fio.read(os.path.join(work_mdet, 'mdet_test_all.fits'))
     full_response, mask_noshear = calculate_response(shear_catalog)
     ra = shear_catalog[mask_noshear]['ra']
@@ -533,13 +472,6 @@ def tangential_shear_field_center():
     g2 = shear_catalog[mask_noshear]['mdet_g'][:,1]/full_response[1]
     centre_x = (CCD28[0] + CCD35[1])/2.
     centre_y = (CCD28[2] + CCD35[3])/2.
-
-    if not os.path.exists(os.path.join(work_pizza, 'expnum_wcs_riz.pickle')):
-        ra_centres = find_field_centres(work_mdet, tilenames, centre_x, centre_y, save=True)['ra']
-        dec_centres = find_field_centres(work_mdet, tilenames, centre_x, centre_y, save=True)['dec']
-    else:
-        ra_centres = find_field_centres(work_mdet, tilenames, centre_x, centre_y)['ra']
-        dec_centres = find_field_centres(work_mdet, tilenames, centre_x, centre_y)['dec']
 
     bin_config = dict(
         sep_units = 'arcmin',
