@@ -246,7 +246,7 @@ def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None)
                 y_data.append(y_stacked)
             return (x_data, y_data)
         else: 
-            plt.hist(mean_g2[1].flatten(), bins=200, range=(-0.09,0.09))
+            plt.hist(mean_g2[1].flatten(), bins=200)
             plt.xlabel(r'$<e_{2}>$')
             plt.savefig('pixel_values_hist_southe2.pdf')
             plt.clf()
