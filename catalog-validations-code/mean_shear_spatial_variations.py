@@ -540,7 +540,8 @@ def main(argv):
         for t in tqdm(enumerate(tilenames)):
             with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
                 ccdres = pickle.load(handle)
-            res[t] = ccdres
+            print(t)
+            res[str(t)] = ccdres
 
         for i in tqdm(range(len(tilenames))):
             ccdres_all = {}
