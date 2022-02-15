@@ -218,7 +218,7 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False):
             rows,cols = np.where(~np.isnan(g2))
             np.add.at(stack_south_g2, (rows, cols), g2[rows, cols])
             np.add.at(num_south_g2, (rows, cols), 1)
-    print(np.sum(num_north_g1))
+    # print(np.sum(num_north_g1))
 
     if not stack_north_south: 
         mean_north_g1 = np.rot90(stack_north_g1/num_north_g1, 3)
@@ -493,14 +493,14 @@ def main(argv):
         for t in tqdm(split_tilenames[rank]):
             ccdres = {}
             obj_num = 0
-            if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle'):
+            if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle'):
                 d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
                 msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
                 ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, t, bands[t])
                 for c in list(ccdres.keys()):
                     obj_num += np.sum(ccdres[c]['num_g1'])
                 print('number of objects in this tile, ', obj_num)
-                with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
+                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
                     pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
             else:
                 print('Already made this tile.', t)
@@ -509,17 +509,17 @@ def main(argv):
         print('Plotting...')
 
         # Add raw sums for all the tiles from individual tile file. 
-        if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle'):
+        if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle'):
             ccdres_all = {}
             for t in tqdm(tilenames):
-                with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
                     ccdres = pickle.load(handle)
                 ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
             print(list(ccdres_all))
-            with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
                 pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
         else:
-            with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
                 ccdres_all = pickle.load(raw)
         # plot for all the CCDs. 
         # plot_shear_vaiations_ccd(x_side, y_side, ccdres_all)
@@ -539,26 +539,29 @@ def main(argv):
             y_g1 = []
             x_g2 = []
             y_g2 = []
+            ccdres_all = {}
             for j,t in enumerate(tilenames):
                 if i == j:
                     continue
-                with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                
+                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
                     ccdres = pickle.load(handle)
-                x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False)
+                ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
+            x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres_all, xbin, ybin, plot=False)
+            
+            x_g1.append(x_data[0])
+            y_g1.append(y_data[0])
+            x_g2.append(x_data[1])
+            y_g2.append(y_data[1])
                 
-                x_g1.append(x_data[0])
-                y_g1.append(y_data[0])
-                x_g2.append(x_data[1])
-                y_g2.append(y_data[1])
-                
-            jk_x_g1[i, :] = np.sum(x_g1, axis=0)/(jk_sample-1)
-            jk_y_g1[i, :] = np.sum(y_g1, axis=0)/(jk_sample-1)
-            jk_x_g2[i, :] = np.sum(x_g2, axis=0)/(jk_sample-1)
-            jk_y_g2[i, :] = np.sum(y_g2, axis=0)/(jk_sample-1)
+            jk_x_g1[i, :] = x_data[0] 
+            jk_y_g1[i, :] = y_data[0]
+            jk_x_g2[i, :] = x_data[1]
+            jk_y_g2[i, :] = y_data[1]
         jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
         print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
 
-        with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
+        with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
             ccdres = pickle.load(handle)
         plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
 
