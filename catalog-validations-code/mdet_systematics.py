@@ -184,7 +184,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
     total_count = 0
     for fname in tqdm(filenames):
         d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
-        total_count += len(d)
+        total_count += len(d[d['mdet_step']=='noshear'])
         if more_cuts is None:
             msk = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] < 1.2) & (d['mfrac'] < 0.02) & (d['mask_flags'] == 0) & (d['mdet_T_ratio'] < 3.0))
         else:
