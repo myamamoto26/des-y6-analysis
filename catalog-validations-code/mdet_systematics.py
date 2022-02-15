@@ -181,9 +181,10 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
            'g2p_count': np.zeros((steps, steps)),
            'g2m_count': np.zeros((steps, steps))}
     # Accumulate raw sums of shear and mean shear corrected with response per tile. 
+    total_count = 0
     for fname in tqdm(filenames):
         d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
-
+        total_count += len(d)
         if more_cuts is None:
             msk = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] < 1.2) & (d['mfrac'] < 0.02) & (d['mask_flags'] == 0) & (d['mdet_T_ratio'] < 3.0))
         else:
@@ -210,7 +211,8 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
     new_meanes = m/count_all
     new_shearweight = (new_response/new_meanes)**2
 
-    print('total number count', np.sum(count_all))
+    print('total number count before cuts', total_count)
+    print('total number count after cuts', np.sum(count_all))
     # count
     fig=plt.figure(figsize=(16,12))
     ax = plt.subplot(221)
