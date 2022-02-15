@@ -544,7 +544,7 @@ def main(argv):
                     continue
                 with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
                     ccdres = pickle.load(handle)
-                x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True)
+                x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False)
                 x_g1.append(x_data[0])
                 y_g1.append(y_data[0])
                 x_g2.append(x_data[1])
