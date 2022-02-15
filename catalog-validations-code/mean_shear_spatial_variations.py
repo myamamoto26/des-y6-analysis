@@ -534,26 +534,22 @@ def main(argv):
         jk_y_g1 = np.zeros((jk_sample, ybin+1))
         jk_x_g2 = np.zeros((jk_sample, xbin))
         jk_y_g2 = np.zeros((jk_sample, ybin+1))
+
+        # Read in files. 
+        res = {}
+        for t in tqdm(enumerate(tilenames)):
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                ccdres = pickle.load(handle)
+            res[t] = ccdres
+
         for i in tqdm(range(len(tilenames))):
-            x_g1 = []
-            y_g1 = []
-            x_g2 = []
-            y_g2 = []
             ccdres_all = {}
-            for j,t in enumerate(tilenames):
+            for j,t in tqdm(enumerate(tilenames)):
                 if i == j:
                     continue
-                
-                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-                    ccdres = pickle.load(handle)
-                ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
-            x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres_all, xbin, ybin, plot=False)
+                ccdres_all = _accum_shear_from_file(ccdres_all, ccdres[t], x_side, y_side)
             
-            x_g1.append(x_data[0])
-            y_g1.append(y_data[0])
-            x_g2.append(x_data[1])
-            y_g2.append(y_data[1])
-                
+            x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres_all, xbin, ybin, plot=False)    
             jk_x_g1[i, :] = x_data[0] 
             jk_y_g1[i, :] = y_data[0]
             jk_x_g2[i, :] = x_data[1]
