@@ -232,8 +232,8 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False):
         # Stack north and south but be careful of the directions of stacking.
         g1 = (stack_north_g1+np.flip(stack_south_g1,0))/(num_north_g1+np.flip(num_south_g1,0))
         g2 = (stack_north_g2+np.flip(stack_south_g2,0))/(num_north_g2+np.flip(num_south_g2,0))
-        mean_g1 = np.rot(g1, 3)
-        mean_g2 = np.rot(g2, 3)
+        mean_g1 = np.rot90(g1, 3)
+        mean_g2 = np.rot90(g2, 3)
         return mean_g1, mean_g2
 
 def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
@@ -356,7 +356,6 @@ def plot_stacked_ccd_north_south(x_side, y_side, ccdres):
 
     mean = np.nanmean(mean_g2[1][mean_g2[1] > -10])
     sig = np.nanstd(mean_g2[1][mean_g2[1] > -10]) / np.sqrt(mean_g2[1][mean_g2[1] > -10].size)
-    print(mean, sig)
     mesh = ax1[1,1].pcolormesh(X,Y,mean_g2[1], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
     ax1[1,1].set_aspect(1)
     ax1[1,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
@@ -527,6 +526,7 @@ def main(argv):
         plot_stacked_ccd_north_south(x_side, y_side, ccdres_all)
 
         # Compute jackknife error estimate. 
+        print('Computing jackknife error')
         jk_sample = len(tilenames)
         xbin = 25
         ybin = 15
