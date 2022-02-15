@@ -522,8 +522,8 @@ def main(argv):
             with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
                 ccdres_all = pickle.load(raw)
         # plot for all the CCDs. 
-        plot_shear_vaiations_ccd(x_side, y_side, ccdres_all)
-        plot_stacked_ccd_north_south(x_side, y_side, ccdres_all)
+        # plot_shear_vaiations_ccd(x_side, y_side, ccdres_all)
+        # plot_stacked_ccd_north_south(x_side, y_side, ccdres_all)
 
         # Compute jackknife error estimate. 
         print('Computing jackknife error')
@@ -531,9 +531,9 @@ def main(argv):
         xbin = 25
         ybin = 15
         jk_x_g1 = np.zeros((jk_sample, xbin))
-        jk_y_g1 = np.zeros((jk_sample, ybin))
+        jk_y_g1 = np.zeros((jk_sample, ybin+1))
         jk_x_g2 = np.zeros((jk_sample, xbin))
-        jk_y_g2 = np.zeros((jk_sample, ybin))
+        jk_y_g2 = np.zeros((jk_sample, ybin+1))
         for i in tqdm(range(len(tilenames))):
             x_g1 = []
             y_g1 = []
