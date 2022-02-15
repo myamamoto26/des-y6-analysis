@@ -523,7 +523,7 @@ def main(argv):
             with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
                 ccdres_all = pickle.load(raw)
         # plot for all the CCDs. 
-        plot_shear_vaiations_ccd(x_side, y_side, ccdres_all, num_ccd)
+        plot_shear_vaiations_ccd(x_side, y_side, ccdres_all)
         plot_stacked_ccd_north_south(x_side, y_side, ccdres_all)
 
         # Compute jackknife error estimate. 
