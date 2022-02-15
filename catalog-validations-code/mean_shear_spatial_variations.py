@@ -83,10 +83,10 @@ def _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, N):
     jk_x_g2_ave = np.sum(jk_x_g2, axis=0)/N
     jk_y_g2_ave = np.sum(jk_y_g2, axis=0)/N
 
-    x_cov_g1 = np.sqrt(np.sum((jk_x_g1 - jk_x_g1_ave)**2, axis=0)/(N*(N-1)))
-    y_cov_g1 = np.sqrt(np.sum((jk_y_g1 - jk_y_g1_ave)**2, axis=0)/(N*(N-1)))
-    x_cov_g2 = np.sqrt(np.sum((jk_x_g2 - jk_x_g2_ave)**2, axis=0)/(N*(N-1)))
-    y_cov_g2 = np.sqrt(np.sum((jk_y_g2 - jk_y_g2_ave)**2, axis=0)/(N*(N-1)))
+    x_cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_x_g1 - jk_x_g1_ave)**2, axis=0))
+    y_cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_y_g1 - jk_y_g1_ave)**2, axis=0))
+    x_cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_x_g2 - jk_x_g2_ave)**2, axis=0))
+    y_cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_y_g2 - jk_y_g2_ave)**2, axis=0))
 
     return x_cov_g1, y_cov_g1, x_cov_g2, y_cov_g2
 
@@ -171,191 +171,204 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
 
     return ccdres
 
-def plot_shear_variations_stacked_ccd(x_side, y_side, ccdres, jk=False, jc=None):
-    
-    x0 = dDECam.CCDSECTION_X0
-    y0 = dDECam.CCDSECTION_Y0
-
-    def stack_CCDs(ccdres, name, x_side, y_side):
+def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False):
         
-        ## stack all the CCDs to find any non-trivial trend in focal plane. ##
-        ## Need to flip CCD 32-62 about x-axis. ##
+    ## stack all the CCDs to find any non-trivial trend in focal plane. ##
+    ## Need to flip CCD 32-62 about x-axis. ##
 
-        SECTIONS = dDECam.CCDSECTIONS
-        # CCD 1-31
-        stack_north_g1 = np.zeros((y_side, x_side))
-        num_north_g1 = np.zeros((y_side, x_side))
-        stack_south_g1 = np.zeros((y_side, x_side))
-        num_south_g1 = np.zeros((y_side, x_side))
+    SECTIONS = dDECam.CCDSECTIONS
+    # CCD 1-31
+    stack_north_g1 = np.zeros((y_side, x_side))
+    num_north_g1 = np.zeros((y_side, x_side))
+    stack_south_g1 = np.zeros((y_side, x_side))
+    num_south_g1 = np.zeros((y_side, x_side))
 
-        # CCD 32-62
-        stack_north_g2 = np.zeros((y_side, x_side))
-        num_north_g2 = np.zeros((y_side, x_side))
-        stack_south_g2 = np.zeros((y_side, x_side))
-        num_south_g2 = np.zeros((y_side, x_side))
+    # CCD 32-62
+    stack_north_g2 = np.zeros((y_side, x_side))
+    num_north_g2 = np.zeros((y_side, x_side))
+    stack_south_g2 = np.zeros((y_side, x_side))
+    num_south_g2 = np.zeros((y_side, x_side))
 
-        # Stacking CCDs on top of each other. 
-        for k, v in list(SECTIONS.items()):
-            if k in list(ccdres):
-                g1, g2 = _compute_g1_g2(ccdres, k)
-            else:
-                continue
+    # Stacking CCDs on top of each other. 
+    for k, v in list(SECTIONS.items()):
+        if k in list(ccdres):
+            g1, g2 = _compute_g1_g2(ccdres, k)
+        else:
+            continue
 
-            if k < 32:
-                # stack_north_g1 = np.nansum(np.dstack((stack_north_g1, g1)), 2)
-                rows,cols = np.where(~np.isnan(g1))
-                np.add.at(stack_north_g1, (rows, cols), g1[rows, cols])
-                np.add.at(num_north_g1, (rows, cols), 1)
+        if k < 32:
+            # stack_north_g1 = np.nansum(np.dstack((stack_north_g1, g1)), 2)
+            rows,cols = np.where(~np.isnan(g1))
+            np.add.at(stack_north_g1, (rows, cols), g1[rows, cols])
+            np.add.at(num_north_g1, (rows, cols), 1)
 
-                # stack_north_g2 = np.nansum(np.dstack((stack_north_g2, g2)), 2)
-                rows,cols = np.where(~np.isnan(g2))
-                np.add.at(stack_north_g2, (rows, cols), g2[rows, cols])
-                np.add.at(num_north_g2, (rows, cols), 1)
-            else:
-                # g1 = np.flip(g1, 0)
-                # stack_south_g1 = np.nansum(np.dstack((stack_south_g1, g1)), 2)
-                rows,cols = np.where(~np.isnan(g1))
-                np.add.at(stack_south_g1, (rows, cols), g1[rows, cols])
-                np.add.at(num_south_g1, (rows, cols), 1)
+            # stack_north_g2 = np.nansum(np.dstack((stack_north_g2, g2)), 2)
+            rows,cols = np.where(~np.isnan(g2))
+            np.add.at(stack_north_g2, (rows, cols), g2[rows, cols])
+            np.add.at(num_north_g2, (rows, cols), 1)
+        else:
+            # g1 = np.flip(g1, 0)
+            # stack_south_g1 = np.nansum(np.dstack((stack_south_g1, g1)), 2)
+            rows,cols = np.where(~np.isnan(g1))
+            np.add.at(stack_south_g1, (rows, cols), g1[rows, cols])
+            np.add.at(num_south_g1, (rows, cols), 1)
 
-                # g2 = np.flip(g2, 0)
-                # stack_south_g2 = np.nansum(np.dstack((stack_south_g2, g2)), 2)
-                rows,cols = np.where(~np.isnan(g2))
-                np.add.at(stack_south_g2, (rows, cols), g2[rows, cols])
-                np.add.at(num_south_g2, (rows, cols), 1)
-        print(np.sum(num_north_g1))
+            # g2 = np.flip(g2, 0)
+            # stack_south_g2 = np.nansum(np.dstack((stack_south_g2, g2)), 2)
+            rows,cols = np.where(~np.isnan(g2))
+            np.add.at(stack_south_g2, (rows, cols), g2[rows, cols])
+            np.add.at(num_south_g2, (rows, cols), 1)
+    print(np.sum(num_north_g1))
+
+    if not stack_north_south: 
         mean_north_g1 = np.rot90(stack_north_g1/num_north_g1, 3)
         mean_north_g2 = np.rot90(stack_north_g2/num_north_g2, 3)
         mean_south_g1 = np.rot90(stack_south_g1/num_south_g1, 3)
         mean_south_g2 = np.rot90(stack_south_g2/num_south_g2, 3)
-
         mean_g1 = [mean_north_g1, mean_south_g1]
         mean_g2 = [mean_north_g2, mean_south_g2]
-        if jk:
-            # Need to fix things here. 
-            x_data = []
-            y_data = []
-            for g in [mean_g1, mean_g2]:
-                xbin_num = 25
-                ybin_num = 15
-                x_reduced = block_reduce(g, block_size=(1, y_side//xbin_num), func=np.nanmean)
-                y_reduced = block_reduce(g, block_size=(x_side//ybin_num, 1), func=np.nanmean)
-                x_stacked = np.nanmean(x_reduced, axis=0)
-                y_stacked = np.nanmean(y_reduced, axis=1)
-                x_data.append(x_stacked)
-                y_data.append(y_stacked)
-            return (x_data, y_data)
-        else: 
-            # plt.hist(mean_g2[1].flatten(), bins=200)
-            # plt.xlabel(r'$<e_{2}>$')
-            # plt.savefig('pixel_values_hist_southe2.pdf')
-            # plt.clf()
-            fig, ax1 = plt.subplots(2,2,figsize=(35,18))
-            # plt.style.use('default')
-            matplotlib.rcParams.update({'font.size': 28})
-            cmap = plt.get_cmap('viridis')
-            # cmap.set_bad(color='k', alpha=1.)
-            piece_side = 32
-            X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
-            
-            mean = np.nanmean(mean_g1[0])
-            sig = np.nanstd(mean_g1[0]) / np.sqrt(mean_g1[0].size)
-            mesh = ax1[0,0].pcolormesh(X,Y,mean_g1[0], vmin=-0.02, vmax=0.02, cmap=cmap)
-            ax1[0,0].set_aspect(1)
-            ax1[0,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
-            ax1[0,0].set_xticks([])
-            ax1[0,0].set_yticks([])
-            ax1[0,0].set_ylabel('North (CCD1-31)', fontsize=25)
-            plt.colorbar(mesh, ax=ax1[0,0], pad=0.01)
-
-            mean = np.nanmean(mean_g2[0])
-            sig = np.nanstd(mean_g2[0]) / np.sqrt(mean_g2[0].size)
-            mesh = ax1[0,1].pcolormesh(X,Y,mean_g2[0], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
-            ax1[0,1].set_aspect(1)
-            ax1[0,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
-            ax1[0,1].set_xticks([])
-            ax1[0,1].set_yticks([])
-            plt.colorbar(mesh, ax=ax1[0,1], pad=0.01)
-
-            mean = np.nanmean(mean_g1[1])
-            sig = np.nanstd(mean_g1[1]) / np.sqrt(mean_g1[1].size)
-            mesh = ax1[1,0].pcolormesh(X,Y,mean_g1[1], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
-            ax1[1,0].set_aspect(1)
-            ax1[1,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
-            ax1[1,0].set_xticks([])
-            ax1[1,0].set_yticks([])
-            ax1[1,0].set_ylabel('South (CCD32-62)', fontsize=25)
-            plt.colorbar(mesh, ax=ax1[1,0], pad=0.01)
-
-
-            mean = np.nanmean(mean_g2[1][mean_g2[1] > -10])
-            sig = np.nanstd(mean_g2[1][mean_g2[1] > -10]) / np.sqrt(mean_g2[1][mean_g2[1] > -10].size)
-            print(mean, sig)
-            mesh = ax1[1,1].pcolormesh(X,Y,mean_g2[1], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
-            ax1[1,1].set_aspect(1)
-            ax1[1,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
-            ax1[1,1].set_xticks([])
-            ax1[1,1].set_yticks([])
-            plt.colorbar(mesh, ax=ax1[1,1], pad=0.01)
-
-            plt.subplots_adjust(hspace=0.3,wspace=0.1)
-            plt.savefig('mdet_shear_variations_focal_plane_stacked.pdf', bbox_inches='tight')
-            plt.clf()
-
-            fig, ax1 = plt.subplots(2,2,figsize=(35,18))
-            # plt.style.use('default')
-            matplotlib.rcParams.update({'font.size': 28})
-            cmap = plt.get_cmap('viridis')
-            cmap.set_bad(color='k', alpha=1.)
-            piece_side = 32
-            X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
-            ## stack this 61x125 CCD in 10 bins along the x or y directions.
-            # xbin_num = 25
-            # ybin_num = 15
-            # x_reduced = block_reduce(mean_g1, block_size=(1, y_side//xbin_num), func=np.nanmean)
-            # y_reduced = block_reduce(mean_g1, block_size=(x_side//ybin_num, 1), func=np.nanmean)
-            # x_stacked = np.nanmean(x_reduced, axis=0)
-            # y_stacked = np.nanmean(y_reduced, axis=1)
-            
-            # x_ = np.linspace(0,1,len(x_stacked))
-            # y_ = np.linspace(0,1,len(y_stacked))
-            # ax1[1,0].plot(x_, x_stacked, c='b', label='x-stacked')
-            # ax1[1,0].errorbar(x_, x_stacked, yerr=jc[0], c='b')
-            # ax1[1,0].plot(y_, y_stacked, c='r', label='y-stacked')
-            # ax1[1,0].errorbar(y_, y_stacked, yerr=jc[1], c='r')
-            # ax1[1,0].set_ylim(-0.2,0.2)
-            # ax1[1,0].set_xlabel('CCD coordinates')
-            # ax1[1,0].set_ylabel(r'$\langle e_{1} \rangle$')
-            # ax1[1,0].set_xticks([])
-
-            # x_reduced = block_reduce(mean_g2, block_size=(1, y_side//xbin_num), func=np.nanmean)
-            # y_reduced = block_reduce(mean_g2, block_size=(x_side//ybin_num, 1), func=np.nanmean)
-            # x_stacked = np.nanmean(x_reduced, axis=0)
-            # y_stacked = np.nanmean(y_reduced, axis=1)
-
-            # ax1[1,1].plot(x_, x_stacked, c='b', label='x-stacked')
-            # ax1[1,1].errorbar(x_, x_stacked, yerr=jc[2], c='b')
-            # ax1[1,1].plot(y_, y_stacked, c='r', label='y-stacked')
-            # ax1[1,1].errorbar(y_, y_stacked, yerr=jc[3], c='r')
-            # ax1[1,1].set_ylim(-0.2,0.2)
-            # ax1[1,1].set_xlabel('CCD coordinates')
-            # ax1[1,1].set_ylabel(r'$\langle e_{2} \rangle$')
-            # ax1[1,1].set_xticks([])
-
-            # plt.legend(fontsize='large')
-            # plt.tight_layout()
-            # plt.savefig('mdet_shear_variations_focal_plane_stacked.pdf', bbox_inches='tight')
-            return None
-
-    name = ['g1', 'g2']
-    data = stack_CCDs(ccdres, name, x_side, y_side)
-    if jk:
-        return data[0], data[1]
+        return mean_g1, mean_g2
     else:
+        # Stack north and south but be careful of the directions of stacking.
+        g1 = (stack_north_g1+np.flip(stack_south_g1,0))/(num_north_g1+np.flip(num_south_g1,0))
+        g2 = (stack_north_g2+np.flip(stack_south_g2,0))/(num_north_g2+np.flip(num_south_g2,0))
+        mean_g1 = np.rot(g1, 3)
+        mean_g2 = np.rot(g2, 3)
+        return mean_g1, mean_g2
+
+def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
+
+    mean_g1, mean_g2 = compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=True)
+    x_data = []
+    y_data = []
+    for g in [mean_g1, mean_g2]:
+        xbin_num = xbin
+        ybin_num = ybin
+        x_reduced = block_reduce(g, block_size=(1, y_side//xbin_num), func=np.nanmean)
+        y_reduced = block_reduce(g, block_size=(x_side//ybin_num, 1), func=np.nanmean)
+        x_stacked = np.nanmean(x_reduced, axis=0)
+        y_stacked = np.nanmean(y_reduced, axis=1)
+        x_data.append(x_stacked)
+        y_data.append(y_stacked)
+    if not plot:
+        return x_data, y_data
+    else:
+        fig, ax1 = plt.subplots(2,2,figsize=(35,18))
+        # plt.style.use('default')
+        matplotlib.rcParams.update({'font.size': 28})
+        cmap = plt.get_cmap('viridis')
+        cmap.set_bad(color='k', alpha=1.)
+        piece_side = 32
+        X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
+
+        mean = np.nanmean(mean_g1[0])
+        sig = np.nanstd(mean_g1[0]) / np.sqrt(mean_g1[0].size)
+        mesh = ax1[0,0].pcolormesh(X,Y,mean_g1[0], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
+        ax1[0,0].set_aspect(1)
+        ax1[0,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
+        ax1[0,0].set_xticks([])
+        ax1[0,0].set_yticks([])
+        plt.colorbar(mesh, ax=ax1[0,0], pad=0.01)
+
+        mean = np.nanmean(mean_g2[0])
+        sig = np.nanstd(mean_g2[0]) / np.sqrt(mean_g2[0].size)
+        mesh = ax1[0,1].pcolormesh(X,Y,mean_g2[0], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
+        ax1[0,1].set_aspect(1)
+        ax1[0,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
+        ax1[0,1].set_xticks([])
+        ax1[0,1].set_yticks([])
+        plt.colorbar(mesh, ax=ax1[0,1], pad=0.01)
+        
+        x_ = np.linspace(0,1,len(x_stacked))
+        y_ = np.linspace(0,1,len(y_stacked))
+        ax1[1,0].plot(x_, x_data[0], c='b', label='x-stacked')
+        ax1[1,0].errorbar(x_, x_data[0], yerr=jc[0], c='b')
+        ax1[1,0].plot(y_, y_data[0], c='r', label='y-stacked')
+        ax1[1,0].errorbar(y_, y_data[0], yerr=jc[1], c='r')
+        # ax1[1,0].set_ylim(-0.2,0.2)
+        ax1[1,0].set_xlabel('CCD coordinates')
+        ax1[1,0].set_ylabel(r'$\langle e_{1} \rangle$')
+        ax1[1,0].set_xticks([])
+
+        ax1[1,1].plot(x_, x_data[1], c='b', label='x-stacked')
+        ax1[1,1].errorbar(x_, x_data[1], yerr=jc[2], c='b')
+        ax1[1,1].plot(y_, y_data[1], c='r', label='y-stacked')
+        ax1[1,1].errorbar(y_, y_data[1], yerr=jc[3], c='r')
+        # ax1[1,1].set_ylim(-0.2,0.2)
+        ax1[1,1].set_xlabel('CCD coordinates')
+        ax1[1,1].set_ylabel(r'$\langle e_{2} \rangle$')
+        ax1[1,1].set_xticks([])
+
+        plt.legend(fontsize='large')
+        # plt.tight_layout()
+        plt.savefig('mdet_shear_variations_focal_plane_stacked_xy.pdf', bbox_inches='tight')
         return None
 
 
-def plot_shear_vaiations_ccd(x_side, y_side, ccdres, jk=False, jc=None):
+def plot_stacked_ccd_north_south(x_side, y_side, ccdres):
+    
+    x0 = dDECam.CCDSECTION_X0
+    y0 = dDECam.CCDSECTION_Y0
+
+    mean_g1, mean_g2 = compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False)
+
+    # plt.hist(mean_g2[1].flatten(), bins=200)
+    # plt.xlabel(r'$<e_{2}>$')
+    # plt.savefig('pixel_values_hist_southe2.pdf')
+    # plt.clf()
+    fig, ax1 = plt.subplots(2,2,figsize=(35,18))
+    # plt.style.use('default')
+    matplotlib.rcParams.update({'font.size': 28})
+    cmap = plt.get_cmap('viridis')
+    # cmap.set_bad(color='k', alpha=1.)
+    piece_side = 32
+    X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
+    
+    mean = np.nanmean(mean_g1[0])
+    sig = np.nanstd(mean_g1[0]) / np.sqrt(mean_g1[0].size)
+    mesh = ax1[0,0].pcolormesh(X,Y,mean_g1[0], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
+    ax1[0,0].set_aspect(1)
+    ax1[0,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
+    ax1[0,0].set_xticks([])
+    ax1[0,0].set_yticks([])
+    ax1[0,0].set_ylabel('North (CCD1-31)', fontsize=25)
+    plt.colorbar(mesh, ax=ax1[0,0], pad=0.01)
+
+    mean = np.nanmean(mean_g2[0])
+    sig = np.nanstd(mean_g2[0]) / np.sqrt(mean_g2[0].size)
+    mesh = ax1[0,1].pcolormesh(X,Y,mean_g2[0], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
+    ax1[0,1].set_aspect(1)
+    ax1[0,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
+    ax1[0,1].set_xticks([])
+    ax1[0,1].set_yticks([])
+    plt.colorbar(mesh, ax=ax1[0,1], pad=0.01)
+
+    mean = np.nanmean(mean_g1[1])
+    sig = np.nanstd(mean_g1[1]) / np.sqrt(mean_g1[1].size)
+    mesh = ax1[1,0].pcolormesh(X,Y,mean_g1[1], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
+    ax1[1,0].set_aspect(1)
+    ax1[1,0].set_title(r'$\langle e_{1} \rangle$', fontsize=22)
+    ax1[1,0].set_xticks([])
+    ax1[1,0].set_yticks([])
+    ax1[1,0].set_ylabel('South (CCD32-62)', fontsize=25)
+    plt.colorbar(mesh, ax=ax1[1,0], pad=0.01)
+
+
+    mean = np.nanmean(mean_g2[1][mean_g2[1] > -10])
+    sig = np.nanstd(mean_g2[1][mean_g2[1] > -10]) / np.sqrt(mean_g2[1][mean_g2[1] > -10].size)
+    print(mean, sig)
+    mesh = ax1[1,1].pcolormesh(X,Y,mean_g2[1], vmin=mean-2*sig, vmax=mean+2*sig, cmap=cmap)
+    ax1[1,1].set_aspect(1)
+    ax1[1,1].set_title(r'$\langle e_{2} \rangle$', fontsize=22)
+    ax1[1,1].set_xticks([])
+    ax1[1,1].set_yticks([])
+    plt.colorbar(mesh, ax=ax1[1,1], pad=0.01)
+
+    plt.subplots_adjust(hspace=0.3,wspace=0.1)
+    plt.savefig('mdet_shear_variations_focal_plane_stacked_north_south.pdf', bbox_inches='tight')
+
+
+def plot_shear_vaiations_ccd(x_side, y_side, ccdres):
 
     x0 = dDECam.CCDSECTION_X0
     y0 = dDECam.CCDSECTION_Y0
@@ -510,16 +523,17 @@ def main(argv):
             with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
                 ccdres_all = pickle.load(raw)
         # plot for all the CCDs. 
-        # plot_shear_vaiations_ccd(x_side, y_side, ccdres_all, num_ccd, jk=False)
-        plot_shear_variations_stacked_ccd(x_side, y_side, ccdres_all, jk=False)
+        plot_shear_vaiations_ccd(x_side, y_side, ccdres_all, num_ccd)
+        plot_stacked_ccd_north_south(x_side, y_side, ccdres_all)
 
-        sys.exit()
         # Compute jackknife error estimate. 
         jk_sample = len(tilenames)
-        jk_x_g1 = []
-        jk_y_g1 = []
-        jk_x_g2 = []
-        jk_y_g2 = []
+        xbin = 25
+        ybin = 15
+        jk_x_g1 = np.zeros((jk_sample, xbin))
+        jk_y_g1 = np.zeros((jk_sample, ybin))
+        jk_x_g2 = np.zeros((jk_sample, xbin))
+        jk_y_g2 = np.zeros((jk_sample, ybin))
         for i in tqdm(range(len(tilenames))):
             x_g1 = []
             y_g1 = []
@@ -530,22 +544,22 @@ def main(argv):
                     continue
                 with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
                     ccdres = pickle.load(handle)
-                x_data, y_data = plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=True)
+                x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True)
                 x_g1.append(x_data[0])
                 y_g1.append(y_data[0])
                 x_g2.append(x_data[1])
                 y_g2.append(y_data[1])
 
-            jk_x_g1.append(np.sum(x_g1, axis=0)/(jk_sample-1))
-            jk_y_g1.append(np.sum(y_g1, axis=0)/(jk_sample-1))
-            jk_x_g2.append(np.sum(x_g2, axis=0)/(jk_sample-1))
-            jk_y_g2.append(np.sum(y_g2, axis=0)/(jk_sample-1))
+            jk_x_g1[i, :] = np.sum(x_g1, axis=0)/(jk_sample-1)
+            jk_y_g1[i, :] = np.sum(y_g1, axis=0)/(jk_sample-1)
+            jk_x_g2[i, :] = np.sum(x_g2, axis=0)/(jk_sample-1)
+            jk_y_g2[i, :] = np.sum(y_g2, axis=0)/(jk_sample-1)
         jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
         print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
 
         with open('/global/cscratch1/sd/myamamot/metadetect/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
             ccdres = pickle.load(handle)
-            plot_shear_vaiations_ccd(x_side, y_side, ccdres, num_ccd, jk=False, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
+        plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
 
     
 if __name__ == "__main__":
