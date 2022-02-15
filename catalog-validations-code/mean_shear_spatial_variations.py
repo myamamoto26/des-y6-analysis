@@ -544,10 +544,10 @@ def main(argv):
 
         for i in tqdm(range(len(tilenames))):
             ccdres_all = {}
-            for j,t in tqdm(enumerate(tilenames)):
+            for j,t in enumerate(tilenames):
                 if i == j:
                     continue
-                ccdres_all = _accum_shear_from_file(ccdres_all, ccdres[t], x_side, y_side)
+                ccdres_all = _accum_shear_from_file(ccdres_all, res[t], x_side, y_side)
             
             x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres_all, xbin, ybin, plot=False)    
             jk_x_g1[i, :] = x_data[0] 
