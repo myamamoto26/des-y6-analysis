@@ -253,6 +253,11 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
     if not plot:
         return x_data, y_data
     else:
+        plt.hist(mean_g1.flatten(), bins=200, label=r'$e_{1}$')
+        plt.hist(mean_g2.flatten(), bins=200, label=r'$e_{1}$')
+        plt.xlabel(r'$<e_{1,2}>$')
+        plt.savefig('pixel_values_hist_xy.pdf')
+        plt.clf()
         fig, ax1 = plt.subplots(2,2,figsize=(35,18))
         # plt.style.use('default')
         matplotlib.rcParams.update({'font.size': 28})
