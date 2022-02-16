@@ -253,9 +253,13 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
     if not plot:
         return x_data, y_data
     else:
-        plt.hist(mean_g1.flatten(), bins=200, label=r'$e_{1}$')
-        plt.hist(mean_g2.flatten(), bins=200, label=r'$e_{1}$')
+        g1_flat = mean_g1.flatten()
+        g2_flat = mean_g2.flatten()
+        print(g1_flat[g1_flat < -10], g2_flat[g2_flat < -10])
+        plt.hist(mean_g1.flatten(), bins=200, histtype='step', range=(-0.1, 0.1), label=r'$e_{1}$')
+        plt.hist(mean_g2.flatten(), bins=200, histtype='step', range=(-0.1, 0.1), label=r'$e_{2}$')
         plt.xlabel(r'$<e_{1,2}>$')
+        plt.legend()
         plt.savefig('pixel_values_hist_xy.pdf')
         plt.clf()
         fig, ax1 = plt.subplots(2,2,figsize=(35,18))
