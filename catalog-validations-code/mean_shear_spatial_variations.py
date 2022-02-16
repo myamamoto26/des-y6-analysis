@@ -536,27 +536,27 @@ def main(argv):
         jk_y_g2 = np.zeros((jk_sample, ybin+1))
 
         # Read in files. 
-        res = {}
-        for t in tqdm(tilenames):
-            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-                ccdres = pickle.load(handle)
-            res[t] = ccdres
+        # res = {}
+        # for t in tqdm(tilenames):
+        #     with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+        #         ccdres = pickle.load(handle)
+        #     res[t] = ccdres
 
-        for i in tqdm(range(len(tilenames))):
-            ccdres_all = {}
-            for j,t in enumerate(tilenames):
-                if i == j:
-                    continue
-                ccdres_all = _accum_shear_from_file(ccdres_all, res[t], x_side, y_side)
+        # for i in tqdm(range(len(tilenames))):
+        #     ccdres_all = {}
+        #     for j,t in enumerate(tilenames):
+        #         if i == j:
+        #             continue
+        #         ccdres_all = _accum_shear_from_file(ccdres_all, res[t], x_side, y_side)
             
-            x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres_all, xbin, ybin, plot=False)    
-            jk_x_g1[i, :] = x_data[0] 
-            jk_y_g1[i, :] = y_data[0]
-            jk_x_g2[i, :] = x_data[1]
-            jk_y_g2[i, :] = y_data[1]
-        jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
-        print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
-
+        #     x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres_all, xbin, ybin, plot=False)    
+        #     jk_x_g1[i, :] = x_data[0] 
+        #     jk_y_g1[i, :] = y_data[0]
+        #     jk_x_g2[i, :] = x_data[1]
+        #     jk_y_g2[i, :] = y_data[1]
+        # jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
+        # print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
+        jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2
         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
             ccdres = pickle.load(handle)
         plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
