@@ -556,10 +556,12 @@ def main(argv):
         #     jk_y_g2[i, :] = y_data[1]
         # jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
         # print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
-        jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2
+        
         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
             ccdres = pickle.load(handle)
-        plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=[jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2])
+        # jc = [jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2]
+        jc = [jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2]
+        plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=jc)
 
     
 if __name__ == "__main__":
