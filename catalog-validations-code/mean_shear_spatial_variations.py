@@ -560,7 +560,7 @@ def main(argv):
         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
             ccdres = pickle.load(handle)
         # jc = [jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2]
-        jc = [jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2]
+        jc = [np.zeros(25), np.zeros(16), np.zeros(25), np.zeros(16)]
         plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=jc)
 
     
