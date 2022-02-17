@@ -295,6 +295,7 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
         
         x_ = [1+i*(3872//len(x_stacked)) for i in range(len(x_stacked))] # np.linspace(1, 3872, len(x_stacked))
         y_ = [1+i*(1824//len(y_stacked)) for i in range(len(y_stacked))] # np.linspace(1, 1824, len(y_stacked))
+        print(len(x_), len(y_), len(x_data[0]), len(y_data[0]))
         ax1[1,0].plot(x_, x_data[0], c='b', label='x-stacked')
         ax1[1,0].errorbar(x_, x_data[0], yerr=jc[0], c='b')
         ax1[1,0].plot(y_, y_data[0], c='r', label='y-stacked')
