@@ -547,38 +547,64 @@ def main(argv):
         jk_sample = len(tilenames)
         xbin = 25
         ybin = 12
+
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        size = comm.Get_size()
+        print('mpi', rank, size)
+
         jk_x_g1 = np.zeros((jk_sample, xbin))
         jk_y_g1 = np.zeros((jk_sample, ybin+1))
         jk_x_g2 = np.zeros((jk_sample, xbin))
         jk_y_g2 = np.zeros((jk_sample, ybin+1))
 
         # Read in files. 
-        # res = {}
-        # for t in tqdm(tilenames):
-        #     with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-        #         ccdres = pickle.load(handle)
-        #     res[t] = ccdres
+        res = {}
+        for t in tqdm(tilenames):
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                ccdres = pickle.load(handle)
+            res[t] = ccdres
 
-        # for i in tqdm(range(len(tilenames))):
-        #     ccdres_all = {}
-        #     for j,t in enumerate(tilenames):
-        #         if i == j:
-        #             continue
-        #         ccdres_all = _accum_shear_from_file(ccdres_all, res[t], x_side, y_side)
+        for i in tqdm(range(len(tilenames))):
+            if i%size != rank:
+                continue
+            ccdres_all = {}
+            for j,t in enumerate(tilenames):
+                if i == j:
+                    continue
+                ccdres_all = _accum_shear_from_file(ccdres_all, res[t], x_side, y_side)
             
-        #     x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres_all, xbin, ybin, plot=False)    
-        #     jk_x_g1[i, :] = x_data[0] 
-        #     jk_y_g1[i, :] = y_data[0]
-        #     jk_x_g2[i, :] = x_data[1]
-        #     jk_y_g2[i, :] = y_data[1]
-        # jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
-        # print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
-        
-        with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
-            ccdres = pickle.load(handle)
-        # jc = [jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2]
-        jc = [np.zeros(25), np.zeros(12), np.zeros(25), np.zeros(12)]
-        plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=jc)
+            x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres_all, xbin, ybin, plot=False)
+            jk_x_g1[i, :] = x_data[0] 
+            jk_y_g1[i, :] = y_data[0]
+            jk_x_g2[i, :] = x_data[1]
+            jk_y_g2[i, :] = y_data[1]
+        comm.Barrier()
+        if rank == 0: 
+            for r in range(1, size):
+                tmp_res = comm.recv(source=r)
+                msk = (tmp_res[:,0]!=0)
+                jk_x_g1[msk] = tmp_res[0][msk]
+                jk_y_g1[msk] = tmp_res[1][msk]
+                jk_x_g2[msk] = tmp_res[2][msk]
+                jk_y_g2[msk] = tmp_res[3][msk]
+            comm.Barrier()
+        else:
+            comm.send([jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2], dest=0)
+            comm.Barrier()
+
+        comm.Barrier()
+        if rank == 0:
+            print(jk_x_g1)
+            jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
+            print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
+            
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
+                ccdres = pickle.load(handle)
+            jc = [jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2]
+            # jc = [np.zeros(25), np.zeros(12), np.zeros(25), np.zeros(12)]
+            plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=jc)
 
     
 if __name__ == "__main__":
