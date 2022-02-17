@@ -295,7 +295,7 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
         
         x_ = [1+i*(3872//len(x_stacked)) for i in range(len(x_stacked))] # np.linspace(1, 3872, len(x_stacked))
         y_ = [1+i*(1824//len(y_stacked)) for i in range(len(y_stacked))] # np.linspace(1, 1824, len(y_stacked))
-        print(len(x_), len(y_), len(x_data[0]), len(y_data[0]))
+
         ax1[1,0].plot(x_, x_data[0], c='b', label='x-stacked')
         ax1[1,0].errorbar(x_, x_data[0], yerr=jc[0], c='b')
         ax1[1,0].plot(y_, y_data[0], c='r', label='y-stacked')
@@ -577,7 +577,7 @@ def main(argv):
         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
             ccdres = pickle.load(handle)
         # jc = [jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2]
-        jc = [np.zeros(25), np.zeros(16), np.zeros(25), np.zeros(16)]
+        jc = [np.zeros(25), np.zeros(12), np.zeros(25), np.zeros(12)]
         plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=jc)
 
     
