@@ -1,4 +1,5 @@
 
+from statistics import mean
 import fitsio as fio
 import numpy as np
 import galsim
@@ -239,6 +240,8 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False):
 def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
 
     mean_g1, mean_g2 = compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=True)
+    mean_g1 = mean_g1[1:-1,1:-1]
+    mean_g2 = mean_g2[1:-1,1:-1]
     x_data = []
     y_data = []
     for g in [mean_g1, mean_g2]:
@@ -246,6 +249,7 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
         ybin_num = ybin
         x_reduced = block_reduce(g, block_size=(1, y_side//xbin_num), func=np.nanmean)
         y_reduced = block_reduce(g, block_size=(x_side//ybin_num, 1), func=np.nanmean)
+        print('array shape', x_reduced.shape, y_reduced.shape)
         x_stacked = np.nanmean(x_reduced, axis=0)
         y_stacked = np.nanmean(y_reduced, axis=1)
         x_data.append(x_stacked)
@@ -268,7 +272,7 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
         cmap = plt.get_cmap('viridis')
         cmap.set_bad(color='k', alpha=1.)
         piece_side = 32
-        X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
+        X, Y = np.meshgrid(np.linspace(1, 3873, (3872//piece_side)+1), np.linspace(1, 1825, (1824//piece_side)+1))
 
         mean = np.nanmean(mean_g1[mean_g1 > -10])
         sig = np.nanstd(mean_g1[mean_g1 > -10]) / np.sqrt(mean_g1[mean_g1 > -10].size)
@@ -288,8 +292,8 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
         ax1[0,1].set_yticks([])
         plt.colorbar(mesh, ax=ax1[0,1], pad=0.01)
         
-        x_ = np.linspace(0,1,len(x_stacked))
-        y_ = np.linspace(0,1,len(y_stacked))
+        x_ = np.linspace(1, 3872, 3872//len(x_stacked))
+        y_ = np.linspace(1, 1824, 1824//len(y_stacked))
         ax1[1,0].plot(x_, x_data[0], c='b', label='x-stacked')
         ax1[1,0].errorbar(x_, x_data[0], yerr=jc[0], c='b')
         ax1[1,0].plot(y_, y_data[0], c='r', label='y-stacked')
@@ -306,7 +310,7 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
         # ax1[1,1].set_ylim(-0.2,0.2)
         ax1[1,1].set_xlabel('CCD coordinates')
         ax1[1,1].set_ylabel(r'$\langle e_{2} \rangle$')
-        ax1[1,1].set_xticks([])
+        # ax1[1,1].set_xticks([])
 
         plt.legend(fontsize='large')
         # plt.tight_layout()
@@ -320,7 +324,9 @@ def plot_stacked_ccd_north_south(x_side, y_side, ccdres):
     y0 = dDECam.CCDSECTION_Y0
 
     mean_g1, mean_g2 = compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False)
-
+    for i in range(2):
+        mean_g1[i] = mean_g1[i][1:-1, 1:-1]
+        mean_g2[i] = mean_g2[i][1:-1, 1:-1]
     # plt.hist(mean_g2[1].flatten(), bins=200)
     # plt.xlabel(r'$<e_{2}>$')
     # plt.savefig('pixel_values_hist_southe2.pdf')
@@ -331,7 +337,7 @@ def plot_stacked_ccd_north_south(x_side, y_side, ccdres):
     cmap = plt.get_cmap('viridis')
     # cmap.set_bad(color='k', alpha=1.)
     piece_side = 32
-    X, Y = np.meshgrid(np.linspace(1, 4001, (4000//piece_side)+1), np.linspace(1, 1953, (1952//piece_side)+1))
+    X, Y = np.meshgrid(np.linspace(1, 3873, (3872//piece_side)+1), np.linspace(1, 1825, (1824//piece_side)+1))
     
     mean = np.nanmean(mean_g1[0])
     sig = np.nanstd(mean_g1[0]) / np.sqrt(mean_g1[0].size)
@@ -538,7 +544,7 @@ def main(argv):
         print('Computing jackknife error')
         jk_sample = len(tilenames)
         xbin = 25
-        ybin = 15
+        ybin = 12
         jk_x_g1 = np.zeros((jk_sample, xbin))
         jk_y_g1 = np.zeros((jk_sample, ybin+1))
         jk_x_g2 = np.zeros((jk_sample, xbin))
