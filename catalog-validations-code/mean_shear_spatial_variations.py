@@ -272,6 +272,7 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None):
         cmap = plt.get_cmap('viridis')
         cmap.set_bad(color='k', alpha=1.)
         piece_side = 32
+        print(mean_g1.shape)
         X, Y = np.meshgrid(np.linspace(1, 3873, (3872//piece_side)+1), np.linspace(1, 1825, (1824//piece_side)+1))
 
         mean = np.nanmean(mean_g1[mean_g1 > -10])
