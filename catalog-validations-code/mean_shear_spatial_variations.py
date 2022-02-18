@@ -555,9 +555,9 @@ def main(argv):
         print('mpi', rank, size)
 
         jk_x_g1 = np.zeros((jk_sample, xbin))
-        jk_y_g1 = np.zeros((jk_sample, ybin+1))
+        jk_y_g1 = np.zeros((jk_sample, ybin))
         jk_x_g2 = np.zeros((jk_sample, xbin))
-        jk_y_g2 = np.zeros((jk_sample, ybin+1))
+        jk_y_g2 = np.zeros((jk_sample, ybin))
 
         # Read in files. 
         res = {}
