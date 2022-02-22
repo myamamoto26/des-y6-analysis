@@ -299,7 +299,7 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None, per
         ybin_num = ybin
         x_reduced = block_reduce(g, block_size=(1, y_side//xbin_num), func=np.nanmean)
         y_reduced = block_reduce(g, block_size=(x_side//ybin_num, 1), func=np.nanmean)
-        print('array shape', x_reduced.shape, y_reduced.shape)
+        
         x_stacked = np.nanmean(x_reduced, axis=0)
         y_stacked = np.nanmean(y_reduced, axis=1)
         x_data.append(x_stacked)
@@ -648,7 +648,8 @@ def main(argv):
             all_ccd[c]['jk_x_g2'].append(jk_x_g2)
             all_ccd[c]['jk_y_g2'].append(jk_y_g2)
         comm.Barrier()
-
+        print('rank ', rank, all_ccd)
+        sys.exit()
         if rank == 0: 
             for r in range(1, size):
                 if r not in [31,61]:
