@@ -648,9 +648,12 @@ def main(argv):
             all_ccd[c]['jk_x_g2'].append(jk_x_g2)
             all_ccd[c]['jk_y_g2'].append(jk_y_g2)
         comm.Barrier()
-        print('rank ', rank, all_ccd)
-        sys.exit()
-        if rank == 0: 
+
+        if rank != 0:
+            if rank not in [31,61]:
+                comm.send(all_ccd, dest=0)
+        comm.Barrier()
+        if rank == 0:
             for r in range(1, size):
                 if r not in [31,61]:
                     tmp_res = comm.recv(source=r)
@@ -658,11 +661,6 @@ def main(argv):
                     all_ccd[r]['jk_y_g1'] = tmp_res[r]['jk_y_g1']
                     all_ccd[r]['jk_x_g2'] = tmp_res[r]['jk_x_g2']
                     all_ccd[r]['jk_y_g2'] = tmp_res[r]['jk_y_g2']
-            comm.Barrier()
-        else:
-            if rank not in [31,61]:
-                comm.send(all_ccd, dest=0)
-                comm.Barrier()
 
         comm.Barrier()
         print(all_ccd)
