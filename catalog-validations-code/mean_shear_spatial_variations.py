@@ -618,7 +618,7 @@ def main(argv):
         print('mpi', rank, size)
 
         all_ccd = {c:{'jk_x_g1':[], 'jk_y_g1':[], 'jk_x_g2':[], 'jk_y_g2':[]} for c in range(1,num_ccd+1)}
-        for c in tqdm(range(1,num_ccd+1)):
+        for c in range(1,num_ccd+1):
             if c != rank:
                 continue
 
@@ -627,10 +627,10 @@ def main(argv):
             jk_x_g2 = np.zeros((jk_sample, xbin))
             jk_y_g2 = np.zeros((jk_sample, ybin))
 
-            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+c+'.pickle', 'rb') as handle:
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'rb') as handle:
                 ccdres = pickle.load(handle)
 
-            for j,t in enumerate(list(ccdres[c])):
+            for j,t in tqdm(enumerate(list(ccdres[c]))):
                 res = ccdres.copy()
                 res.pop(t)
                 ccdres_jk = {}
