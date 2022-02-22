@@ -56,7 +56,7 @@ def _accum_shear_per_ccd(ccdres_all, ccdres, tilename):
     for ccdnum in list(ccdres):
         for cname in cnames:
             ccdres_all[ccdnum][tilename][cname] = ccdres[ccdnum][cname]
-            ccdres_all[ccdnum][tilename]["num_"+cname] += ccdres[ccdnum]["num_"+cname]
+            ccdres_all[ccdnum][tilename]["num_"+cname] = ccdres[ccdnum]["num_"+cname]
 
     return ccdres_all
 
