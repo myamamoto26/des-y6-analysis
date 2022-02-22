@@ -43,6 +43,22 @@ def _accum_shear(ccdres, ccdnum, cname, shear, mdet_step, xind, yind, g, x_side,
         )
 
     return ccdres
+def _accum_shear_per_ccd(ccdres_all, ccdres, tilename):
+
+    # Create ccd number key. 
+    for ccdnum in list(ccdres):
+        if ccdnum not in list(ccdres_all):
+            ccdres_all[ccdnum] = {}
+        if tilename not in list(ccdres_all[ccdnum]):
+            ccdres_all[ccdnum][tilename] = {}
+
+    cnames = ['g1', 'g2', 'g1p', 'g1m', 'g2p', 'g2m']
+    for ccdnum in list(ccdres):
+        for cname in cnames:
+            ccdres_all[ccdnum][tilename][cname] = ccdres[ccdnum][cname]
+            ccdres_all[ccdnum][tilename]["num_"+cname] += ccdres[ccdnum]["num_"+cname]
+
+    return ccdres_all
 
 def _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side):
 
@@ -523,8 +539,19 @@ def main(argv):
                 print('Already made this tile.', t)
         comm.Barrier()
     else:
-        print('Plotting...')
+        print('Converting tiles to CCDs...')
+        ccdres_all = {}
+        for t in tqdm(tilenames):
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                ccdres = pickle.load(handle)
+            ccdres_all = _accum_shear_per_ccd(ccdres_all, ccdres, t)
+        for c in list(ccdres_all):
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'wb') as raw:
+                pickle.dump(ccdres_all[c], raw, protocol=pickle.HIGHEST_PROTOCOL)
 
+        sys.exit()
+
+        print('Plotting...')
         # Add raw sums for all the tiles from individual tile file. 
         if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle'):
             ccdres_all = {}
