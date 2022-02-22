@@ -444,7 +444,8 @@ def tangential_shear_field_center():
                 mdet_step = mdet_d["mdet_step"][msk_obj]
                 msk_step = (mdet_step == 'noshear')
 
-                end = start + len(mdet_d[msk_obj][msk_step]['ra'])
+                end = start + len(mdet_d[msk_obj][msk_step])
+                print(start, end, len(mdet_d[msk_obj][msk_step]))
                 res['ra_obj'][start:end] = ra_obj[msk_step]
                 res['dec_obj'][start:end] = dec_obj[msk_step]
                 res['g1'][start:end] = mdet_d['mdet_g_1'][msk_obj][msk_step] / R11
