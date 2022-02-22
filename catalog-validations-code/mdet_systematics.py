@@ -398,6 +398,66 @@ def tangential_shear_field_center():
     sys.path.append('./download-query-concatenation-code')
     from query_examples import query_field_centers
 
+    def find_objects(tname, mdet_d, R11, R22, fcenter):
+
+        # Find pizza-cutter meds files for a particualr tilename. 
+        coadd_info = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/pizza-cutter-coadds-info.fits')
+        coadd_tilenames = [coadd['FILENAME'].split('_')[0] for coadd in coadd_info]
+        msk_coadd = (coadd_tilenames == tname)
+        coadd_files = [f+c for f,c in zip(coadd_info[msk_coadd]['FILENAME'], coadd_info[msk_coadd]['COMPRESSION'])]
+        bands = [band.split('_')[2] for band in coadd_info[msk_coadd]['FILENAME']]
+           
+        res = np.zeros(len(mdet_d), dtype=[('ra_obj', float), ('dec_obj', float), ('g1', float), ('g2', float), ('ra_fcen', float), ('dec_fcen', float)])
+        start = 0
+        for pizza_f in coadd_files:
+            coadd = fio.FITS(os.path.join('/global/cscratch1/sd/myamamot/pizza-slice/griz', pizza_f))
+            try:
+                epochs = coadd['epochs_info'].read()
+                image_info = coadd['image_info'].read()
+            except OSError:
+                print('Corrupt file.?', pizza_f)
+                raise OSError
+            
+            # Find the paths to the single-epoch images from the pizza-cutter coadd files for a particular tile. 
+            image_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
+            image_id = image_id[image_id != 0]
+            for iid in image_id:
+                msk_im = np.where(image_info['image_id'] == iid)
+                expnum = _get_exp_num(image_info['image_path'][msk_im][0])
+                # Find the field center (RA, DEC) in a given exposure number. 
+                ra_cent = fcenter[fcenter['EXPNUM'] == expnum]['AVG(I.RA_CENT)']
+                dec_cent = fcenter[fcenter['EXPNUM'] == expnum]['AVG(I.DEC_CENT)']
+
+                msk = ((epochs['flags'] == 0) & (epochs['image_id']==iid) & (epochs['weight'] > 0))
+                if not np.any(msk):
+                    continue
+                unique_slices = np.unique(epochs['id'][msk])
+
+                msk_obj = np.where(np.in1d(mdet_d['slice_id'], unique_slices))[0]
+                if len(msk_obj) == 0:
+                    continue
+            
+                n = len(msk_obj)
+                ra_obj = mdet_d['ra'][msk_obj]
+                dec_obj = mdet_d['dec'][msk_obj]
+
+                mdet_step = mdet_d["mdet_step"][msk_obj]
+                msk_step = (mdet_step == 'noshear')
+
+                end = start + len(mdet_d[msk_obj][msk_step]['ra'])
+                res['ra_obj'][start:end] = ra_obj[msk_step]
+                res['dec_obj'][start:end] = dec_obj[msk_step]
+                res['g1'][start:end] = mdet_d['mdet_g_1'][msk_obj][msk_step] / R11
+                res['g2'][start:end] = mdet_d['mdet_g_2'][msk_obj][msk_step] / R22
+                res['ra_fcen'][start:end] = ra_cent
+                res['dec_fcen'][start:end] = dec_cent
+                start = end
+        print('objects saved in this file.', end)
+        # Trim zero entry.
+        res = res[~np.all(res == 0, axis=1)]
+        fio.write('mdet_shear_field_centers_'+tname+'.fits', res)
+
+             
     def find_exposure_numbers(mdet_fs):
 
         mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
@@ -452,29 +512,25 @@ def tangential_shear_field_center():
     # Compute the shear response over all the tiles. 
     f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
-    filenames = [fname.split('/')[-1] for fname in fs]
-    tilenames = [d.split('_')[0] for d in filenames] 
-    R11, R22 = statistics_per_tile_without_bins(fs)
+    mdet_filenames = [fname.split('/')[-1] for fname in fs]
+    tilenames = [d.split('_')[0] for d in mdet_filenames] 
+    # R11, R22 = statistics_per_tile_without_bins(fs)
+    R11, R22 = 1, 1
 
-    # Create ccdnum and expnum text file if it has not been created yet. 
+    # Create ccdnum and expnum text file if it has not been created yet, and query from DESDM table. Should only be done once. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
         find_exposure_numbers(fs)
-    query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 30)
+        query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 30)
+    
     expnum_field_centers = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits')
-    print(expnum_field_centers)
+    print('number of field centers', len(expnum_field_centers))
 
-    sys.exit()
-    # for t in tilenames:
-        # What is the best way to store ra, dec, g1, g2 for all the tiles?
-        # Create dictionary for each exposure?
-    shear_catalog = fio.read(os.path.join(work_mdet, 'mdet_test_all.fits'))
-    full_response, mask_noshear = calculate_response(shear_catalog)
-    ra = shear_catalog[mask_noshear]['ra']
-    dec = shear_catalog[mask_noshear]['dec']
-    g1 = shear_catalog[mask_noshear]['mdet_g'][:,0]/full_response[0]
-    g2 = shear_catalog[mask_noshear]['mdet_g'][:,1]/full_response[1]
-    centre_x = (CCD28[0] + CCD35[1])/2.
-    centre_y = (CCD28[2] + CCD35[3])/2.
+    # For each tilename, save a file that contains each object's location, shear, and field centers. 
+    for t in tilenames:
+        d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
+        msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T'] <1.2))
+        find_objects(t, d[msk], R11, R22, expnum_field_centers)
+        sys.exit()
 
     bin_config = dict(
         sep_units = 'arcmin',
