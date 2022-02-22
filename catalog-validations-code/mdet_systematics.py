@@ -405,8 +405,8 @@ def tangential_shear_field_center():
         coadd_tilenames = [coadd['FILENAME'].split('_')[0] for coadd in coadd_info]
         msk_coadd = (coadd_tilenames == tname)
         coadd_files = [f+c for f,c in zip(coadd_info[msk_coadd]['FILENAME'], coadd_info[msk_coadd]['COMPRESSION'])]
-        bands = [band.split('_')[2] for band in coadd_info[msk_coadd]['FILENAME']]
-           
+        
+        print(tname, coadd_files)
         res = np.zeros(len(mdet_d), dtype=[('ra_obj', float), ('dec_obj', float), ('g1', float), ('g2', float), ('ra_fcen', float), ('dec_fcen', float)])
         start = 0
         for pizza_f in coadd_files:
