@@ -436,18 +436,14 @@ def tangential_shear_field_center():
                 msk_obj = np.where(np.in1d(mdet_d['slice_id'], unique_slices))[0]
                 if len(msk_obj) == 0:
                     continue
-            
-                n = len(msk_obj)
-                ra_obj = mdet_d['ra'][msk_obj]
-                dec_obj = mdet_d['dec'][msk_obj]
 
                 mdet_step = mdet_d["mdet_step"][msk_obj]
                 msk_step = (mdet_step == 'noshear')
 
                 end = start + len(mdet_d[msk_obj][msk_step])
                 print(start, end, len(mdet_d[msk_obj][msk_step]))
-                res['ra_obj'][start:end] = ra_obj[msk_step]
-                res['dec_obj'][start:end] = dec_obj[msk_step]
+                res['ra_obj'][start:end] = mdet_d['ra'][msk_obj][msk_step]
+                res['dec_obj'][start:end] = mdet_d['dec'][msk_obj][msk_step]
                 res['g1'][start:end] = mdet_d['mdet_g_1'][msk_obj][msk_step] / R11
                 res['g2'][start:end] = mdet_d['mdet_g_2'][msk_obj][msk_step] / R22
                 res['ra_fcen'][start:end] = ra_cent
