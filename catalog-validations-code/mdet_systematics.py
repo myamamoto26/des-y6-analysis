@@ -450,7 +450,7 @@ def tangential_shear_field_center():
         # Trim zero entry.
         # res = res[~np.all(res == 0, axis=1)]
         res_tile = np.concatenate(res_tile, axis=0)
-        fio.write('mdet_shear_field_centers_'+tname+'.fits', res)
+        fio.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_'+tname+'.fits', res_tile)
 
              
     def find_exposure_numbers(mdet_fs):
