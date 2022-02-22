@@ -406,9 +406,7 @@ def tangential_shear_field_center():
         msk_coadd = np.where(np.in1d(coadd_tilenames, tname))[0]
         coadd_files = [f+c for f,c in zip(coadd_info[msk_coadd]['FILENAME'], coadd_info[msk_coadd]['COMPRESSION'])]
         
-        print(coadd_files)
-        res = np.zeros(len(mdet_d), dtype=[('ra_obj', float), ('dec_obj', float), ('g1', float), ('g2', float), ('ra_fcen', float), ('dec_fcen', float)])
-        start = 0
+        res_tile = []
         for pizza_f in coadd_files:
             coadd = fio.FITS(os.path.join('/global/cscratch1/sd/myamamot/pizza-slice/griz', pizza_f))
             try:
@@ -439,19 +437,19 @@ def tangential_shear_field_center():
 
                 mdet_step = mdet_d["mdet_step"][msk_obj]
                 msk_step = (mdet_step == 'noshear')
+                n = len(mdet_d[msk_obj][msk_step])
 
-                end = start + len(mdet_d[msk_obj][msk_step])
-                print(start, end, len(mdet_d[msk_obj][msk_step]))
-                res['ra_obj'][start:end] = mdet_d['ra'][msk_obj][msk_step]
-                res['dec_obj'][start:end] = mdet_d['dec'][msk_obj][msk_step]
-                res['g1'][start:end] = mdet_d['mdet_g_1'][msk_obj][msk_step] / R11
-                res['g2'][start:end] = mdet_d['mdet_g_2'][msk_obj][msk_step] / R22
-                res['ra_fcen'][start:end] = ra_cent
-                res['dec_fcen'][start:end] = dec_cent
-                start = end
-        print('objects saved in this file.', end)
+                res = np.zeros(n, dtype=[('ra_obj', float), ('dec_obj', float), ('g1', float), ('g2', float), ('ra_fcen', float), ('dec_fcen', float)])
+                res['ra_obj'][:] = mdet_d['ra'][msk_obj][msk_step]
+                res['dec_obj'][:] = mdet_d['dec'][msk_obj][msk_step]
+                res['g1'][:] = mdet_d['mdet_g_1'][msk_obj][msk_step] / R11
+                res['g2'][:] = mdet_d['mdet_g_2'][msk_obj][msk_step] / R22
+                res['ra_fcen'][:] = ra_cent
+                res['dec_fcen'][:] = dec_cent
+                res_tile.append(res)
         # Trim zero entry.
-        res = res[~np.all(res == 0, axis=1)]
+        # res = res[~np.all(res == 0, axis=1)]
+        res_tile = np.concatenate(res_tile, axis=0)
         fio.write('mdet_shear_field_centers_'+tname+'.fits', res)
 
              
