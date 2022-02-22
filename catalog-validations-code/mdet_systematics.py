@@ -527,7 +527,7 @@ def tangential_shear_field_center():
 
     # For each tilename, save a file that contains each object's location, shear, and field centers. 
     for t in tilenames:
-        d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
+        d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect/2000tiles_test1', mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
         msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T'] <1.2))
         find_objects(t, d[msk], R11, R22, expnum_field_centers)
         sys.exit()
