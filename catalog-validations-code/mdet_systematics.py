@@ -403,10 +403,10 @@ def tangential_shear_field_center():
         # Find pizza-cutter meds files for a particualr tilename. 
         coadd_info = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/pizza-cutter-coadds-info.fits')
         coadd_tilenames = [coadd['FILENAME'].split('_')[0] for coadd in coadd_info]
-        msk_coadd = (coadd_tilenames == tname)
+        msk_coadd = np.where(np.in1d(coadd_tilenames, tname))[0]
         coadd_files = [f+c for f,c in zip(coadd_info[msk_coadd]['FILENAME'], coadd_info[msk_coadd]['COMPRESSION'])]
         
-        print(tname, coadd_files)
+        print(coadd_files)
         res = np.zeros(len(mdet_d), dtype=[('ra_obj', float), ('dec_obj', float), ('g1', float), ('g2', float), ('ra_fcen', float), ('dec_fcen', float)])
         start = 0
         for pizza_f in coadd_files:
