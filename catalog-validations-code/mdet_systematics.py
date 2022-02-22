@@ -5,8 +5,6 @@
 ####################################################################
 
 import os, sys
-from re import I
-from unittest.main import _TestRunner
 from tqdm import tqdm
 import numpy as np
 import fitsio as fio
