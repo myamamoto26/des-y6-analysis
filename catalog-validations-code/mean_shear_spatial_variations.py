@@ -574,8 +574,8 @@ def main(argv):
                 print('Already made this tile.', t)
         comm.Barrier()
     else:
-        print('Converting tiles to CCDs...')
         if make_per_ccd_files:
+            print('Converting tiles to CCDs...')
             ccdres_all_ccd = {}
             for t in tqdm(tilenames):
                 with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
@@ -585,8 +585,6 @@ def main(argv):
                 with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'wb') as raw:
                     pickle.dump(ccdres_all_ccd[c], raw, protocol=pickle.HIGHEST_PROTOCOL)
 
-
-        print('Plotting...')
         # Add raw sums for all the tiles from individual tile file. 
         if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle'):
             ccdres_all = {}
@@ -601,6 +599,7 @@ def main(argv):
         #     with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
         #         ccdres_all = pickle.load(raw)
             # plot for all the CCDs. 
+            # print('Plotting...')
             # plot_shear_vaiations_ccd(x_side, y_side, ccdres_all)
             # plot_stacked_ccd_north_south(x_side, y_side, ccdres_all)
 
@@ -633,7 +632,7 @@ def main(argv):
             with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'rb') as handle:
                 ccdres = pickle.load(handle)
 
-            for j,t in tqdm(enumerate(list(ccdres[c]))):
+            for j,t in tqdm(enumerate(list(ccdres))):
                 res = ccdres.copy()
                 res.pop(t)
                 ccdres_jk = {}
