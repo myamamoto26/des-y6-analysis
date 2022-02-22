@@ -322,7 +322,6 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None, per
         cmap = plt.get_cmap('viridis')
         cmap.set_bad(color='k', alpha=1.)
         piece_side = 32
-        print(mean_g1.shape)
         X, Y = np.meshgrid(np.linspace(1, 3873, (3872//piece_side)+2), np.linspace(1, 1825, (1824//piece_side)+2))
 
         mean = np.nanmean(mean_g1[mean_g1 > -10])
@@ -621,7 +620,7 @@ def main(argv):
         for c in range(1,num_ccd+1):
             if c != rank:
                 continue
-            if c == 61:
+            if c in [31, 61]:
                 continue
 
             jk_x_g1 = np.zeros((jk_sample, xbin))
@@ -652,7 +651,7 @@ def main(argv):
 
         if rank == 0: 
             for r in range(1, size):
-                if r != 61:
+                if r not in [31,61]:
                     tmp_res = comm.recv(source=r)
                     all_ccd[r]['jk_x_g1'] = tmp_res[r]['jk_x_g1']
                     all_ccd[r]['jk_y_g1'] = tmp_res[r]['jk_y_g1']
@@ -660,7 +659,7 @@ def main(argv):
                     all_ccd[r]['jk_y_g2'] = tmp_res[r]['jk_y_g2']
             comm.Barrier()
         else:
-            if rank != 61:
+            if rank not in [31,61]:
                 comm.send(all_ccd, dest=0)
                 comm.Barrier()
 
