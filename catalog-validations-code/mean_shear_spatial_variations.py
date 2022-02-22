@@ -618,8 +618,11 @@ def main(argv):
         print('mpi', rank, size)
 
         all_ccd = {c:{'jk_x_g1':[], 'jk_y_g1':[], 'jk_x_g2':[], 'jk_y_g2':[]} for c in range(1,num_ccd+1)}
+        all_ccd.pop(61)
         for c in range(1,num_ccd+1):
             if c != rank:
+                continue
+            if c == 61:
                 continue
 
             jk_x_g1 = np.zeros((jk_sample, xbin))
@@ -650,15 +653,17 @@ def main(argv):
 
         if rank == 0: 
             for r in range(1, size):
-                tmp_res = comm.recv(source=r)
-                all_ccd[r]['jk_x_g1'] = tmp_res[r]['jk_x_g1']
-                all_ccd[r]['jk_y_g1'] = tmp_res[r]['jk_y_g1']
-                all_ccd[r]['jk_x_g2'] = tmp_res[r]['jk_x_g2']
-                all_ccd[r]['jk_y_g2'] = tmp_res[r]['jk_y_g2']
+                if r != 61:
+                    tmp_res = comm.recv(source=r)
+                    all_ccd[r]['jk_x_g1'] = tmp_res[r]['jk_x_g1']
+                    all_ccd[r]['jk_y_g1'] = tmp_res[r]['jk_y_g1']
+                    all_ccd[r]['jk_x_g2'] = tmp_res[r]['jk_x_g2']
+                    all_ccd[r]['jk_y_g2'] = tmp_res[r]['jk_y_g2']
             comm.Barrier()
         else:
-            comm.send(all_ccd, dest=0)
-            comm.Barrier()
+            if rank != 61:
+                comm.send(all_ccd, dest=0)
+                comm.Barrier()
 
         comm.Barrier()
         print(all_ccd)
