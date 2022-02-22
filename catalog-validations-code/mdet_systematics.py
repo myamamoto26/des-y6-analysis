@@ -6,6 +6,7 @@
 
 import os, sys
 from re import I
+from unittest.main import _TestRunner
 from tqdm import tqdm
 import numpy as np
 import fitsio as fio
@@ -398,7 +399,7 @@ def tangential_shear_field_center():
     sys.path.append('./download-query-concatenation-code')
     from query_examples import query_field_centers
 
-    def find_objects(tname, mdet_d, R11, R22, fcenter):
+    def find_and_save_objects(tname, mdet_d, R11, R22, fcenter):
 
         # Find pizza-cutter meds files for a particualr tilename. 
         coadd_info = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/pizza-cutter-coadds-info.fits')
@@ -505,6 +506,7 @@ def tangential_shear_field_center():
         return int(image_path.split('/')[1].split('_')[2][1:])
         
     # Compute the shear response over all the tiles. 
+    save_objects = False
     f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
     mdet_filenames = [fname.split('/')[-1] for fname in fs]
@@ -520,65 +522,47 @@ def tangential_shear_field_center():
     expnum_field_centers = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits')
     print('number of field centers', len(expnum_field_centers))
 
-    # For each tilename, save a file that contains each object's location, shear, and field centers. 
-    for t in tilenames:
-        d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect/2000tiles_test1', mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
-        msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T'] <1.2))
-        find_objects(t, d[msk], R11, R22, expnum_field_centers)
-        sys.exit()
+    if save_objects:
+        # For each tilename, save a file that contains each object's location, shear, and field centers. 
+        for t in tqdm(tilenames):
+            d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect/2000tiles_test1', mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
+            msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T'] <1.2))
+            find_and_save_objects(t, d[msk], R11, R22, expnum_field_centers)
+    else:
+        bin_config = dict(
+            sep_units = 'arcmin',
+            bin_slop = 0.1,
 
-    bin_config = dict(
-        sep_units = 'arcmin',
-        bin_slop = 0.1,
+            min_sep = 1.0,
+            max_sep = 250,
+            nbins = 20,
 
-        min_sep = 1.0,
-        max_sep = 250,
-        nbins = 20,
+            var_method = 'jackknife'
+        )
+        mdet_d = fio.read('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_DES0000-0207.fits')
+        cat1 = treecorr.Catalog(ra=expnum_field_centers['AVG(I.RA_CENT)'], dec=expnum_field_centers['AVG(I.DEC_CENT)'], ra_units='deg', dec_units='deg', npatch=10)
+        cat2 = treecorr.Catalog(ra=mdet_d['ra_obj'], dec=mdet_d['dec_obj'], ra_units='deg', dec_units='deg', g1=mdet_d['g1'], g2=mdet_d['g2'], npatch=10)
+        ng = treecorr.NGCorrelation(bin_config, verbose=2)
+        ng.process(cat1, cat2)
 
-        var_method = 'jackknife'
-    )
+        fig, axes = plt.subplots(figsize=(15,7))
+        print(ng)
+        ax = axes[0]
+        ax.errorbar(ng, ng*ng.xi, yerr=np.sqrt(ng.varxi), fmt='o')
+        ax.set_ylabel(r'$\theta\gamma_{\rm t}(\theta)$', fontsize='xx-large')
+        ax.legend(prop={'size': 16},loc='lower right')
+        ax.set_xlabel(r'$\theta [arcmin]$', fontsize='xx-large' )
+        ax.set_xscale('log')
 
-    cat1 = treecorr.Catalog(ra=ra_centres, dec=dec_centres, ra_units='deg', dec_units='deg', npatch=10)
-    cat2 = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=g1, g2=g2, npatch=10)
-    ng = treecorr.NGCorrelation(bin_config, verbose=2)
-    ng.process(cat1, cat2)
-
-    fig, axes = plt.subplots(figsize=(15,7))
-        
-    ax = axes[0]
-    ax.errorbar(ng, ng*ng.xi, yerr=np.sqrt(ng.varxi), fmt='o')
-    ax.set_ylabel(r'$\theta\gamma_{\rm t}(\theta)$', fontsize='xx-large')
-    ax.legend(prop={'size': 16},loc='lower right')
-    ax.set_xlabel(r'$\theta [arcmin]$', fontsize='xx-large' )
-    ax.set_xscale('log')
-
-    # fig.suptitle('Tangential shear around stars', fontsize='x-large')
-    plt.tight_layout()
-    plt.savefig('tangential_shear_around_field_centres.png')
+        # fig.suptitle('Tangential shear around stars', fontsize='x-large')
+        plt.tight_layout()
+        plt.savefig('tangential_shear_around_field_centres_test.pdf', bbox_inches='tight')
 
 
 def main(argv):
 
     f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
-
-    # f = open('/home/s1/masaya/des-y6-analysis/tiles.txt', 'r')
-    # tilenames = f.read().split('\n')[:-1]
-    # tilename_delete_list = ['DES0031+0001']
-    # tilenames.remove('DES0031+0001')
-    # work_mdet = os.path.join('/data/des70.a/data/masaya/', 'metadetect/v2')
-    # work_pizza = os.path.join('/data/des70.a/data/masaya/', 'pizza-slice')
-    # work_piff = os.path.join('/data/des70.a/data/masaya/', 'piff_models')
-    # work_gold = os.path.join('/data/des70.a/data/masaya/', 'gold')
-
-    # mdet_cat = os.path.join(work_mdet, 'mdet_test_all_v2.fits')
-    # gold_cat = os.path.join(work_gold, 'y6_gold_2_0_magnitudes.fits')
-    # good_piff_models = os.path.join(work_piff, 'good_piffs_newcuts_query_test_v2.fits')
-    # basic_piff_models = os.path.join(work_piff, 'basic_piffs_query_test_v2.fits')
-    # piff_cat_r = os.path.join(work_piff, 'r_band/master_r_piff_models_newcuts_test_v2.fits')
-    # piff_cat_i = os.path.join(work_piff, 'i_band/master_i_piff_models_newcuts_test_v2.fits')
-    # piff_cat_z = os.path.join(work_piff, 'z_band/master_z_piff_models_newcuts_test_v2.fits')
-    # piff_all_cat = os.path.join(work_piff, 'master_all_piff_models.fits')
 
     # combine_piff(['r', 'i', 'z'], work_piff, tilenames)
     # combine_gold(32, work_gold)
