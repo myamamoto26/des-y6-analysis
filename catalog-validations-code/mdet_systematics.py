@@ -504,7 +504,7 @@ def tangential_shear_field_center():
         return int(image_path.split('/')[1].split('_')[2][1:])
         
     # Compute the shear response over all the tiles. 
-    save_objects = False
+    save_objects = True
     f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
     mdet_filenames = [fname.split('/')[-1] for fname in fs]
@@ -523,7 +523,7 @@ def tangential_shear_field_center():
     if save_objects:
         # For each tilename, save a file that contains each object's location, shear, and field centers. 
         for t in tqdm(tilenames):
-            d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect/2000tiles_test1', mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
+            d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
             msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T'] <1.2))
             find_and_save_objects(t, d[msk], R11, R22, expnum_field_centers)
     else:
@@ -539,7 +539,7 @@ def tangential_shear_field_center():
         )
         mdet_d = fio.read('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_DES0000-0207.fits')
         cat1 = treecorr.Catalog(ra=expnum_field_centers['AVG(I.RA_CENT)'], dec=expnum_field_centers['AVG(I.DEC_CENT)'], ra_units='deg', dec_units='deg', npatch=10)
-        cat2 = treecorr.Catalog(ra=mdet_d['ra_obj'], dec=mdet_d['dec_obj'], ra_units='deg', dec_units='deg', g1=mdet_d['g1'], g2=mdet_d['g2'], npatch=10)
+        cat2 = treecorr.Catalog(ra=mdet_d['ra_obj'], dec=mdet_d['dec_obj'], ra_units='deg', dec_units='deg', g1=mdet_d['g1'], g2=mdet_d['g2'])
         ng = treecorr.NGCorrelation(bin_config, verbose=2)
         ng.process(cat1, cat2)
 
