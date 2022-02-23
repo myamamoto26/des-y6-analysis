@@ -555,8 +555,8 @@ def tangential_shear_field_center():
             cat2.unload()
 
         fig, ax = plt.subplots(figsize=(15,7))
-        print(ng)
-        ax.errorbar(ng, ng*ng.xi, yerr=np.sqrt(ng.varxi), fmt='o')
+        print(ng.meanr, ng.xi, np.sqrt(ng.varxi))
+        ax.errorbar(ng.meanr, ng.meanr*ng.xi, yerr=np.sqrt(ng.varxi), fmt='o')
         ax.set_ylabel(r'$\theta\gamma_{\rm t}(\theta)$', fontsize='xx-large')
         ax.legend(prop={'size': 16},loc='lower right')
         ax.set_xlabel(r'$\theta [arcmin]$', fontsize='xx-large' )
