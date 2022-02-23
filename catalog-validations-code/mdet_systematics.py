@@ -545,7 +545,7 @@ def tangential_shear_field_center():
         # cat2 = treecorr.Catalog(ra=mdet_d['ra_obj'], dec=mdet_d['dec_obj'], ra_units='deg', dec_units='deg', g1=mdet_d['g1'], g2=mdet_d['g2'])
         cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
         cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=10)
-        cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_DES0000-0207.fits')
+        cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_*.fits')
         cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
         
         ng = treecorr.NGCorrelation(bin_config, verbose=2)
@@ -554,9 +554,8 @@ def tangential_shear_field_center():
             ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
             cat2.unload()
 
-        fig, axes = plt.subplots(figsize=(15,7))
+        fig, ax = plt.subplots(figsize=(15,7))
         print(ng)
-        ax = axes[0]
         ax.errorbar(ng, ng*ng.xi, yerr=np.sqrt(ng.varxi), fmt='o')
         ax.set_ylabel(r'$\theta\gamma_{\rm t}(\theta)$', fontsize='xx-large')
         ax.legend(prop={'size': 16},loc='lower right')
@@ -565,7 +564,7 @@ def tangential_shear_field_center():
 
         # fig.suptitle('Tangential shear around stars', fontsize='x-large')
         plt.tight_layout()
-        plt.savefig('tangential_shear_around_field_centres_test.pdf', bbox_inches='tight')
+        plt.savefig('tangential_shear_around_field_centers_test.pdf', bbox_inches='tight')
 
 
 def main(argv):
