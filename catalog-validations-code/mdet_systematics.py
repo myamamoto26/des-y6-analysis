@@ -549,6 +549,7 @@ def tangential_shear_field_center():
         ng = treecorr.NGCorrelation(bin_config, verbose=2)
         for i,cat2 in enumerate(cat2_list):
             # ng.process(cat1, cat2)
+            print(i, cat2)
             ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1), low_mem=True)
 
         fig, axes = plt.subplots(figsize=(15,7))
