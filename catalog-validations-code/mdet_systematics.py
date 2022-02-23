@@ -393,6 +393,7 @@ def tangential_shear_field_center():
     import json
     import pickle
     from tqdm import tqdm
+    import glob
     from mean_shear_bin_statistics import statistics_per_tile_without_bins
     sys.path.append('./download-query-concatenation-code')
     from query_examples import query_field_centers
@@ -535,13 +536,20 @@ def tangential_shear_field_center():
             max_sep = 250,
             nbins = 20,
 
-            var_method = 'jackknife'
+            var_method = 'jackknife',
+            output_dots = False,
         )
-        mdet_d = fio.read('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_DES0000-0207.fits')
-        cat1 = treecorr.Catalog(ra=expnum_field_centers['AVG(I.RA_CENT)'], dec=expnum_field_centers['AVG(I.DEC_CENT)'], ra_units='deg', dec_units='deg', npatch=10)
-        cat2 = treecorr.Catalog(ra=mdet_d['ra_obj'], dec=mdet_d['dec_obj'], ra_units='deg', dec_units='deg', g1=mdet_d['g1'], g2=mdet_d['g2'])
+        
+        # mdet_d = fio.read('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_DES0000-0207.fits')
+        cat1 = treecorr.Catalog(ra=expnum_field_centers['AVG(I.RA_CENT)'], dec=expnum_field_centers['AVG(I.DEC_CENT)'], ra_units='deg', dec_units='deg', npatch=100)
+        cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_*.fits')
+        cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
+        # cat2 = treecorr.Catalog(ra=mdet_d['ra_obj'], dec=mdet_d['dec_obj'], ra_units='deg', dec_units='deg', g1=mdet_d['g1'], g2=mdet_d['g2'])
+        
         ng = treecorr.NGCorrelation(bin_config, verbose=2)
-        ng.process(cat1, cat2)
+        for i,cat2 in enumerate(cat2_list):
+            # ng.process(cat1, cat2)
+            ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1), low_mem=True)
 
         fig, axes = plt.subplots(figsize=(15,7))
         print(ng)
