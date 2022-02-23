@@ -505,13 +505,12 @@ def tangential_shear_field_center():
         return int(image_path.split('/')[1].split('_')[2][1:])
         
     # Compute the shear response over all the tiles. 
-    save_objects = False
+    save_objects = True
     f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
     mdet_filenames = [fname.split('/')[-1] for fname in fs]
     tilenames = [d.split('_')[0] for d in mdet_filenames] 
-    # R11, R22 = statistics_per_tile_without_bins(fs)
-    R11, R22 = 1, 1
+    R11, R22 = statistics_per_tile_without_bins(fs)
 
     # Create ccdnum and expnum text file if it has not been created yet, and query from DESDM table. Should only be done once. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
@@ -540,11 +539,8 @@ def tangential_shear_field_center():
             output_dots = False,
         )
         
-        # mdet_d = fio.read('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_DES0000-0207.fits')
-        # cat1 = treecorr.Catalog(ra=expnum_field_centers['AVG(I.RA_CENT)'], dec=expnum_field_centers['AVG(I.DEC_CENT)'], ra_units='deg', dec_units='deg', npatch=100)
-        # cat2 = treecorr.Catalog(ra=mdet_d['ra_obj'], dec=mdet_d['dec_obj'], ra_units='deg', dec_units='deg', g1=mdet_d['g1'], g2=mdet_d['g2'])
         cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
-        cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=10)
+        cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=100)
         cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_*.fits')
         cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
         
@@ -554,17 +550,14 @@ def tangential_shear_field_center():
             ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
             cat2.unload()
 
-        fig, ax = plt.subplots(figsize=(15,7))
-        print(ng.meanr, ng.xi, np.sqrt(ng.varxi))
+        fig, ax = plt.subplots(figsize=(12,10))
         ax.errorbar(ng.meanr, ng.meanr*ng.xi, yerr=np.sqrt(ng.varxi), fmt='o')
         ax.set_ylabel(r'$\theta\gamma_{\rm t}(\theta)$', fontsize='xx-large')
-        ax.legend(prop={'size': 16},loc='lower right')
         ax.set_xlabel(r'$\theta [arcmin]$', fontsize='xx-large' )
         ax.set_xscale('log')
-
         # fig.suptitle('Tangential shear around stars', fontsize='x-large')
         plt.tight_layout()
-        plt.savefig('tangential_shear_around_field_centers_test.pdf', bbox_inches='tight')
+        plt.savefig('tangential_shear_around_field_centers.pdf', bbox_inches='tight')
 
 
 def main(argv):
