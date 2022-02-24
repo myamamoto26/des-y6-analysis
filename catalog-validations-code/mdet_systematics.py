@@ -10,9 +10,10 @@ import numpy as np
 import fitsio as fio
 import matplotlib as mpl
 
+work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
 
 # Figure 4; galaxy count, shear response, variance of e, shear weight as a function of S/N and size ratio.
-def inverse_variance_weight(steps, fs, more_cuts=None):
+def inverse_variance_weight(steps, fs):
 
     # Input: 
     #   steps = how many bins in each axis.
@@ -24,6 +25,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
     from math import log10
     import pylab as mplot
     import matplotlib.ticker as ticker
+    import pickle
 
     mpl.use('Agg')
     font = {'size'   : 13}
@@ -163,7 +165,7 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
         return new_response
 
     snmin=10
-    snmax=100
+    snmax=300
     sizemin=0.5
     sizemax=3
     steps=steps
@@ -183,13 +185,19 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
     # Accumulate raw sums of shear and mean shear corrected with response per tile. 
     total_count = 0
     for fname in tqdm(filenames):
-        d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
+        d = fio.read(os.path.join(work_mdet, fname))
         total_count += len(d[d['mdet_step']=='noshear'])
-        if more_cuts is None:
-            msk = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] < 1.2) & (d['mfrac'] < 0.02) & (d['mask_flags'] == 0) & (d['mdet_T_ratio'] < 3.0))
-        else:
-            msk_default = ((d['flags'] == 0) & (d['mdet_s2n'] > 10) & (d['mdet_s2n'] < 100) & (d['mdet_T_ratio'] > 0.5) & (d['mdet_T'] < 1.2) & (d['mfrac'] < 0.02) & (d['mask_flags'] == 0))
-            msk = (more_cuts & msk_default)
+        
+        mag_g = 30.0 - 2.5*np.log10(d["mdet_g_flux"])
+        mag_r = 30.0 - 2.5*np.log10(d["mdet_r_flux"])
+        mag_i = 30.0 - 2.5*np.log10(d["mdet_i_flux"])
+        mag_z = 30.0 - 2.5*np.log10(d["mdet_z_flux"])
+        gmr = mag_g - mag_r
+        rmi = mag_r - mag_i
+        imz = mag_i - mag_z
+
+        msk = ((d["flags"] == 0) & (d["mask_flags"] == 0) & (d["mdet_flux_flags"] == 0) & (d["mdet_T_ratio"] > 0.5) & (d["mdet_s2n"] > 10) & (d["mfrac"] < 0.1) & (d["mdet_T"] < 1.9 - 2.8*d["mdet_T_err"]) & (np.abs(gmr) < 5) & (np.abs(rmi) < 5) & (np.abs(imz) < 5) & np.isfinite(mag_g) & np.isfinite(mag_r) & np.isfinite(mag_i) & np.isfinite(mag_z) & (mag_g < 26.5) & (mag_r < 26.5) & (mag_i < 26.2) & (mag_z < 25.6))
+
         mask_noshear = (msk & (d['mdet_step'] == 'noshear'))
         mastercat_noshear_snr = d[mask_noshear]['mdet_s2n']
         mastercat_noshear_Tr = d[mask_noshear]['mdet_T_ratio']
@@ -211,60 +219,12 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
     new_meanes = m/count_all
     new_shearweight = (new_response/new_meanes)**2
 
+    res_measurement = {'xedges': xedges, 'yedges': yedges, 'count': count_all, 'meanes': new_meanes, 'response': new_response, 'weight': new_shearweight}
+    with open('/global/cscratch/sd/myamamot/metadetect/inverse_variance_weight_v2.pickle', 'w') as dat:
+        pickle.dump(res_measurement, dat, protocol=pickle.HIGHEST_PROTOCOL)
+
     print('total number count before cuts', total_count)
     print('total number count after cuts', np.sum(count_all))
-    # count
-    fig=plt.figure(figsize=(16,12))
-    ax = plt.subplot(221)
-    X, Y = np.meshgrid(yedges, xedges)
-    im = ax.pcolormesh(X, Y, count_all/1.e5)
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.ylabel("S/N")
-    plt.xlabel("galaxy size / PSF size")
-    #im.colorbar(label="count")
-    # im.axes.get_xaxis().set_visible(True)
-    fig.colorbar(im, ax=ax, label=r"count [$10^5$]")
-
-    # Eq 9. 
-    ax = plt.subplot(222)
-    X, Y = np.meshgrid(yedges, xedges)
-    im = ax.pcolormesh(X, Y, new_meanes)
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.ylabel("S/N")
-    plt.xlabel("galaxy size / PSF size")
-    # im.axes.get_xaxis().set_visible(True)
-    fig.colorbar(im, ax=ax, label=r"$\sqrt{\langle e_{1,2}^2\rangle}$")
-
-    ax = plt.subplot(223)
-    X, Y = np.meshgrid(yedges, xedges)
-    im = ax.pcolormesh(X, Y, new_response, vmin=0.1, vmax=1.5)
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.ylabel("S/N")
-    plt.xlabel("galaxy size / PSF size")
-    # im.axes.get_xaxis().set_visible(True)
-    fig.colorbar(im, ax=ax, label=r"$\langle$R$\rangle$")
-
-    ax = plt.subplot(224)
-    X, Y = np.meshgrid(yedges, xedges)
-    im = ax.pcolormesh(X, Y, new_shearweight, vmin=0, vmax=40)
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.ylabel("S/N")
-    plt.xlabel("galaxy size / PSF size")
-    # im.axes.get_xaxis().get_ticklabels()[3].set_visible(False)
-    fig.colorbar(im, ax=ax, label="shear weight")
-
-    #plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment='right')
-    # plt.minorticks_off() 
-    # ax.set_xticks(np.array([0.5,0.7,0.9,1.1,1.3,1.5,2.,3.]))
-    # ax.set_xticklabels(np.array([r'0.5 x $10^{0}$','','','','','',r'2 x $10^{0}$',r'3 x $10^{0}$']))
-    plt.tight_layout()
-    plt.subplots_adjust(hspace=0.1)
-    plt.savefig('count_response_ellip_SNR_Tr_cutsv3.pdf', bbox_inches='tight')
-
 
 # Figure 11; tangential and cross-component shear around bright and faint stars. 
 def shear_stellar_contamination(mdet_cat, piff_all_cat):
@@ -562,9 +522,9 @@ def main(argv):
     f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
 
-    # inverse_variance_weight(20, fs, more_cuts=None)
+    inverse_variance_weight(20, fs)
     # shear_stellar_contamination(mdet_cat, piff_all_cat)
-    tangential_shear_field_center(fs)
+    # tangential_shear_field_center(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
