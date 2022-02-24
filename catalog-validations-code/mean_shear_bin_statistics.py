@@ -17,6 +17,8 @@ import pickle
 import matplotlib
 # from ../metadetect_mask import exclude_gold_mask_objects
 
+work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
+
 def _make_cuts(d, shear, additional_cuts=None):
 
     if additional_cuts is None:
@@ -426,7 +428,7 @@ def statistics_per_tile_without_bins(fs):
            '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
            '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
     for fname in tqdm(filenames):
-        d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
+        d = fio.read(os.path.join(work_mdet, fname))
         mag_g = 30.0 - 2.5*np.log10(d["mdet_g_flux"])
         mag_r = 30.0 - 2.5*np.log10(d["mdet_r_flux"])
         mag_i = 30.0 - 2.5*np.log10(d["mdet_i_flux"])
@@ -458,7 +460,7 @@ def bin_statistics_per_tile(fs, predef_bin, qa, plt_label, plt_fname):
     tilenames = [d.split('_')[0] for d in filenames] 
     # Accumulate raw sums of shear and mean shear corrected with response per tile. 
     for fname in tqdm(filenames):
-        mdet_all = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect', fname))
+        mdet_all = fio.read(os.path.join(work_mdet, fname))
         msk_default = ((mdet_all['flags']==0) & (mdet_all['mdet_s2n']>10) & (mdet_all['mdet_s2n']<100) & (mdet_all['mfrac']<0.02) & (mdet_all['mdet_T_ratio']>0.5) & (mdet_all['mask_flags']==0) & (mdet_all['mdet_T']<1.2))
         mdet = mdet_all[msk_default]
         num_objects += len(mdet)
@@ -529,7 +531,7 @@ def main(argv):
     # sys.exit()
 
     # NEED TO WRITE THE CODE TO BE ABLE TO RUN FROM BOTH MASTER FLAT AND INDIVIDUAL FILES. 
-    f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
+    f = open(os.path.join(work_mdet, 'mdet_files.txt'), 'r')
     fs = f.read().split('\n')[:-1]
     with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_'+sys.argv[1]+'.pickle', 'rb') as handle:
         predef_bin = pickle.load(handle)
