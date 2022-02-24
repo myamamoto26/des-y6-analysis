@@ -379,7 +379,7 @@ def shear_stellar_contamination(mdet_cat, piff_all_cat):
 
 
 # Figure 14; Tangential shear around field center
-def tangential_shear_field_center():
+def tangential_shear_field_center(fs):
 
     # step 1. Create a fits file that contains the exposure number and field centers (RA, DEC) from desoper. 
     # step 2. Create a file that contains the exposure number, RA, DEC, g1, g2 (corrected with the average shear response for the whole survey). 
@@ -506,11 +506,14 @@ def tangential_shear_field_center():
         
     # Compute the shear response over all the tiles. 
     save_objects = True
-    f = open('/global/project/projectdirs/des/myamamot/mdet_files.txt', 'r')
-    fs = f.read().split('\n')[:-1]
     mdet_filenames = [fname.split('/')[-1] for fname in fs]
-    tilenames = [d.split('_')[0] for d in mdet_filenames] 
-    R11, R22 = statistics_per_tile_without_bins(fs)
+    tilenames = [d.split('_')[0] for d in mdet_filenames]
+    if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt'):
+        R11, R22 = statistics_per_tile_without_bins(fs)
+    else:
+        f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
+        R11 = f_response.read().split('\n')[:-1][0]
+        R22 = f_response.read().split('\n')[:-1][1]
 
     # Create ccdnum and expnum text file if it has not been created yet, and query from DESDM table. Should only be done once. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
@@ -571,14 +574,14 @@ def tangential_shear_field_center():
 
 def main(argv):
 
-    f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
+    f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
 
     # combine_piff(['r', 'i', 'z'], work_piff, tilenames)
     # combine_gold(32, work_gold)
     # inverse_variance_weight(20, fs, more_cuts=None)
     # shear_stellar_contamination(mdet_cat, piff_all_cat)
-    tangential_shear_field_center()
+    tangential_shear_field_center(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
