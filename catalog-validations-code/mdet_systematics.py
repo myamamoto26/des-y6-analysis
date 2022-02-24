@@ -512,8 +512,7 @@ def tangential_shear_field_center(fs):
         R11, R22 = statistics_per_tile_without_bins(fs)
     else:
         f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
-        R11 = f_response.read().split('\n')[:-1][0]
-        R22 = f_response.read().split('\n')[:-1][1]
+        R11, R22 = f_response.read().split('\n')
 
     # Create ccdnum and expnum text file if it has not been created yet, and query from DESDM table. Should only be done once. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
