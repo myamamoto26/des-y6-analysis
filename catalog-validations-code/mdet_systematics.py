@@ -8,6 +8,8 @@ import os, sys
 from tqdm import tqdm
 import numpy as np
 import fitsio as fio
+import matplotlib as mpl
+
 
 # Figure 4; galaxy count, shear response, variance of e, shear weight as a function of S/N and size ratio.
 def inverse_variance_weight(steps, fs, more_cuts=None):
@@ -18,13 +20,12 @@ def inverse_variance_weight(steps, fs, more_cuts=None):
 
     import os
     np.random.seed(1738)
-    import matplotlib as mpl
-    mpl.use('Agg')
     import matplotlib.pyplot as plt
     from math import log10
     import pylab as mplot
     import matplotlib.ticker as ticker
 
+    mpl.use('Agg')
     font = {'size'   : 13}
     mplot.rc('font', **font)
     mplot.rc('text', usetex=False)
@@ -397,6 +398,8 @@ def tangential_shear_field_center(fs):
     from mean_shear_bin_statistics import statistics_per_tile_without_bins
     sys.path.append('./download-query-concatenation-code')
     from query_examples import query_field_centers
+    
+    mpl.rcParams.update({'font.size':20})
 
     def find_and_save_objects(tname, mdet_d, R11, R22, fcenter):
 
@@ -551,7 +554,7 @@ def tangential_shear_field_center(fs):
         )
         
         cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
-        cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=100)
+        cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=20)
         cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_*.fits')
         cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
         
@@ -563,8 +566,8 @@ def tangential_shear_field_center(fs):
 
         fig, ax = plt.subplots(figsize=(12,10))
         ax.errorbar(ng.meanr, ng.meanr*ng.xi, yerr=np.sqrt(ng.varxi), fmt='o')
-        ax.set_ylabel(r'$\theta\gamma_{\rm t}(\theta)$', fontsize='xx-large')
-        ax.set_xlabel(r'$\theta [arcmin]$', fontsize='xx-large' )
+        ax.set_ylabel(r'$\theta\gamma_{\rm t}(\theta)$')
+        ax.set_xlabel(r'$\theta [arcmin]$')
         ax.set_xscale('log')
         # fig.suptitle('Tangential shear around stars', fontsize='x-large')
         plt.tight_layout()
