@@ -505,7 +505,7 @@ def tangential_shear_field_center(fs):
         return int(image_path.split('/')[1].split('_')[2][1:])
         
     # Compute the shear response over all the tiles. 
-    save_objects = True
+    save_objects = False
     mdet_filenames = [fname.split('/')[-1] for fname in fs]
     tilenames = [d.split('_')[0] for d in mdet_filenames]
     if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt'):
@@ -557,7 +557,7 @@ def tangential_shear_field_center(fs):
         cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
         
         ng = treecorr.NGCorrelation(bin_config, verbose=2)
-        for i,cat2 in enumerate(cat2_list):
+        for i,cat2 in tqdm(enumerate(cat2_list)):
             # ng.process(cat1, cat2)
             ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
             cat2.unload()
@@ -569,7 +569,7 @@ def tangential_shear_field_center(fs):
         ax.set_xscale('log')
         # fig.suptitle('Tangential shear around stars', fontsize='x-large')
         plt.tight_layout()
-        plt.savefig('tangential_shear_around_field_centers.pdf', bbox_inches='tight')
+        plt.savefig('tangential_shear_around_field_centers_v2.pdf', bbox_inches='tight')
 
 
 def main(argv):
