@@ -391,6 +391,8 @@ def tangential_shear_field_center(fs):
     from mean_shear_bin_statistics import statistics_per_tile_without_bins
     sys.path.append('./download-query-concatenation-code')
     from query_examples import query_field_centers
+    import treecorr
+    import glob
 
     def find_and_save_objects(tname, mdet_d, R11, R22, fcenter):
 
@@ -531,6 +533,29 @@ def tangential_shear_field_center(fs):
             msk = ((d["flags"] == 0) & (d["mask_flags"] == 0) & (d["mdet_flux_flags"] == 0) & (d["mdet_T_ratio"] > 0.5) & (d["mdet_s2n"] > 10) & (d["mfrac"] < 0.1) & (d["mdet_T"] < 1.9 - 2.8*d["mdet_T_err"]) & (np.abs(gmr) < 5) & (np.abs(rmi) < 5) & (np.abs(imz) < 5) & np.isfinite(mag_g) & np.isfinite(mag_r) & np.isfinite(mag_i) & np.isfinite(mag_z) & (mag_g < 26.5) & (mag_r < 26.5) & (mag_i < 26.2) & (mag_z < 25.6))
             # msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T'] <1.2))
             find_and_save_objects(t, d[msk], R11, R22, expnum_field_centers)
+    else:
+        bin_config = dict(
+                    sep_units = 'arcmin',
+                    bin_slop = 0.1,
+
+                    min_sep = 1.0,
+                    max_sep = 250,
+                    nbins = 20,
+
+                    var_method = 'jackknife',
+                    output_dots = False,
+                    )
+        
+        cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
+        cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=20)
+        cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_*.fits')
+        cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
+
+        ng = treecorr.NGCorrelation(bin_config, verbose=2)
+        for i,cat2 in tqdm(enumerate(cat2_list)):
+            ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
+            cat2.unload()
+        ng.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_output.fits')
 
 def main(argv):
 
