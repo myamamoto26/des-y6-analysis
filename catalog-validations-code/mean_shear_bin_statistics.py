@@ -444,9 +444,9 @@ def statistics_per_tile_without_bins(fs):
         res = _accum_shear_per_tile_without_bin(res, d['mdet_step'], d['mdet_g_1'], d['mdet_g_2'], 0)
     R11, R22 = _compute_g1_g2(res, binnum, method='just_response')
     f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'w')
-    f_response.write(R11)
+    f_response.write(str(R11))
     f_response.write('\n')
-    f_response.write(R22)
+    f_response.write(str(R22))
     
     return R11, R22
 
