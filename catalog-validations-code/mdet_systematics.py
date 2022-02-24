@@ -384,22 +384,13 @@ def tangential_shear_field_center(fs):
 
     # step 1. Create a fits file that contains the exposure number and field centers (RA, DEC) from desoper. 
     # step 2. Create a file that contains the exposure number, RA, DEC, g1, g2 (corrected with the average shear response for the whole survey). 
-    # -> Loop through each metadetect file, and create individual files which contain necessary info (use MPI).
-    # -> How do I use these individual files to compute treecorr? Since I will only be using noshear catalog, this should be fine.
 
-    import treecorr
     from matplotlib import pyplot as plt
     import tqdm
-    import esutil as eu
-    import json
-    import pickle
     from tqdm import tqdm
-    import glob
     from mean_shear_bin_statistics import statistics_per_tile_without_bins
     sys.path.append('./download-query-concatenation-code')
     from query_examples import query_field_centers
-    
-    mpl.rcParams.update({'font.size':20})
 
     def find_and_save_objects(tname, mdet_d, R11, R22, fcenter):
 
@@ -540,47 +531,12 @@ def tangential_shear_field_center(fs):
             msk = ((d["flags"] == 0) & (d["mask_flags"] == 0) & (d["mdet_flux_flags"] == 0) & (d["mdet_T_ratio"] > 0.5) & (d["mdet_s2n"] > 10) & (d["mfrac"] < 0.1) & (d["mdet_T"] < 1.9 - 2.8*d["mdet_T_err"]) & (np.abs(gmr) < 5) & (np.abs(rmi) < 5) & (np.abs(imz) < 5) & np.isfinite(mag_g) & np.isfinite(mag_r) & np.isfinite(mag_i) & np.isfinite(mag_z) & (mag_g < 26.5) & (mag_r < 26.5) & (mag_i < 26.2) & (mag_z < 25.6))
             # msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T'] <1.2))
             find_and_save_objects(t, d[msk], R11, R22, expnum_field_centers)
-    else:
-        bin_config = dict(
-            sep_units = 'arcmin',
-            bin_slop = 0.1,
-
-            min_sep = 1.0,
-            max_sep = 250,
-            nbins = 20,
-
-            var_method = 'jackknife',
-            output_dots = False,
-        )
-        
-        cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
-        cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=20)
-        cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_*.fits')
-        cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
-        
-        ng = treecorr.NGCorrelation(bin_config, verbose=2)
-        for i,cat2 in tqdm(enumerate(cat2_list)):
-            # ng.process(cat1, cat2)
-            ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
-            cat2.unload()
-
-        fig, ax = plt.subplots(figsize=(12,10))
-        ax.errorbar(ng.meanr, ng.meanr*ng.xi, yerr=np.sqrt(ng.varxi), fmt='o')
-        ax.set_ylabel(r'$\theta\gamma_{\rm t}(\theta)$')
-        ax.set_xlabel(r'$\theta [arcmin]$')
-        ax.set_xscale('log')
-        # fig.suptitle('Tangential shear around stars', fontsize='x-large')
-        plt.tight_layout()
-        plt.savefig('tangential_shear_around_field_centers_v2.pdf', bbox_inches='tight')
-
 
 def main(argv):
 
     f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
 
-    # combine_piff(['r', 'i', 'z'], work_piff, tilenames)
-    # combine_gold(32, work_gold)
     # inverse_variance_weight(20, fs, more_cuts=None)
     # shear_stellar_contamination(mdet_cat, piff_all_cat)
     tangential_shear_field_center(fs)
