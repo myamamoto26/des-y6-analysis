@@ -206,7 +206,7 @@ def inverse_variance_weight(steps, fs):
     new_shearweight = (new_response/new_meanes)**2
 
     res_measurement = {'xedges': xedges, 'yedges': yedges, 'count': count_all, 'meanes': new_meanes, 'response': new_response, 'weight': new_shearweight}
-    with open('/global/cscratch/sd/myamamot/metadetect/inverse_variance_weight_v2.pickle', 'wb') as dat:
+    with open('/global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v2.pickle', 'w') as dat:
         pickle.dump(res_measurement, dat, protocol=pickle.HIGHEST_PROTOCOL)
 
     print('total number count before cuts', total_count)
