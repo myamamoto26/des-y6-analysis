@@ -27,7 +27,6 @@ for fname in tqdm(mdet_filenames):
             & np.isfinite(mag_i) & np.isfinite(mag_z) & (mag_g < 26.5) & (mag_r < 26.5) & (mag_i < 26.2) & (mag_z < 25.6))
     in_footprint = hmap.get_values_pos(d["ra"], d["dec"], valid_mask=True)
 
-    total_msk = (msk & in_footprint)
+    total_msk = (msk & ~in_footprint)
     d_msk = d[total_msk]
-    print(len(d), len(d_msk))
-    # fio.write('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/'+fname, d_msk)
+    fio.write('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/'+fname, d_msk)
