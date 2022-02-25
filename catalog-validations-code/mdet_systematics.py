@@ -29,12 +29,6 @@ def inverse_variance_weight(steps, fs):
     import matplotlib.ticker as ticker
     import pickle
 
-    mpl.use('Agg')
-    font = {'size'   : 13}
-    mplot.rc('font', **font)
-    mplot.rc('text', usetex=False)
-    mplot.rc('font', family='serif')
-
     def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
         # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
         
@@ -212,7 +206,7 @@ def inverse_variance_weight(steps, fs):
     new_shearweight = (new_response/new_meanes)**2
 
     res_measurement = {'xedges': xedges, 'yedges': yedges, 'count': count_all, 'meanes': new_meanes, 'response': new_response, 'weight': new_shearweight}
-    with open('/global/cscratch/sd/myamamot/metadetect/inverse_variance_weight_v2.pickle', 'w') as dat:
+    with open('/global/cscratch/sd/myamamot/metadetect/inverse_variance_weight_v2.pickle', 'wb') as dat:
         pickle.dump(res_measurement, dat, protocol=pickle.HIGHEST_PROTOCOL)
 
     print('total number count before cuts', total_count)
