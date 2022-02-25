@@ -516,9 +516,10 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres):
 
 def main(argv):
 
-    just_plot = True
+    just_plot = False
     make_per_ccd_files = False
-    work_mdet = '/global/cscratch1/sd/myamamot/metadetect'
+    work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
+    work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
     work = '/global/cscratch1/sd/myamamot'
     ccd_x_min = 48
     ccd_x_max = 2000
@@ -530,7 +531,7 @@ def main(argv):
     num_ccd = 62
 
     # NEED TO WRITE THE CODE TO BE ABLE TO RUN FROM BOTH MASTER FLAT AND INDIVIDUAL FILES. 
-    mdet_f = open('/global/cscratch1/sd/myamamot/metadetect/mdet_files.txt', 'r')
+    mdet_f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
     mdet_fs = mdet_f.read().split('\n')[:-1]
     mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
     tilenames = [d.split('_')[0] for d in mdet_filenames]
@@ -560,10 +561,10 @@ def main(argv):
         for t in tqdm(split_tilenames[rank]):
             ccdres = {}
             obj_num = 0
-            if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle'):
-                d = fio.read(os.path.join(work_mdet, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
-                msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
-                ccdres = spatial_variations(ccdres, d[msk], coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, t, bands[t])
+            if not os.path.exists('/global/project/projectdirs/des/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle'):
+                d = fio.read(os.path.join(work_mdet_cuts, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
+                # msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
+                ccdres = spatial_variations(ccdres, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, t, bands[t])
                 for c in list(ccdres.keys()):
                     obj_num += np.sum(ccdres[c]['num_g1'])
                 print('number of objects in this tile, ', obj_num)
