@@ -516,8 +516,8 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres):
 
 def main(argv):
 
-    just_plot = False
-    make_per_ccd_files = False
+    individual_tiles = True
+    make_per_ccd_files = True
     work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
     work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
     work = '/global/cscratch1/sd/myamamot'
@@ -536,7 +536,7 @@ def main(argv):
     mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
     tilenames = [d.split('_')[0] for d in mdet_filenames]
 
-    if not just_plot:
+    if not individual_tiles:
         from mpi4py import MPI
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
@@ -595,6 +595,7 @@ def main(argv):
             print(list(ccdres_all))
             with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
                 pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
+        sys.exit()
         # else:
         #     with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
         #         ccdres_all = pickle.load(raw)
