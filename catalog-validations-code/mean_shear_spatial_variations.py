@@ -618,8 +618,9 @@ def main(argv):
         print('mpi', rank, size)
 
         all_ccd = {c:{'jk_x_g1':[], 'jk_y_g1':[], 'jk_x_g2':[], 'jk_y_g2':[]} for c in range(1,num_ccd+1)}
+        all_ccd.pop(31)
         all_ccd.pop(61)
-        for c in range(1,num_ccd+1):
+        for c in range(3): #range(1,num_ccd+1):
             if c != rank:
                 continue
             if c in [31, 61]:
@@ -666,6 +667,9 @@ def main(argv):
 
         comm.Barrier()
         print(all_ccd)
+        if rank == 0:
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/jk_test.pickle', 'wb') as handle:
+                pickle.dump(all_ccd, handle, protocol=pickle.HIGHEST_PROTOCOL)
         sys.exit()
         if rank == 0:
             jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
