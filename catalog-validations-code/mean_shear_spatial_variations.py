@@ -574,35 +574,35 @@ def main(argv):
                 print('Already made this tile.', t)
         comm.Barrier()
     else:
-        if make_per_ccd_files:
-            print('Converting tiles to CCDs...')
-            ccdres_all_ccd = {}
-            for t in tqdm(tilenames):
-                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-                    ccdres = pickle.load(handle)
-                ccdres_all_ccd = _accum_shear_per_ccd(ccdres_all_ccd, ccdres, t)
-            for c in list(ccdres_all_ccd):
-                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'wb') as raw:
-                    pickle.dump(ccdres_all_ccd[c], raw, protocol=pickle.HIGHEST_PROTOCOL)
+        # if make_per_ccd_files:
+        #     print('Converting tiles to CCDs...')
+        #     ccdres_all_ccd = {}
+        #     for t in tqdm(tilenames):
+        #         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+        #             ccdres = pickle.load(handle)
+        #         ccdres_all_ccd = _accum_shear_per_ccd(ccdres_all_ccd, ccdres, t)
+        #     for c in list(ccdres_all_ccd):
+        #         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'wb') as raw:
+        #             pickle.dump(ccdres_all_ccd[c], raw, protocol=pickle.HIGHEST_PROTOCOL)
 
-        # Add raw sums for all the tiles from individual tile file. 
-        if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle'):
-            ccdres_all = {}
-            for t in tqdm(tilenames):
-                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-                    ccdres = pickle.load(handle)
-                ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
-            print(list(ccdres_all))
-            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
-                pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
-        sys.exit()
+        # # Add raw sums for all the tiles from individual tile file. 
+        # if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle'):
+        #     ccdres_all = {}
+        #     for t in tqdm(tilenames):
+        #         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+        #             ccdres = pickle.load(handle)
+        #         ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
+        #     print(list(ccdres_all))
+        #     with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
+        #         pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
+
         # else:
         #     with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
         #         ccdres_all = pickle.load(raw)
             # plot for all the CCDs. 
             # print('Plotting...')
-            # plot_shear_vaiations_ccd(x_side, y_side, ccdres_all)
-            # plot_stacked_ccd_north_south(x_side, y_side, ccdres_all)
+            # plot_shear_vaiations_ccd(x_side, y_side, ccdres_all) ->  now coded-up in jupyter-notebook. 
+            # plot_stacked_ccd_north_south(x_side, y_side, ccdres_all) ->  now coded-up in jupyter-notebook. 
 
         # Compute jackknife error estimate. 
         print('Computing jackknife error')
@@ -610,7 +610,7 @@ def main(argv):
         xbin = 25
         ybin = 12
 
-        # Set the mpi size to be 63 so that 1 CCD per task. 
+        # Set the mpi size to be 63 so that 1 CCD per task, save rank=0 for all the processing. 
         from mpi4py import MPI
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
