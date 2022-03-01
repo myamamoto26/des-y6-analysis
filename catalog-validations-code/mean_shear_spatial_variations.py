@@ -87,7 +87,7 @@ def _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side, per_ccd=False):
                     ccdres_all[cname] = np.zeros((y_side, x_side))
                     ccdres_all["num_" + cname] = np.zeros((y_side, x_side))
                 if cname in list(ccdres_all):
-                    rows,cols = np.where(~np.isnan(ccdres[tname]))
+                    rows,cols = np.where(~np.isnan(ccdres[tname][cname]))
                     np.add.at(ccdres_all[cname], (rows, cols), ccdres[tname][cname][rows, cols])
                     np.add.at(ccdres_all["num_"+cname], (rows, cols), ccdres[tname]["num_"+cname][rows, cols])
                     # ccdres_all[cname] += ccdres[tname][cname]
