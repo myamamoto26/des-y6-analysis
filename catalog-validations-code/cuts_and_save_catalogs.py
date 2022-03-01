@@ -6,7 +6,7 @@ from tqdm import tqdm
 import healsparse
 
 # Apply cuts + image masks, and save the catalogs.
-hmap = healsparse.HealSparseMap.read('/global/project/projectdirs/des/myamamot/metadetect/hleda-foreground-des-hsmap16384.fits')
+hmap = healsparse.HealSparseMap.read('/global/project/projectdirs/des/myamamot/metadetect/y6-combined-hsmap16384-nomdet.fits')
 f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
 fs = f.read().split('\n')[:-1]
 mdet_filenames = [fname.split('/')[-1] for fname in fs]
@@ -27,6 +27,6 @@ for fname in tqdm(mdet_filenames):
             & np.isfinite(mag_i) & np.isfinite(mag_z) & (mag_g < 26.5) & (mag_r < 26.5) & (mag_i < 26.2) & (mag_z < 25.6))
     in_footprint = hmap.get_values_pos(d["ra"], d["dec"], valid_mask=True)
 
-    total_msk = (msk & ~in_footprint)
+    total_msk = (msk & in_footprint)
     d_msk = d[total_msk]
     fio.write('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/'+fname, d_msk)
