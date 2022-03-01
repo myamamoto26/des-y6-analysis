@@ -74,8 +74,11 @@ def _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side, per_ccd=False):
                     ccdres_all[ccdnum][cname] = np.zeros((y_side, x_side))
                     ccdres_all[ccdnum]["num_" + cname] = np.zeros((y_side, x_side))
                 if cname in list(ccdres_all[ccdnum]):
-                    ccdres_all[ccdnum][cname] += ccdres[ccdnum][cname]
-                    ccdres_all[ccdnum]["num_"+cname] += ccdres[ccdnum]["num_"+cname]
+                    rows,cols = np.where(~np.isnan(ccdres[ccdnum][cname]))
+                    np.add.at(ccdres_all[cname], (rows, cols), ccdres[ccdnum][cname][rows, cols])
+                    np.add.at(ccdres_all["num_"+cname], (rows, cols), ccdres[ccdnum]["num_"+cname][rows, cols])
+                    # ccdres_all[ccdnum][cname] += ccdres[ccdnum][cname]
+                    # ccdres_all[ccdnum]["num_"+cname] += ccdres[ccdnum]["num_"+cname]
     else:
         cnames = ['g1', 'g2', 'g1p', 'g1m', 'g2p', 'g2m']
         for tname in list(ccdres):
@@ -84,8 +87,11 @@ def _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side, per_ccd=False):
                     ccdres_all[cname] = np.zeros((y_side, x_side))
                     ccdres_all["num_" + cname] = np.zeros((y_side, x_side))
                 if cname in list(ccdres_all):
-                    ccdres_all[cname] += ccdres[tname][cname]
-                    ccdres_all["num_"+cname] += ccdres[tname]["num_"+cname]
+                    rows,cols = np.where(~np.isnan(ccdres[tname]))
+                    np.add.at(ccdres_all[cname], (rows, cols), ccdres[tname][cname][rows, cols])
+                    np.add.at(ccdres_all["num_"+cname], (rows, cols), ccdres[tname]["num_"+cname][rows, cols])
+                    # ccdres_all[cname] += ccdres[tname][cname]
+                    # ccdres_all["num_"+cname] += ccdres[tname]["num_"+cname]
 
     return ccdres_all
 
@@ -215,7 +221,6 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False, pe
         
     if per_ccd:
         g1, g2 = _compute_g1_g2_per_ccd(ccdres)
-        print(np.where(~np.isnan(g1)))
         mean_g1 = np.rot90(g1, 3)
         mean_g2 = np.rot90(g2, 3)
         return mean_g1, mean_g2
@@ -292,6 +297,7 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None, per
     # Trimming around the edges. 
     mean_g1 = mean_g1[1:-1,1:-1]
     mean_g2 = mean_g2[1:-1,1:-1]
+    print(np.where(~np.isnan(mean_g1)))
     x_data = []
     y_data = []
     for g in [mean_g1, mean_g2]:
@@ -621,7 +627,7 @@ def main(argv):
         all_ccd = {c:{'jk_x_g1':[], 'jk_y_g1':[], 'jk_x_g2':[], 'jk_y_g2':[]} for c in range(1,num_ccd+1)}
         all_ccd.pop(31)
         all_ccd.pop(61)
-        for c in range(1,4): #range(1,num_ccd+1):
+        for c in tqdm(range(1,num_ccd+1)):
             # if c != rank:
             #     continue
             if c in [31, 61]:
@@ -635,7 +641,7 @@ def main(argv):
             with open('/global/cscratch1/sd/myamamot/metadetect/2000tiles_test1/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'rb') as handle:
                 ccdres = pickle.load(handle)
 
-            for j,t in tqdm(enumerate(list(ccdres))):
+            for j,t in enumerate(list(ccdres)):
                 res = ccdres.copy()
                 res.pop(t)
                 ccdres_jk = {}
@@ -667,20 +673,17 @@ def main(argv):
         #             all_ccd[r]['jk_y_g2'] = tmp_res[r]['jk_y_g2']
 
         # comm.Barrier()
-        print(all_ccd)
-        # if rank == 0:
-        with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/jk_test.pickle', 'wb') as handle:
-            pickle.dump(all_ccd, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
+        print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
+        jc = [jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2]
+        jk_dict = {'jc_x_g1': jc_x_g1, 'jc_y_g1': jc_y_g1, 'jc_x_g2': jc_x_g2, 'jc_y_g2': jc_y_g2}
+        with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/jk_cov_v2.pickle', 'wb') as handle:
+            pickle.dump(jk_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
         sys.exit()
-        if rank == 0:
-            jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
-            print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
-            
-            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
-                ccdres = pickle.load(handle)
-            jc = [jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2]
-            # jc = [np.zeros(25), np.zeros(12), np.zeros(25), np.zeros(12)]
-            plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=jc)
+        with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
+            ccdres = pickle.load(handle)
+        # plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=jc)
 
     
 if __name__ == "__main__":
