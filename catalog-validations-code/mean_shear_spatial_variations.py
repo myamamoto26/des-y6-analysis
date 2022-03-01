@@ -2,7 +2,6 @@
 from statistics import mean
 import fitsio as fio
 import numpy as np
-import galsim
 from matplotlib import pyplot as plt
 import os, sys
 # from scipy import stats
@@ -538,6 +537,7 @@ def main(argv):
 
     if not individual_tiles:
         from mpi4py import MPI
+        import galsim
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         size = comm.Get_size()
