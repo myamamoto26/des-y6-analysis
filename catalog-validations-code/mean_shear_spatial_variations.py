@@ -215,6 +215,7 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False, pe
         
     if per_ccd:
         g1, g2 = _compute_g1_g2_per_ccd(ccdres)
+        print(np.where(~np.isnan(g1)))
         mean_g1 = np.rot90(g1, 3)
         mean_g2 = np.rot90(g2, 3)
         return mean_g1, mean_g2
@@ -611,18 +612,18 @@ def main(argv):
         ybin = 12
 
         # Set the mpi size to be 63 so that 1 CCD per task, save rank=0 for all the processing. 
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        rank = comm.Get_rank()
-        size = comm.Get_size()
-        print('mpi', rank, size)
+        # from mpi4py import MPI
+        # comm = MPI.COMM_WORLD
+        # rank = comm.Get_rank()
+        # size = comm.Get_size()
+        # print('mpi', rank, size)
 
         all_ccd = {c:{'jk_x_g1':[], 'jk_y_g1':[], 'jk_x_g2':[], 'jk_y_g2':[]} for c in range(1,num_ccd+1)}
         all_ccd.pop(31)
         all_ccd.pop(61)
         for c in range(1,4): #range(1,num_ccd+1):
-            if c != rank:
-                continue
+            # if c != rank:
+            #     continue
             if c in [31, 61]:
                 continue
 
@@ -650,26 +651,26 @@ def main(argv):
             all_ccd[c]['jk_y_g1'].append(jk_y_g1)
             all_ccd[c]['jk_x_g2'].append(jk_x_g2)
             all_ccd[c]['jk_y_g2'].append(jk_y_g2)
-        comm.Barrier()
+        # comm.Barrier()
 
-        if rank != 0:
-            if rank not in [31,61]:
-                comm.send(all_ccd, dest=0)
-        comm.Barrier()
-        if rank == 0:
-            for r in range(1, size):
-                if r not in [31,61]:
-                    tmp_res = comm.recv(source=r)
-                    all_ccd[r]['jk_x_g1'] = tmp_res[r]['jk_x_g1']
-                    all_ccd[r]['jk_y_g1'] = tmp_res[r]['jk_y_g1']
-                    all_ccd[r]['jk_x_g2'] = tmp_res[r]['jk_x_g2']
-                    all_ccd[r]['jk_y_g2'] = tmp_res[r]['jk_y_g2']
+        # if rank != 0:
+        #     if rank not in [31,61]:
+        #         comm.send(all_ccd, dest=0)
+        # comm.Barrier()
+        # if rank == 0:
+        #     for r in range(1, size):
+        #         if r not in [31,61]:
+        #             tmp_res = comm.recv(source=r)
+        #             all_ccd[r]['jk_x_g1'] = tmp_res[r]['jk_x_g1']
+        #             all_ccd[r]['jk_y_g1'] = tmp_res[r]['jk_y_g1']
+        #             all_ccd[r]['jk_x_g2'] = tmp_res[r]['jk_x_g2']
+        #             all_ccd[r]['jk_y_g2'] = tmp_res[r]['jk_y_g2']
 
-        comm.Barrier()
+        # comm.Barrier()
         print(all_ccd)
-        if rank == 0:
-            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/jk_test.pickle', 'wb') as handle:
-                pickle.dump(all_ccd, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        # if rank == 0:
+        with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/jk_test.pickle', 'wb') as handle:
+            pickle.dump(all_ccd, handle, protocol=pickle.HIGHEST_PROTOCOL)
         sys.exit()
         if rank == 0:
             jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
