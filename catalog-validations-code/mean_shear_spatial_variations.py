@@ -297,7 +297,7 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None, per
     # Trimming around the edges. 
     mean_g1 = mean_g1[1:-1,1:-1]
     mean_g2 = mean_g2[1:-1,1:-1]
-    print(np.where(~np.isnan(mean_g1)))
+ 
     x_data = []
     y_data = []
     for g in [mean_g1, mean_g2]:
@@ -618,18 +618,18 @@ def main(argv):
         ybin = 12
 
         # Set the mpi size to be 63 so that 1 CCD per task, save rank=0 for all the processing. 
-        # from mpi4py import MPI
-        # comm = MPI.COMM_WORLD
-        # rank = comm.Get_rank()
-        # size = comm.Get_size()
-        # print('mpi', rank, size)
+        from mpi4py import MPI
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        size = comm.Get_size()
+        print('mpi', rank, size)
 
         all_ccd = {c:{'jk_x_g1':[], 'jk_y_g1':[], 'jk_x_g2':[], 'jk_y_g2':[]} for c in range(1,num_ccd+1)}
         all_ccd.pop(31)
         all_ccd.pop(61)
-        for c in tqdm(range(1,num_ccd+1)):
-            # if c != rank:
-            #     continue
+        for c in tqdm(range(1,4)): #num_ccd+1)):
+            if c != rank:
+                continue
             if c in [31, 61]:
                 continue
 
@@ -657,23 +657,25 @@ def main(argv):
             all_ccd[c]['jk_y_g1'].append(jk_y_g1)
             all_ccd[c]['jk_x_g2'].append(jk_x_g2)
             all_ccd[c]['jk_y_g2'].append(jk_y_g2)
-        # comm.Barrier()
+        print('before comm barrier', rank)
+        comm.Barrier()
 
-        # if rank != 0:
-        #     if rank not in [31,61]:
-        #         comm.send(all_ccd, dest=0)
-        # comm.Barrier()
-        # if rank == 0:
-        #     for r in range(1, size):
-        #         if r not in [31,61]:
-        #             tmp_res = comm.recv(source=r)
-        #             all_ccd[r]['jk_x_g1'] = tmp_res[r]['jk_x_g1']
-        #             all_ccd[r]['jk_y_g1'] = tmp_res[r]['jk_y_g1']
-        #             all_ccd[r]['jk_x_g2'] = tmp_res[r]['jk_x_g2']
-        #             all_ccd[r]['jk_y_g2'] = tmp_res[r]['jk_y_g2']
-
-        # comm.Barrier()
-
+        if rank != 0:
+            if rank not in [31,61]:
+                comm.send(all_ccd, dest=0)
+        print('info sent', rank)
+        comm.Barrier()
+        if rank == 0:
+            print('receiving info', rank)
+            for r in range(1, size):
+                if r not in [31,61]:
+                    tmp_res = comm.recv(source=r)
+                    all_ccd[r]['jk_x_g1'] = tmp_res[r]['jk_x_g1']
+                    all_ccd[r]['jk_y_g1'] = tmp_res[r]['jk_y_g1']
+                    all_ccd[r]['jk_x_g2'] = tmp_res[r]['jk_x_g2']
+                    all_ccd[r]['jk_y_g2'] = tmp_res[r]['jk_y_g2']
+        print(all_ccd)
+        sys.exit()
         jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
         print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
         jc = [jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2]
@@ -681,6 +683,7 @@ def main(argv):
         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/jk_cov_v2.pickle', 'wb') as handle:
             pickle.dump(jk_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
         sys.exit()
+        
         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
             ccdres = pickle.load(handle)
         # plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=jc)
