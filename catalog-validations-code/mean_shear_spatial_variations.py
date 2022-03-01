@@ -630,7 +630,7 @@ def main(argv):
             jk_x_g2 = np.zeros((jk_sample, xbin))
             jk_y_g2 = np.zeros((jk_sample, ybin))
 
-            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'rb') as handle:
+            with open('/global/cscratch1/sd/myamamot/metadetect/2000tiles_test1/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'rb') as handle:
                 ccdres = pickle.load(handle)
 
             for j,t in tqdm(enumerate(list(ccdres))):
