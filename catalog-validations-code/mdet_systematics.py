@@ -447,7 +447,7 @@ def tangential_shear_field_center(fs):
         return int(image_path.split('/')[1].split('_')[2][1:])
         
     # Compute the shear response over all the tiles. 
-    save_objects = False
+    save_objects = True
     mdet_filenames = [fname.split('/')[-1] for fname in fs]
     tilenames = [d.split('_')[0] for d in mdet_filenames]
     if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt'):
@@ -499,9 +499,9 @@ def main(argv):
     f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
 
-    inverse_variance_weight(20, fs)
+    # inverse_variance_weight(20, fs)
     # shear_stellar_contamination(mdet_cat, piff_all_cat)
-    # tangential_shear_field_center(fs)
+    tangential_shear_field_center(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
