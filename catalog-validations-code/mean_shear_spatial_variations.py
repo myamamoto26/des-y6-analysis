@@ -620,7 +620,7 @@ def main(argv):
         all_ccd = {c:{'jk_x_g1':[], 'jk_y_g1':[], 'jk_x_g2':[], 'jk_y_g2':[]} for c in range(1,num_ccd+1)}
         all_ccd.pop(31)
         all_ccd.pop(61)
-        for c in range(3): #range(1,num_ccd+1):
+        for c in range(1,4): #range(1,num_ccd+1):
             if c != rank:
                 continue
             if c in [31, 61]:
