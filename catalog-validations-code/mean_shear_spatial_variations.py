@@ -54,8 +54,11 @@ def _accum_shear_per_ccd(ccdres_all, ccdres, tilename):
     cnames = ['g1', 'g2', 'g1p', 'g1m', 'g2p', 'g2m']
     for ccdnum in list(ccdres):
         for cname in cnames:
-            ccdres_all[ccdnum][tilename][cname] = ccdres[ccdnum][cname]
-            ccdres_all[ccdnum][tilename]["num_"+cname] = ccdres[ccdnum]["num_"+cname]
+            rows,cols = np.where(~np.isnan(ccdres[ccdnum][cname]))
+            np.add.at(ccdres_all[tilename][cname], (rows, cols), ccdres[ccdnum][cname][rows, cols])
+            np.add.at(ccdres_all[tilename]["num_"+cname], (rows, cols), ccdres[ccdnum]["num_"+cname][rows, cols])
+            # ccdres_all[ccdnum][tilename][cname] = ccdres[ccdnum][cname]
+            # ccdres_all[ccdnum][tilename]["num_"+cname] = ccdres[ccdnum]["num_"+cname]
 
     return ccdres_all
 
@@ -75,8 +78,8 @@ def _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side, per_ccd=False):
                     ccdres_all[ccdnum]["num_" + cname] = np.zeros((y_side, x_side))
                 if cname in list(ccdres_all[ccdnum]):
                     rows,cols = np.where(~np.isnan(ccdres[ccdnum][cname]))
-                    np.add.at(ccdres_all[cname], (rows, cols), ccdres[ccdnum][cname][rows, cols])
-                    np.add.at(ccdres_all["num_"+cname], (rows, cols), ccdres[ccdnum]["num_"+cname][rows, cols])
+                    np.add.at(ccdres_all[ccdnum][cname], (rows, cols), ccdres[ccdnum][cname][rows, cols])
+                    np.add.at(ccdres_all[ccdnum]["num_"+cname], (rows, cols), ccdres[ccdnum]["num_"+cname][rows, cols])
                     # ccdres_all[ccdnum][cname] += ccdres[ccdnum][cname]
                     # ccdres_all[ccdnum]["num_"+cname] += ccdres[ccdnum]["num_"+cname]
     else:
@@ -523,7 +526,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres):
 def main(argv):
 
     individual_tiles = False
-    make_per_ccd_files = True
+    make_per_ccd_files = False
     work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
     work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
     work = '/global/cscratch1/sd/myamamot'
