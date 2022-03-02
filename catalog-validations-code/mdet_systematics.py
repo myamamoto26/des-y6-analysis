@@ -382,7 +382,7 @@ def tangential_shear_field_center(fs):
         return int(image_path.split('/')[1].split('_')[2][1:])
         
     # Compute the shear response over all the tiles. 
-    save_objects = True
+    save_objects = False
     mdet_filenames = [fname.split('/')[-1] for fname in fs]
     tilenames = [d.split('_')[0] for d in mdet_filenames]
     if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt'):
