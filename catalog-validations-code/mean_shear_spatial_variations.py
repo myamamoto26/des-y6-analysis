@@ -522,7 +522,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres):
 
 def main(argv):
 
-    individual_tiles = True
+    individual_tiles = False
     make_per_ccd_files = True
     work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
     work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
@@ -542,7 +542,7 @@ def main(argv):
     mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
     tilenames = [d.split('_')[0] for d in mdet_filenames]
 
-    if not individual_tiles:
+    if individual_tiles:
         from mpi4py import MPI
         import galsim
         comm = MPI.COMM_WORLD
@@ -581,28 +581,28 @@ def main(argv):
                 print('Already made this tile.', t)
         comm.Barrier()
     else:
-        # if make_per_ccd_files:
-        #     print('Converting tiles to CCDs...')
-        #     ccdres_all_ccd = {}
-        #     for t in tqdm(tilenames):
-        #         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-        #             ccdres = pickle.load(handle)
-        #         ccdres_all_ccd = _accum_shear_per_ccd(ccdres_all_ccd, ccdres, t)
-        #     for c in list(ccdres_all_ccd):
-        #         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'wb') as raw:
-        #             pickle.dump(ccdres_all_ccd[c], raw, protocol=pickle.HIGHEST_PROTOCOL)
+        if make_per_ccd_files:
+            print('Converting tiles to CCDs...')
+            ccdres_all_ccd = {}
+            for t in tqdm(tilenames):
+                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                    ccdres = pickle.load(handle)
+                ccdres_all_ccd = _accum_shear_per_ccd(ccdres_all_ccd, ccdres, t)
+            for c in list(ccdres_all_ccd):
+                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'wb') as raw:
+                    pickle.dump(ccdres_all_ccd[c], raw, protocol=pickle.HIGHEST_PROTOCOL)
 
-        # # Add raw sums for all the tiles from individual tile file. 
-        # if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle'):
-        #     ccdres_all = {}
-        #     for t in tqdm(tilenames):
-        #         with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
-        #             ccdres = pickle.load(handle)
-        #         ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
-        #     print(list(ccdres_all))
-        #     with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
-        #         pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
-
+        # Add raw sums for all the tiles from individual tile file. 
+        if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle'):
+            ccdres_all = {}
+            for t in tqdm(tilenames):
+                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                    ccdres = pickle.load(handle)
+                ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
+            print(list(ccdres_all))
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
+                pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
+        sys.exit()
         # else:
         #     with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
         #         ccdres_all = pickle.load(raw)
