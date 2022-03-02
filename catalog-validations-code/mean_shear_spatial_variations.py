@@ -526,7 +526,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres):
 def main(argv):
 
     individual_tiles = False
-    make_per_ccd_files = False
+    make_per_ccd_files = True
     work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
     work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
     work = '/global/cscratch1/sd/myamamot'
