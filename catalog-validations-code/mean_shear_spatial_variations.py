@@ -55,8 +55,8 @@ def _accum_shear_per_ccd(ccdres_all, ccdres, tilename):
     for ccdnum in list(ccdres):
         for cname in cnames:
             rows,cols = np.where(~np.isnan(ccdres[ccdnum][cname]))
-            np.add.at(ccdres_all[tilename][cname], (rows, cols), ccdres[ccdnum][cname][rows, cols])
-            np.add.at(ccdres_all[tilename]["num_"+cname], (rows, cols), ccdres[ccdnum]["num_"+cname][rows, cols])
+            np.add.at(ccdres_all[ccdnum][tilename][cname], (rows, cols), ccdres[ccdnum][cname][rows, cols])
+            np.add.at(ccdres_all[ccdnum][tilename]["num_"+cname], (rows, cols), ccdres[ccdnum]["num_"+cname][rows, cols])
             # ccdres_all[ccdnum][tilename][cname] = ccdres[ccdnum][cname]
             # ccdres_all[ccdnum][tilename]["num_"+cname] = ccdres[ccdnum]["num_"+cname]
 
