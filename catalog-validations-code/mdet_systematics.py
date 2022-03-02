@@ -213,51 +213,17 @@ def inverse_variance_weight(steps, fs):
     print('total number count after cuts', np.sum(count_all))
 
 # Figure 11; tangential and cross-component shear around bright and faint stars. 
-def shear_stellar_contamination(mdet_cat, piff_all_cat):
+def shear_stellar_contamination():
 
     import treecorr
     from matplotlib import pyplot as plt
+    import glob
 
     def flux2mag(flux, zero_pt=30):
         return zero_pt - 2.5 * np.log10(flux)
-    
-    def _make_cuts(d, shear):
 
-        msk = (
-            (d['flags'] == 0)
-            & (d['mdet_s2n'] > 10)
-            & (d['mdet_T_ratio'] > 1.2)
-            & (d['mfrac'] < 0.1)
-            & (d['mdet_step'] == shear)
-        )
-        
-        return np.mean(d['mdet_g'][msk, :], axis=0), msk
-
-    def calculate_response(d):
-
-        g_noshear, mask_noshear = _make_cuts(d, 'noshear')
-        g_1p, mask_1p = _make_cuts(d, '1p')
-        g_1m, mask_1m = _make_cuts(d, '1m')
-        g_2p, mask_2p = _make_cuts(d, '2p')
-        g_2m, mask_2m = _make_cuts(d, '2m')
-
-        R11 = (g_1p[0] - g_1m[0])/0.02
-        R22 = (g_2p[1] - g_2m[1])/0.02
-        R = [R11, R22]
-
-        return R, mask_noshear
-
-    shear_catalog = fio.read(mdet_cat)
-    full_response, mask_noshear = calculate_response(shear_catalog)
-    ra = shear_catalog[mask_noshear]['ra']
-    dec = shear_catalog[mask_noshear]['dec']
-    g1 = shear_catalog[mask_noshear]['mdet_g'][:,0]/full_response[0]
-    g2 = shear_catalog[mask_noshear]['mdet_g'][:,1]/full_response[1]
-
-    # data_r = fio.read(os.path.join(work_piff, 'r_band/master_r_piff_models.fits'))
-    # data_i = fio.read(os.path.join(work_piff, 'i_band/master_i_piff_models.fits'))
-    # data_z = fio.read(os.path.join(work_piff, 'z_band/master_z_piff_models.fits'))
-    data_piff = fio.read(piff_all_cat)
+    f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
+    R11, R22 = f_response.read().split('\n')
 
     bin_config = dict(
         sep_units = 'arcmin',
@@ -270,59 +236,28 @@ def shear_stellar_contamination(mdet_cat, piff_all_cat):
         var_method = 'jackknife'
     )
 
-    ########################
-    # bright stars; m<16.5 #
-    ########################
-    data_mag = flux2mag(data_piff['FLUX'])
-    mask_bright = (data_mag<16.5)
-    star_catalog_bright = data_piff[mask_bright]
-    ra_piff = star_catalog_bright['RA']
-    dec_piff = star_catalog_bright['DEC']
+    cat1_file = '/global/project/projectdirs/des/schutt20/catalogs/y6a2_piff_hsm_all_qacuts_col_fwhm_collated.fits'
+    d_piff = fio.read(cat1_file)
+    mask_bright = (flux2mag(d_piff['FLUX']) < 16.5)
+    mask_faint = (flux2mag(d_piff['FLUX']) > 16.5)
+    cat1_bright = treecorr.Catalog(ra=d_piff[mask_bright]['RA'], dec=d_piff[mask_bright]['DEC'], ra_units='deg', dec_units='deg', npatch=20)
+    cat1_faint = treecorr.Catalog(ra=d_piff[mask_faint]['RA'], dec=d_piff[mask_faint]['DEC'], ra_units='deg', dec_units='deg', npatch=20)
+    
+    cat2_files = glob.glob('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
+    cat2_list = []
+    for cat2_file in cat2_files:
+        d_mdet = fio.read(cat2_file)
+        d_mdet['mdet_g_1'] = d_mdet['mdet_g_1']/R11
+        d_mdet['mdet_g_2'] = d_mdet['mdet_g_2']/R22
+        cat = treecorr.Catalog(ra=d_mdet['ra'], dec_col=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=d_mdet['mdet_g_1'], g2=d_mdet['mdet_g_2'], patch_centers=cat1_bright.patch_centers)
+        cat2_list.append(cat)
 
-    cat1 = treecorr.Catalog(ra=ra_piff, dec=dec_piff, ra_units='deg', dec_units='deg', npatch=10)
-    cat2 = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=g1, g2=g2, npatch=10)
-    ng_bright = treecorr.NGCorrelation(bin_config, verbose=2)
-    ng_bright.process(cat1, cat2)
-
-    #######################
-    # faint stars; m>16.5 #
-    #######################
-    mask_faint = (data_mag>16.5)
-    star_catalog_faint = data_piff[mask_faint]
-    ra_piff = star_catalog_faint['RA']
-    dec_piff = star_catalog_faint['DEC']
-
-    cat1 = treecorr.Catalog(ra=ra_piff, dec=dec_piff, ra_units='deg', dec_units='deg', npatch=10)
-    ng_faint = treecorr.NGCorrelation(bin_config, verbose=2)
-    ng_faint.process(cat1, cat2)
-
-    fig, axes = plt.subplots(1,2, figsize=(15,7))
-        
-    ax = axes[0]
-    ax.errorbar(ng_bright.meanr, ng_bright.xi, yerr=np.sqrt(ng_bright.varxi), fmt='o', label=r'$\gamma_{\rm t}$')
-    ax.errorbar(ng_bright.meanr, ng_bright.xi_im, yerr=np.sqrt(ng_bright.varxi), fmt='x', label=r'$\gamma_{\rm x}$')
-    ax.set_ylabel(r'$\gamma_{\rm t}(\theta), \gamma_{\rm x}(\theta)$', fontsize='xx-large')
-    # ax.set_xlim(min_mag,max_mag)
-    ax.set_title('Bright stars [m<16.5]', fontsize='x-large' )
-    ax.legend(prop={'size': 16},loc='lower right')
-    ax.set_xlabel(r'$\theta [arcmin]$', fontsize='xx-large' )
-    ax.set_xscale('log')
-
-    ax = axes[1]
-    #ax.set_ylim(-0.002,0.002)
-    ax.errorbar(ng_faint.meanr, ng_faint.xi, yerr=np.sqrt(ng_faint.varxi), fmt='o', label=r'$\gamma_{\rm t}$')
-    ax.errorbar(ng_faint.meanr, ng_faint.xi_im, yerr=np.sqrt(ng_faint.varxi), fmt='x', label=r'$\gamma_{\rm x}$')
-    #ax.plot(mag_bins[:-1], fit_fn(mag_bins[:-1]), '--k')
-    ax.set_ylabel(r'$\gamma_{\rm t}(\theta), \gamma_{\rm x}(\theta)$', fontsize='xx-large')
-    # ax.set_xlim(min_mag,max_mag)
-    ax.set_title('Faint stars [m>16.5]', fontsize='x-large' )
-    # ax.set_ylim(-0.007,0.0125)
-    ax.set_xlabel(r'$\theta [arcmin]$', fontsize='xx-large' )
-    ax.set_xscale('log')
-
-    fig.suptitle('Tangential shear around stars', fontsize='x-large')
-    plt.tight_layout()
-    plt.savefig('tangential_shear_around_stars.png')
+    for ii,cat1 in enumerate([cat1_bright, cat1_faint]):
+        ng = treecorr.NGCorrelation(bin_config, verbose=2)
+        for i,cat2 in tqdm(enumerate(cat2_list)):
+            ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
+            cat2.unload()
+        ng.write('/global/cscratch1/sd/myamamot/metadetect/stars_shear_cross_correlation_output_'+ii+'.fits')
 
 
 # Figure 14; Tangential shear around field center
@@ -500,7 +435,7 @@ def main(argv):
     fs = f.read().split('\n')[:-1]
 
     # inverse_variance_weight(20, fs)
-    # shear_stellar_contamination(mdet_cat, piff_all_cat)
+    # shear_stellar_contamination()
     tangential_shear_field_center(fs)
 
 if __name__ == "__main__":
