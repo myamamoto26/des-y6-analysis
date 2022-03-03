@@ -282,7 +282,7 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False, pe
             ccd_list = np.delete(ccd_list, -1)
         elif direct == 'south':
             ccd_list = np.arange(32,63)
-            ccd_list = np.delete(ccd_list, -1)
+            ccd_list = np.delete(ccd_list, -2)
             
         for ccdnum in list(ccd_list):
             for cname in cnames:
