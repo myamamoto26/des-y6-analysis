@@ -279,8 +279,10 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False, pe
         
         if direct == 'north':
             ccd_list = np.arange(1,32)
+            ccd_list.pop(31)
         elif direct == 'south':
             ccd_list = np.arange(32,63)
+            ccd_list.pop(62)
             
         for ccdnum in list(ccd_list):
             for cname in cnames:
