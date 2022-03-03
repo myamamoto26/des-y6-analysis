@@ -236,7 +236,7 @@ def shear_stellar_contamination():
         var_method = 'jackknife'
     )
 
-    cat1_file = '/global/project/projectdirs/des/schutt20/catalogs/y6a2_piff_hsm_all_qacuts_col_fwhm_collated.fits'
+    cat1_file = '/global/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v2_hsm_allres_collated.fits'
     d_piff = fio.read(cat1_file)
     mask_bright = (flux2mag(d_piff['FLUX']) < 16.5)
     mask_faint = (flux2mag(d_piff['FLUX']) > 16.5)
@@ -427,6 +427,7 @@ def tangential_shear_field_center(fs):
         for i,cat2 in tqdm(enumerate(cat2_list)):
             ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
             cat2.unload()
+        np.save('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_cov.npy', ng['cov'])
         ng.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_output.fits')
 
 def main(argv):
