@@ -257,6 +257,7 @@ def shear_stellar_contamination():
         for i,cat2 in tqdm(enumerate(cat2_list)):
             ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
             cat2.unload()
+        np.save('/global/cscratch1/sd/myamamot/metadetect/stars_shear_cross_correlation_cov_'+ii+'.npy', ng.cov)
         ng.write('/global/cscratch1/sd/myamamot/metadetect/stars_shear_cross_correlation_output_'+ii+'.fits')
 
 
@@ -427,7 +428,7 @@ def tangential_shear_field_center(fs):
         for i,cat2 in tqdm(enumerate(cat2_list)):
             ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
             cat2.unload()
-        print(ng.cov)
+        
         np.save('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_cov.npy', ng.cov)
         ng.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_output.fits')
 
@@ -437,8 +438,8 @@ def main(argv):
     fs = f.read().split('\n')[:-1]
 
     # inverse_variance_weight(20, fs)
-    # shear_stellar_contamination()
-    tangential_shear_field_center(fs)
+    shear_stellar_contamination()
+    # tangential_shear_field_center(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
