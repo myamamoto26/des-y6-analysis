@@ -95,6 +95,15 @@ def _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side, per_ccd=False):
 
     return ccdres_all
 
+def _accum_shear_for_jk(ccdres_all, ccdres):
+    
+    cnames = ['g1', 'g2', 'g1p', 'g1m', 'g2p', 'g2m']
+    for cname in cnames:
+        rows,cols = np.where(~np.isnan(ccdres[cname]))
+        np.negative.at(ccdres_all[cname], (rows, cols), ccdres[cname][rows, cols])
+        np.negative.at(ccdres_all["num_"+cname], (rows, cols), ccdres["num_"+cname][rows, cols])
+    return ccdres_all
+
 def _compute_g1_g2(ccdres, ccdnum):
     g1 = ccdres[ccdnum]["g1"] / ccdres[ccdnum]["num_g1"]
     g1p = ccdres[ccdnum]["g1p"] / ccdres[ccdnum]["num_g1p"]
@@ -121,13 +130,57 @@ def _compute_g1_g2_per_ccd(ccdres):
     
     return g1/R11, g2/R22
 
+def comb_rows(d, nbin):
+    
+    ncol = d['g1'].shape[1]
+    binds = np.array_split(np.arange(ncol), nbin) 
+    cnames = ['g1', 'g2', 'g1p', 'g1m', 'g2p', 'g2m']
+    bin_shear = {}
+    for cname in cnames:
+        if cname not in bin_shear:
+            bin_shear[cname] = np.zeros(nbin)
+            bin_shear["num_"+cname] = np.zeros(nbin)
+        for i,bins in enumerate(binds):
+            bin_shear[cname][i] = np.nansum(d[cname][:,bins])
+            bin_shear["num_"+cname][i] = np.nansum(d["num_"+cname][:,bins])
+            
+    g1, g2 = _compute_g1_g2_per_ccd(bin_shear)  
+    return g1, g2
+
+def comb_cols(d, nbin):
+    
+    nrow = d['g1'].shape[0]
+    binds = np.array_split(np.arange(nrow), nbin) 
+    cnames = ['g1', 'g2', 'g1p', 'g1m', 'g2p', 'g2m']
+    bin_shear = {}
+    for cname in cnames:
+        if cname not in bin_shear:
+            bin_shear[cname] = np.zeros(nbin)
+            bin_shear["num_"+cname] = np.zeros(nbin)
+        for i,bins in enumerate(binds):
+            bin_shear[cname][i] = np.nansum(d[cname][bins,:])
+            bin_shear["num_"+cname][i] = np.nansum(d["num_"+cname][bins,:])
+    
+    g1, g2 = _compute_g1_g2_per_ccd(bin_shear)  
+    return g1, g2
+
 def _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, N):
 
+    # Make zero entries nan values.
+    msk = np.where(~jk_x_g1.any(axis=1))[0]
+    jk_x_g1 = np.delete(jk_x_g1, msk, axis=0)
+    msk = np.where(~jk_y_g1.any(axis=1))[0]
+    jk_y_g1 = np.delete(jk_y_g1, msk, axis=0)
+    msk = np.where(~jk_x_g2.any(axis=1))[0]
+    jk_x_g2 = np.delete(jk_x_g2, msk, axis=0)
+    msk = np.where(~jk_y_g2.any(axis=1))[0]
+    jk_y_g2 = np.delete(jk_y_g2, msk, axis=0)
+
     # compute jackknife average. 
-    jk_x_g1_ave = np.sum(jk_x_g1, axis=0)/N
-    jk_y_g1_ave = np.sum(jk_y_g1, axis=0)/N
-    jk_x_g2_ave = np.sum(jk_x_g2, axis=0)/N
-    jk_y_g2_ave = np.sum(jk_y_g2, axis=0)/N
+    jk_x_g1_ave = np.mean(jk_x_g1, axis=0)
+    jk_y_g1_ave = np.mean(jk_y_g1, axis=0)
+    jk_x_g2_ave = np.mean(jk_x_g2, axis=0)
+    jk_y_g2_ave = np.mean(jk_y_g2, axis=0)
 
     x_cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_x_g1 - jk_x_g1_ave)**2, axis=0))
     y_cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_y_g1 - jk_y_g1_ave)**2, axis=0))
@@ -217,76 +270,69 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
 
     return ccdres
 
-def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False, per_ccd=False):
+def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False, per_ccd=False, block=False):
+    
+    shear = {}
+    for direct in ['north', 'south']:
+        cnames = ['g1', 'g2', 'g1p', 'g1m', 'g2p', 'g2m']
+        shear_sum_all = {}
         
-    if per_ccd:
-        g1, g2 = _compute_g1_g2_per_ccd(ccdres)
-        mean_g1 = np.rot90(g1, 3)
-        mean_g2 = np.rot90(g2, 3)
-        return mean_g1, mean_g2
+        if direct == 'north':
+            ccd_list = np.arange(1,32)
+        elif direct == 'south':
+            ccd_list = np.arange(32,63)
+            
+        for ccdnum in list(ccd_list):
+            for cname in cnames:
+                if cname not in list(shear_sum_all):
+                    shear_sum_all[cname] = np.zeros((y_side, x_side))
+                    shear_sum_all["num_" + cname] = np.zeros((y_side, x_side))
+                if cname in list(shear_sum_all):
+                    rows,cols = np.where(~np.isnan(ccdres[ccdnum][cname]))
+                    np.add.at(shear_sum_all[cname], (rows, cols), ccdres[ccdnum][cname][rows, cols])
+                    np.add.at(shear_sum_all["num_"+cname], (rows, cols), ccdres[ccdnum]["num_"+cname][rows, cols])
+                    
+        if direct == 'north':
+            shear['north'] = shear_sum_all
+        elif direct == 'south':
+            shear['south'] = shear_sum_all
 
-    ## stack all the CCDs to find any non-trivial trend in focal plane. ##
-    ## Need to flip CCD 32-62 about x-axis. ##
-
-    SECTIONS = dDECam.CCDSECTIONS
-    # CCD 1-31
-    stack_north_g1 = np.zeros((y_side, x_side))
-    num_north_g1 = np.zeros((y_side, x_side))
-    stack_south_g1 = np.zeros((y_side, x_side))
-    num_south_g1 = np.zeros((y_side, x_side))
-
-    # CCD 32-62
-    stack_north_g2 = np.zeros((y_side, x_side))
-    num_north_g2 = np.zeros((y_side, x_side))
-    stack_south_g2 = np.zeros((y_side, x_side))
-    num_south_g2 = np.zeros((y_side, x_side))
-
-    # Stacking CCDs on top of each other. 
-    for k, v in list(SECTIONS.items()):
-        if k in list(ccdres):
-            g1, g2 = _compute_g1_g2(ccdres, k)
-        else:
-            continue
-
-        if k < 32:
-            # stack_north_g1 = np.nansum(np.dstack((stack_north_g1, g1)), 2)
-            rows,cols = np.where(~np.isnan(g1))
-            np.add.at(stack_north_g1, (rows, cols), g1[rows, cols])
-            np.add.at(num_north_g1, (rows, cols), 1)
-
-            # stack_north_g2 = np.nansum(np.dstack((stack_north_g2, g2)), 2)
-            rows,cols = np.where(~np.isnan(g2))
-            np.add.at(stack_north_g2, (rows, cols), g2[rows, cols])
-            np.add.at(num_north_g2, (rows, cols), 1)
-        else:
-            # g1 = np.flip(g1, 0)
-            # stack_south_g1 = np.nansum(np.dstack((stack_south_g1, g1)), 2)
-            rows,cols = np.where(~np.isnan(g1))
-            np.add.at(stack_south_g1, (rows, cols), g1[rows, cols])
-            np.add.at(num_south_g1, (rows, cols), 1)
-
-            # g2 = np.flip(g2, 0)
-            # stack_south_g2 = np.nansum(np.dstack((stack_south_g2, g2)), 2)
-            rows,cols = np.where(~np.isnan(g2))
-            np.add.at(stack_south_g2, (rows, cols), g2[rows, cols])
-            np.add.at(num_south_g2, (rows, cols), 1)
-    # print(np.sum(num_north_g1))
-
-    if not stack_north_south: 
-        mean_north_g1 = np.rot90(stack_north_g1/num_north_g1, 3)
-        mean_north_g2 = np.rot90(stack_north_g2/num_north_g2, 3)
-        mean_south_g1 = np.rot90(stack_south_g1/num_south_g1, 3)
-        mean_south_g2 = np.rot90(stack_south_g2/num_south_g2, 3)
+    if not stack_north_south:
+        mean_north_g1, mean_north_g2  = _compute_g1_g2_per_ccd(shear['north'])
+        mean_south_g1, mean_south_g2  = _compute_g1_g2_per_ccd(shear['south'])
+        
+        mean_north_g1 = np.rot90(mean_north_g1, 3)
+        mean_north_g2 = np.rot90(mean_north_g2, 3)
+        mean_south_g1 = np.rot90(mean_south_g1, 3)
+        mean_south_g2 = np.rot90(mean_south_g2, 3)
         mean_g1 = [mean_north_g1, mean_south_g1]
         mean_g2 = [mean_north_g2, mean_south_g2]
         return mean_g1, mean_g2
     else:
         # Stack north and south but be careful of the directions of stacking.
-        g1 = (stack_north_g1+np.flip(stack_south_g1,0))/(num_north_g1+np.flip(num_south_g1,0))
-        g2 = (stack_north_g2+np.flip(stack_south_g2,0))/(num_north_g2+np.flip(num_south_g2,0))
-        mean_g1 = np.rot90(g1, 3)
-        mean_g2 = np.rot90(g2, 3)
-        return mean_g1, mean_g2
+        shear_stack = {}
+        for cname in cnames:
+            shear_stack[cname] = np.zeros((y_side, x_side))
+            shear_stack["num_" + cname] = np.zeros((y_side, x_side))
+            rows,cols = np.where(~np.isnan(shear['north'][cname]))
+            np.add.at(shear_stack[cname], (rows, cols), shear['north'][cname][rows, cols])
+            np.add.at(shear_stack["num_"+cname], (rows, cols), shear['north']["num_"+cname][rows, cols])
+            
+            shear_flip = np.flip(shear['south'][cname],0)
+            shear_flip_num = shear['south']["num_"+cname]
+            rows,cols = np.where(~np.isnan(shear_flip))
+            np.add.at(shear_stack[cname], (rows, cols), shear_flip[rows, cols])
+            np.add.at(shear_stack["num_"+cname], (rows, cols), shear_flip_num[rows, cols])
+        
+        if block:
+            for cname in list(shear_stack):
+                shear_stack[cname] = shear_stack[cname][2:-2, 2:-2]
+            return shear_stack
+        else:
+            g1, g2  = _compute_g1_g2_per_ccd(shear_stack)
+            mean_g1 = np.rot90(g1, 3)
+            mean_g2 = np.rot90(g2, 3)
+            return mean_g1, mean_g2
 
 def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None, per_ccd=False):
 
@@ -295,8 +341,8 @@ def plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=False, jc=None, per
     else:
         mean_g1, mean_g2 = compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=True)
     # Trimming around the edges. 
-    mean_g1 = mean_g1[1:-1,1:-1]
-    mean_g2 = mean_g2[1:-1,1:-1]
+    mean_g1 = mean_g1[2:-2,2:-2]
+    mean_g2 = mean_g2[2:-2,2:-2]
  
     x_data = []
     y_data = []
@@ -523,7 +569,7 @@ def plot_shear_vaiations_ccd(x_side, y_side, ccdres):
 def main(argv):
 
     individual_tiles = False
-    make_per_ccd_files = True
+    make_per_ccd_files = False
     work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
     work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
     work = '/global/cscratch1/sd/myamamot'
@@ -602,93 +648,72 @@ def main(argv):
             print(list(ccdres_all))
             with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
                 pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
-        sys.exit()
-        # else:
-        #     with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
-        #         ccdres_all = pickle.load(raw)
-            # plot for all the CCDs. 
-            # print('Plotting...')
-            # plot_shear_vaiations_ccd(x_side, y_side, ccdres_all) ->  now coded-up in jupyter-notebook. 
-            # plot_stacked_ccd_north_south(x_side, y_side, ccdres_all) ->  now coded-up in jupyter-notebook. 
+        else:
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
+                ccdres_all = pickle.load(raw) 
+        
+        # Compute the mean shear for x-stack and y-stack.
+        bin_num = 20
+        d_shear = compute_shear_stack_CCDs(ccdres_all, x_side, y_side, stack_north_south=True, block=True)
+        mean_row_g1, mean_row_g2 = comb_rows(d_shear, bin_num)
+        mean_col_g1, mean_col_g2 = comb_cols(d_shear, bin_num)
 
         # Compute jackknife error estimate. 
         print('Computing jackknife error')
         jk_sample = len(tilenames)
-        xbin = 25
-        ybin = 12
 
-        # Set the mpi size to be 63 so that 1 CCD per task, save rank=0 for all the processing. 
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        rank = comm.Get_rank()
-        size = comm.Get_size()
-        print('mpi', rank, size)
-
-        all_ccd = {c:{'jk_x_g1':[], 'jk_y_g1':[], 'jk_x_g2':[], 'jk_y_g2':[]} for c in range(1,num_ccd+1)}
-        all_ccd.pop(31)
-        all_ccd.pop(61)
-        for c in range(1,3): #num_ccd+1)):
-            if c != rank:
-                continue
-            if c in [31, 61]:
+        all_ccd_shear = {}
+        cnames = ['g1', 'g2', 'g1p', 'g1m', 'g2p', 'g2m']
+        for c in tqdm(range(1, num_ccd+1)):
+            if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle'):
                 continue
 
-            jk_x_g1 = np.zeros((jk_sample, xbin))
-            jk_y_g1 = np.zeros((jk_sample, ybin))
-            jk_x_g2 = np.zeros((jk_sample, xbin))
-            jk_y_g2 = np.zeros((jk_sample, ybin))
-
-            with open('/global/cscratch1/sd/myamamot/metadetect/2000tiles_test1/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'rb') as handle:
+            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'rb') as handle:
                 ccdres = pickle.load(handle)
 
-            for j,t in enumerate(list(ccdres)):
-                if j % 100 == 0:
-                    print(j, rank)
-                res = ccdres.copy()
-                res.pop(t)
-                ccdres_jk = {}
-                ccdres_jk = _accum_shear_from_file(ccdres_jk, res, x_side, y_side, per_ccd=True)
-            
-                x_data, y_data = plot_stacked_xy(x_side, y_side, ccdres_jk, xbin, ybin, plot=False, per_ccd=True)
-                jk_x_g1[j, :] = x_data[0] 
-                jk_y_g1[j, :] = y_data[0]
-                jk_x_g2[j, :] = x_data[1]
-                jk_y_g2[j, :] = y_data[1]
-                
-            all_ccd[c]['jk_x_g1'].append(jk_x_g1)
-            all_ccd[c]['jk_y_g1'].append(jk_y_g1)
-            all_ccd[c]['jk_x_g2'].append(jk_x_g2)
-            all_ccd[c]['jk_y_g2'].append(jk_y_g2)
-        print('before comm barrier', rank)
-        comm.Barrier()
+            # Accumulate all the shears first. 
+            ccdres_jk = {}
+            ccdres_jk = _accum_shear_from_file(ccdres_jk, ccdres, x_side, y_side, per_ccd=True)
+            for t in list(ccdres):
+                res_jk = ccdres_jk.copy()
+                res_jk = _accum_shear_for_jk(res_jk, ccdres[t])
+                if t not in list(all_ccd_shear):
+                    all_ccd_shear[t] = {}
+                    for cname in cnames:
+                        all_ccd_shear[t][cname] = np.zeros((y_side, x_side))
+                        all_ccd_shear[t]["num_" + cname] = np.zeros((y_side, x_side))
+                        rows,cols = np.where(~np.isnan(res_jk[cname]))
+                        np.add.at(all_ccd_shear[t][cname], (rows, cols), res_jk[cname][rows, cols])
+                        np.add.at(all_ccd_shear[t]["num_"+cname], (rows, cols), res_jk["num_"+cname][rows, cols])
+                else:
+                    for cname in cnames:
+                        rows,cols = np.where(~np.isnan(res_jk[cname]))
+                        np.add.at(all_ccd_shear[t][cname], (rows, cols), res_jk[cname][rows, cols])
+                        np.add.at(all_ccd_shear[t]["num_"+cname], (rows, cols), res_jk["num_"+cname][rows, cols])
+        
+        jk_x_g1 = np.zeros((jk_sample, bin_num))
+        jk_y_g1 = np.zeros((jk_sample, bin_num))
+        jk_x_g2 = np.zeros((jk_sample, bin_num))
+        jk_y_g2 = np.zeros((jk_sample, bin_num))
+        unused_tile = 0
+        for j,t in tqdm(enumerate(tilenames)):
+            if t not in list(all_ccd_shear):
+                unused_tile += 1 
+            mean_row_g1_jk, mean_row_g2_jk = comb_rows(all_ccd_shear[t], bin_num)
+            mean_col_g1_jk, mean_col_g2_jk = comb_cols(all_ccd_shear[t], bin_num)
 
-        if rank != 0:
-            if rank not in [31,61]:
-                comm.send(all_ccd, dest=0)
-        print('info sent', rank)
-        comm.Barrier()
-        if rank == 0:
-            print('receiving info', rank)
-            for r in range(1, size):
-                if r not in [31,61]:
-                    tmp_res = comm.recv(source=r)
-                    all_ccd[r]['jk_x_g1'] = tmp_res[r]['jk_x_g1']
-                    all_ccd[r]['jk_y_g1'] = tmp_res[r]['jk_y_g1']
-                    all_ccd[r]['jk_x_g2'] = tmp_res[r]['jk_x_g2']
-                    all_ccd[r]['jk_y_g2'] = tmp_res[r]['jk_y_g2']
-        print(all_ccd)
-        sys.exit()
+            jk_x_g1[j, :] = mean_row_g1_jk
+            jk_y_g1[j, :] = mean_col_g1_jk
+            jk_x_g2[j, :] = mean_row_g2_jk
+            jk_y_g2[j, :] = mean_col_g2_jk
+
         jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
         print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
-        jc = [jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2]
-        jk_dict = {'jc_x_g1': jc_x_g1, 'jc_y_g1': jc_y_g1, 'jc_x_g2': jc_x_g2, 'jc_y_g2': jc_y_g2}
-        with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/jk_cov_v2.pickle', 'wb') as handle:
+
+        jk_dict = {'x_g1': mean_row_g1, 'y_g1': mean_col_g1, 'x_g2': mean_row_g2, 'mean_col_g2': mean_col_g2, 
+                    'jc_x_g1': jc_x_g1, 'jc_y_g1': jc_y_g1, 'jc_x_g2': jc_x_g2, 'jc_y_g2': jc_y_g2}
+        with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mean_shear_jk_cov_v2.pickle', 'wb') as handle:
             pickle.dump(jk_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        sys.exit()
-        
-        with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as handle:
-            ccdres = pickle.load(handle)
-        # plot_stacked_xy(x_side, y_side, ccdres, xbin, ybin, plot=True, jc=jc)
 
     
 if __name__ == "__main__":
