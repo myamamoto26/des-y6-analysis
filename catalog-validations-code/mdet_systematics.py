@@ -245,10 +245,10 @@ def shear_stellar_contamination():
     
     cat2_files = glob.glob('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
     cat2_list = []
-    for cat2_file in cat2_files:
+    for cat2_file in tqdm(cat2_files):
         d_mdet = fio.read(cat2_file)
-        d_mdet['mdet_g_1'] = d_mdet['mdet_g_1']/R11
-        d_mdet['mdet_g_2'] = d_mdet['mdet_g_2']/R22
+        d_mdet['mdet_g_1'] = d_mdet['mdet_g_1']/float(R11)
+        d_mdet['mdet_g_2'] = d_mdet['mdet_g_2']/float(R22)
         cat = treecorr.Catalog(ra=d_mdet['ra'], dec_col=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=d_mdet['mdet_g_1'], g2=d_mdet['mdet_g_2'], patch_centers=cat1_bright.patch_centers)
         cat2_list.append(cat)
 
