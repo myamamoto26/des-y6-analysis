@@ -249,7 +249,7 @@ def shear_stellar_contamination():
         d_mdet = fio.read(cat2_file)
         d_mdet['mdet_g_1'] = d_mdet['mdet_g_1']/float(R11)
         d_mdet['mdet_g_2'] = d_mdet['mdet_g_2']/float(R22)
-        cat = treecorr.Catalog(ra=d_mdet['ra'], dec_col=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=d_mdet['mdet_g_1'], g2=d_mdet['mdet_g_2'], patch_centers=cat1_bright.patch_centers)
+        cat = treecorr.Catalog(ra=d_mdet['ra'], dec=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=d_mdet['mdet_g_1'], g2=d_mdet['mdet_g_2'], patch_centers=cat1_bright.patch_centers)
         cat2_list.append(cat)
 
     for ii,cat1 in enumerate([cat1_bright, cat1_faint]):
