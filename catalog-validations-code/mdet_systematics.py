@@ -257,8 +257,8 @@ def shear_stellar_contamination():
         for i,cat2 in tqdm(enumerate(cat2_list)):
             ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
             cat2.unload()
-        np.save('/global/cscratch1/sd/myamamot/metadetect/stars_shear_cross_correlation_cov_'+ii+'.npy', ng.cov)
-        ng.write('/global/cscratch1/sd/myamamot/metadetect/stars_shear_cross_correlation_output_'+ii+'.fits')
+        np.save('/global/cscratch1/sd/myamamot/metadetect/stars_shear_cross_correlation_cov_'+str(ii)+'.npy', ng.cov)
+        ng.write('/global/cscratch1/sd/myamamot/metadetect/stars_shear_cross_correlation_output_'+str(ii)+'.fits')
 
 
 # Figure 14; Tangential shear around field center
