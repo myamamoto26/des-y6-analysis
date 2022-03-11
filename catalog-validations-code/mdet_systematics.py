@@ -160,6 +160,7 @@ def inverse_variance_weight(steps, fs):
 
         return new_response
 
+    save_data = True
     snmin=10
     snmax=300
     sizemin=0.5
@@ -183,6 +184,7 @@ def inverse_variance_weight(steps, fs):
     for fname in tqdm(filenames):
         d = fio.read(os.path.join(work_mdet_cuts, fname))
         total_count += len(d[d['mdet_step']=='noshear'])
+        d = d[d['mdet_T_ratio'] < 3.0]
         
         mask_noshear = (d['mdet_step'] == 'noshear')
         mastercat_noshear_snr = d[mask_noshear]['mdet_s2n']
@@ -206,8 +208,9 @@ def inverse_variance_weight(steps, fs):
     new_shearweight = (new_response/new_meanes)**2
 
     res_measurement = {'xedges': xedges, 'yedges': yedges, 'count': count_all, 'meanes': new_meanes, 'response': new_response, 'weight': new_shearweight}
-    with open('/global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v2.pickle', 'wb') as dat:
-        pickle.dump(res_measurement, dat, protocol=pickle.HIGHEST_PROTOCOL)
+    if save_data:
+        with open('/global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v2_Trcut.pickle', 'wb') as dat:
+            pickle.dump(res_measurement, dat, protocol=pickle.HIGHEST_PROTOCOL)
 
     print('total number count before cuts', total_count)
     print('total number count after cuts', np.sum(count_all))
