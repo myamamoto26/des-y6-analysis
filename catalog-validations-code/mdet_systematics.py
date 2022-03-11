@@ -440,8 +440,8 @@ def main(argv):
     f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
 
-    # inverse_variance_weight(20, fs)
-    shear_stellar_contamination()
+    inverse_variance_weight(20, fs)
+    # shear_stellar_contamination()
     # tangential_shear_field_center(fs)
 
 if __name__ == "__main__":
