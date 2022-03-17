@@ -446,6 +446,7 @@ def tangential_shear_field_center(fs):
             for i,cat2_f in enumerate(cat2_files):
                 d = fio.read(cat2_f)
                 mask_noshear = (d['mdet_step'] == 'noshear')
+                print(R11, R22)
                 g1 = d[mask_noshear]['mdet_g_1'] / R11
                 g2 = d[mask_noshear]['mdet_g_2'] / R22
                 cat2 = treecorr.Catalog(ra=d['ra'], dec=d['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=cat1.patch_centers)
