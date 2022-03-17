@@ -387,6 +387,7 @@ def tangential_shear_field_center(fs):
         
     # Compute the shear response over all the tiles. 
     save_objects = False
+    random_only = True
     mdet_filenames = [fname.split('/')[-1] for fname in fs]
     tilenames = [d.split('_')[0] for d in mdet_filenames]
     if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt'):
@@ -421,33 +422,33 @@ def tangential_shear_field_center(fs):
                     var_method = 'jackknife',
                     output_dots = False,
                     )
-        
-        # cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
-        # cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=20)
-        # cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_*.fits')
-        # cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
+        if not random_only:
+            cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
+            cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=20)
+            cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_*.fits')
+            cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
 
-        # ng = treecorr.NGCorrelation(bin_config, verbose=2)
-        # for i,cat2 in tqdm(enumerate(cat2_list)):
-        #     ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
-        #     cat2.unload()
-        
-        # np.save('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_cov.npy', ng.cov)
-        # ng.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_output.fits')
+            ng = treecorr.NGCorrelation(bin_config, verbose=2)
+            for i,cat2 in tqdm(enumerate(cat2_list)):
+                ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
+                cat2.unload()
+            
+            np.save('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_cov.npy', ng.cov)
+            ng.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_output.fits')
+        else:
+            # random point subtraction. 
+            cat1_file = '/global/homes/m/myamamot/DES/des-y6-analysis/y6-combined-hsmap_random.fits'
+            cat1 = treecorr.Catalog(cat1_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', npatch=20)
+            cat2_files = glob.glob('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
+            cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
 
-        # random point subtraction. 
-        cat1_file = '/global/homes/m/myamamot/DES/des-y6-analysis/y6-combined-hsmap_random.fits'
-        cat1 = treecorr.Catalog(cat1_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', npatch=20)
-        cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_*.fits')
-        cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
-
-        ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
-        for i,cat2 in tqdm(enumerate(cat2_list)):
-            ng_rand.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
-            cat2.unload()
-        
-        np.save('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_rand_cov.npy', ng_rand.cov)
-        ng_rand.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_rand_output.fits')
+            ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
+            for i,cat2 in tqdm(enumerate(cat2_list)):
+                ng_rand.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
+                cat2.unload()
+            
+            np.save('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_rand_cov.npy', ng_rand.cov)
+            ng_rand.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_rand_output.fits')
 
 def main(argv):
 
