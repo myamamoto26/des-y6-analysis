@@ -440,11 +440,14 @@ def tangential_shear_field_center(fs):
             cat1_file = '/global/homes/m/myamamot/DES/des-y6-analysis/y6-combined-hsmap_random.fits'
             cat1 = treecorr.Catalog(cat1_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', npatch=20)
             cat2_files = glob.glob('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
-            cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', g1_col='mdet_g_1', g2_col='mdet_g_2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
-
+            # cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', g1_col='mdet_g_1', g2_col='mdet_g_2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
+            cat2_list = []
             ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
-            for i,cat2 in tqdm(enumerate(cat2_list)):
-                ng_rand.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
+            for i,cat2_f in cat2_files:
+                d = fio.read(cat2_f)
+                cat2 = treecorr.Catalog(ra=d['ra'], dec=d['dec'], ra_units='deg', dec_units='deg', g1=d['mdet_g_1']/R11, g2=d['mdet_g_2']/R22, patch_centers=cat1.patch_centers))
+            
+                ng_rand.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
                 cat2.unload()
             
             np.save('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_rand_cov.npy', ng_rand.cov)
