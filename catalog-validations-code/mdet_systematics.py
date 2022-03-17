@@ -440,7 +440,7 @@ def tangential_shear_field_center(fs):
             cat1_file = '/global/homes/m/myamamot/DES/des-y6-analysis/y6-combined-hsmap_random.fits'
             cat1 = treecorr.Catalog(cat1_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', npatch=20)
             cat2_files = glob.glob('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
-            cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
+            cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', g1_col='mdet_g_1', g2_col='mdet_g_2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
 
             ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
             for i,cat2 in tqdm(enumerate(cat2_list)):
