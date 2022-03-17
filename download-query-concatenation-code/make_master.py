@@ -40,6 +40,38 @@ PATH = "/data/des70.a/data/masaya/"
 #     fio.write('coadd_master_v1.fits', master_coadd)
 #     fio.write('piff_model_master_v1.fits', master_piff_model)
 #     fio.write('piff_star_master_v1.fits', master_piff_star)
+
+# Combine PIFF tables.
+def combine_piff(bands, work_piff, tilenames, all=False):
+    
+    if not all:
+        for band in bands:
+            model = []
+            for t in tqdm(tilenames):
+                if not os.path.exists(os.path.join(work_piff, band+'_band/'+t+'_piff_model.fits')):
+                    continue
+                model.append(fio.read(os.path.join(work_piff, band+'_band/'+t+'_piff_model.fits')))
+            
+            fio.write(os.path.join(work_piff, band+'_band/master_'+band+'_piff_models.fits'), np.concatenate(model, axis=0))
+    else:
+        r = fio.read(os.path.join(work_piff, 'r_band/master_r_piff_models.fits'))
+        i = fio.read(os.path.join(work_piff, 'i_band/master_i_piff_models.fits'))
+        z = fio.read(os.path.join(work_piff, 'z_band/master_z_piff_models.fits'))
+        fio.write(os.path.join(work_piff, 'master_all_piff_models.fits'), np.concatenate([r, i, z], axis=0))
+
+# combine gold catalogs split by healpix ids.
+def combine_gold(test_region, work_gold):
+
+    import healpy as hp
+
+    gold_mag = []
+    # npix = hp.nside2npix(nside)
+    for i in range(test_region):
+        for split in range(5):
+            if os.path.exists(os.path.join(work_gold, 'gold_2_0_magnitudes_'+str(i)+'_'+str(split).zfill(6)+'.fits')):
+                gold_mag.append(fio.read(os.path.join(work_gold, 'gold_2_0_magnitudes_'+str(i)+'_'+str(split).zfill(6)+'.fits')))
+    gold_all = np.concatenate(gold_mag, axis=0)
+    fio.write(os.path.join(work_gold, 'y6_gold_2_0_magnitudes.fits'), gold_all)
     
 def main(argv):
 
