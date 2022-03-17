@@ -443,9 +443,9 @@ def tangential_shear_field_center(fs):
             # cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', g1_col='mdet_g_1', g2_col='mdet_g_2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
             cat2_list = []
             ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
-            for i,cat2_f in cat2_files:
+            for i,cat2_f in enumerate(cat2_files):
                 d = fio.read(cat2_f)
-                cat2 = treecorr.Catalog(ra=d['ra'], dec=d['dec'], ra_units='deg', dec_units='deg', g1=d['mdet_g_1']/R11, g2=d['mdet_g_2']/R22, patch_centers=cat1.patch_centers))
+                cat2 = treecorr.Catalog(ra=d['ra'], dec=d['dec'], ra_units='deg', dec_units='deg', g1=d['mdet_g_1']/R11, g2=d['mdet_g_2']/R22, patch_centers=cat1.patch_centers)
             
                 ng_rand.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
                 cat2.unload()
