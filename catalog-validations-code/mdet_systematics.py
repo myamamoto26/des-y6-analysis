@@ -422,18 +422,18 @@ def tangential_shear_field_center(fs):
                     output_dots = False,
                     )
         
-        cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
-        cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=20)
-        cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_*.fits')
-        cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
+        # cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
+        # cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=20)
+        # cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/field_centers/mdet_shear_field_centers_*.fits')
+        # cat2_list = [treecorr.Catalog(cat2_file, ra_col='ra_obj', dec_col='dec_obj', ra_units='deg', dec_units='deg', g1_col='g1', g2_col='g2', patch_centers=cat1.patch_centers) for cat2_file in cat2_files]
 
-        ng = treecorr.NGCorrelation(bin_config, verbose=2)
-        for i,cat2 in tqdm(enumerate(cat2_list)):
-            ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
-            cat2.unload()
+        # ng = treecorr.NGCorrelation(bin_config, verbose=2)
+        # for i,cat2 in tqdm(enumerate(cat2_list)):
+        #     ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_list)-1))
+        #     cat2.unload()
         
-        np.save('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_cov.npy', ng.cov)
-        ng.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_output.fits')
+        # np.save('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_cov.npy', ng.cov)
+        # ng.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_output.fits')
 
         # random point subtraction. 
         cat1_file = '/global/homes/m/myamamot/DES/des-y6-analysis/y6-combined-hsmap_random.fits'
