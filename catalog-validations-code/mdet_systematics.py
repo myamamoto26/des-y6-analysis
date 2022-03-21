@@ -452,7 +452,8 @@ def tangential_shear_field_center(fs):
             cat2.unload()
         
         ng_final = ng.calculateXi(rg=ng_rand)
-        np.save('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_final_cov.npy', ng_final.cov)
+        print(ng_final)
+        # np.save('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_final_cov.npy', ng_final.cov)
         ng_final.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_final_output.fits')
 
 def main(argv):
