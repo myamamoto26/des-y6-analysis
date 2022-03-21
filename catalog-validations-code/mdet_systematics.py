@@ -437,8 +437,8 @@ def tangential_shear_field_center(fs):
             cat2.unload()
 
         # random point subtraction. 
-        cat1_file = '/global/homes/m/myamamot/DES/des-y6-analysis/y6-combined-hsmap_random.fits'
-        cat1 = treecorr.Catalog(cat1_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', patch_centers=cat1.patch_centers)
+        cat1r_file = '/global/homes/m/myamamot/DES/des-y6-analysis/y6-combined-hsmap_random.fits'
+        cat1r = treecorr.Catalog(cat1r_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', patch_centers=cat1.patch_centers)
         cat2_files = glob.glob('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
         ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
         for i,cat2_f in enumerate(cat2_files):
@@ -448,7 +448,7 @@ def tangential_shear_field_center(fs):
             g2 = d[mask_noshear]['mdet_g_2']/np.float64(R22)
             cat2 = treecorr.Catalog(ra=d[mask_noshear]['ra'], dec=d[mask_noshear]['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=cat1.patch_centers)
         
-            ng_rand.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
+            ng_rand.process(cat1r, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
             cat2.unload()
         
         ng_final = ng.calculateXi(rg=ng_rand)
