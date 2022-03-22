@@ -459,7 +459,7 @@ def tangential_shear_field_center(fs):
         ng_final['raw_xi'] = ng.raw_xi
         ng_final['raw_varxi'] = ng.raw_varxi
         
-        ng_final.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_final_output.fits')
+        fio.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_final_output.fits', ng_final)
 
 def main(argv):
 
