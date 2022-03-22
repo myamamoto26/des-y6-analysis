@@ -4,6 +4,7 @@
 #  y6 shear catalog tests (This does not include PSF diagnostics)  #
 ####################################################################
 
+from nis import match
 import os, sys
 from tqdm import tqdm
 import numpy as np
@@ -339,7 +340,7 @@ def tangential_shear_field_center(fs):
         mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
         tilenames = [d.split('_')[0] for d in mdet_filenames]
 
-        coadd_info = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/pizza-cutter-coadds-info.fits')
+        coadd_info = fio.read('/global/project/projectdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info.fits')
         coadd_files = {t: [] for t in tilenames}
         bands = {t: [] for t in tilenames}
         for coadd in coadd_info:
@@ -353,7 +354,7 @@ def tangential_shear_field_center(fs):
         exp_num = []
         for t in tqdm(tilenames):
             for pizza_f in coadd_files[t]:
-                coadd = fio.FITS(os.path.join('/global/cscratch1/sd/myamamot/pizza-slice/griz', pizza_f))
+                coadd = fio.FITS(os.path.join('/global/project/projectdirs/des/myamamot/pizza-slice/griz', pizza_f))
                 try:
                     epochs = coadd['epochs_info'].read()
                     image_info = coadd['image_info'].read()
@@ -461,14 +462,52 @@ def tangential_shear_field_center(fs):
         
         fio.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_final_output.fits', ng_final)
 
+def mean_shear_tomoz(gold_f, fs):
+
+    import smatch
+    gold = fio.read(gold_f)
+
+    nside = 4096
+    maxmatch = 1
+    radius = 0.263/3600 # degrees
+
+    tomobin = {'bin1': [], 'bin2': [], 'bin3': [], 'bin4': []}
+    # tomobin_shear = {'g': np.zeros(5,2), 'g_count': np.zeros(5,2)}
+    psfe = {'bin1': {'e1': [], 'e2': []}, 'bin2': {'e1': [], 'e2': []}, 'bin3': {'e1': [], 'e2': []}, 'bin4': {'e1': [], 'e2': []}}
+    shear = {'bin1': {'e1': [], 'e2': []}, 'bin2': {'e1': [], 'e2': []}, 'bin3': {'e1': [], 'e2': []}, 'bin4': {'e1': [], 'e2': []}}
+    for fname in tqdm(fs):
+        d = fio.read(os.path.join(work_mdet_cuts, fname))
+        mask_noshear = d['mdet_step'] == 'noshear'
+        matches = smatch.match(d[mask_noshear]['ra'], d[mask_noshear]['dec'], radius, gold['RA'], gold['DEC'], nside=nside, maxmatch=maxmatch)
+
+        zs = gold[matches['i2']]['DNF_Z']
+        d_match = d[mask_noshear][matches['i1']]
+        for i,b in enumerate(['bin1', 'bin2', 'bin3', 'bin4']):
+            msk_bin = ((zs > tomobin[b][0]) & (zs < tomobin[b][1]))
+            psfe1 = d_match[msk_bin]['psfrec_g_1']
+            psfe2 = d_match[msk_bin]['psfrec_g_2']
+            psfe[b]['e1'].append(psfe1)
+            psfe[b]['e2'].append(psfe2)
+            e1 = d_match[msk_bin]['mdet_g_1']
+            e2 = d_match[msk_bin]['mdet_g_2']
+            shear[b]['e1'].append(e1)
+            shear[b]['e2'].append(e2)
+            # np.add.at(tomobin_shear['g'], (i, 0), np.sum(d_match[msk_bin]['mdet_g_1']))
+            # np.add.at(tomobin_shear['g'], (i, 1), np.sum(d_match[msk_bin]['mdet_g_2']))
+            # np.add.at(tomobin_shear['g_count'], (i, 0), len(d_match[msk_bin]['mdet_g_1']))
+            # np.add.at(tomobin_shear['g_count'], (i, 1), len(d_match[msk_bin]['mdet_g_2']))
+    print(shear)
+
 def main(argv):
 
+    gold_f = '/global/project/projectdirs/des/myamamot/y6_gold_dnf_z.fits'
     f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
 
     # inverse_variance_weight(20, fs)
     # shear_stellar_contamination()
-    tangential_shear_field_center(fs)
+    # tangential_shear_field_center(fs)
+    mean_shear_tomoz(gold_f, fs)
 
 if __name__ == "__main__":
     main(sys.argv)
