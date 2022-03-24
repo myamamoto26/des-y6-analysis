@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 import emcee
 import pickle
 import glob
-from rho_stats import measure_rho, measure_tao, write_stats, write_stats_tao, plot_overall_rho, plot_overall_tao
+from rho_stats import measure_rho, measure_tau, write_stats, write_stats_tau, plot_overall_rho, plot_overall_tao
 
 
 def get_coaddtile_geom(query, out_fname):
@@ -254,8 +254,6 @@ def main(argv):
     fs = f.read().split('\n')[:-1]
     mdet_filenames = [fname.split('/')[-1] for fname in fs]
     tilenames = [d.split('_')[0] for d in mdet_filenames]
-    piff_stars = None
-    gal_cat = None
 
     # rho-stats -> Just need to pass the piff catalog.
     good_piffs_table = fio.read('/global/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v2_hsm_allres_collated.fits')
@@ -267,7 +265,15 @@ def main(argv):
     stats = measure_rho(good_piffs_table, max_sep, max_mag, subtract_mean=True, do_rho0=True)
     stat_file = os.path.join('/global/cscratch1/sd/myamamot/metadetect', "rho_%s_%s.json"%(name, tag))
     write_stats(stat_file,*stats)
-    plot_overall_rho('/global/cscratch1/sd/myamamot/metadetect', name)
+    # plot_overall_rho('/global/cscratch1/sd/myamamot/metadetect', name)
+
+    # tau-stats?
+    name = 'all' #'y3_cuts'
+    tag = 'griz'
+    stats = measure_tau(good_piffs_table, mdet_filenames, max_sep, max_mag, subtract_mean=True)
+    stat_file = os.path.join('/global/cscratch1/sd/myamamot/metadetect', "tau_%s_%s.json"%(name, tag))
+    write_stats_tau(stat_file,*stats)
+
 
     sys.exit()
     # tau-stats -> Need to grab expnum and ccdnum to match the mdet objects and piff models. 
@@ -315,15 +321,6 @@ def main(argv):
             else:
                 piff_stars_ = make_stars_catalog(nstars, piff_stars_dict, gal_star_columns)
                 piff_stars = np.concatenate([piff_stars, piff_stars_], axis=0)
-
-
-    else:
-        print('Computing rho-stats...')
-        max_sep = 250
-        max_mag = 0
-        name = 'all_newcuts' #'y3_cuts'
-        tag = ''.join(band)
-        plot_overall_rho(work, name)
     
 
 if __name__ == "__main__":
