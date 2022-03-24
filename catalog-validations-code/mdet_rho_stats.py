@@ -276,7 +276,7 @@ def main(argv):
     max_mag = 0
     name = 'all' #'y3_cuts'
     tag = 'griz'
-    stats = measure_tau(good_piffs_table, mdet_filenames, max_sep, max_mag, subtract_mean=True)
+    stats = measure_tau(good_piffs_table, max_sep, max_mag, subtract_mean=True)
     stat_file = os.path.join('/global/cscratch1/sd/myamamot/metadetect', "tau_%s_%s.json"%(name, tag))
     write_stats_tau(stat_file,*stats)
 
