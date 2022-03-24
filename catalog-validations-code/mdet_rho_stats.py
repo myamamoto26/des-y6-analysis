@@ -254,10 +254,10 @@ def main(argv):
     fs = f.read().split('\n')[:-1]
     mdet_filenames = [fname.split('/')[-1] for fname in fs]
     tilenames = [d.split('_')[0] for d in mdet_filenames]
+    good_piffs_table = fio.read('/global/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v2_hsm_allres_collated.fits')
 
     # rho-stats -> Just need to pass the piff catalog.
     if not os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect', 'rho_all_griz.json')): 
-        good_piffs_table = fio.read('/global/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v2_hsm_allres_collated.fits')
         print('Computing rho-stats...')
         max_sep = 250
         max_mag = 0
@@ -271,6 +271,7 @@ def main(argv):
         print('Skipping rho-stats. ')
 
     # tau-stats?
+    print('Computing tau-stats...')
     name = 'all' #'y3_cuts'
     tag = 'griz'
     stats = measure_tau(good_piffs_table, mdet_filenames, max_sep, max_mag, subtract_mean=True)
