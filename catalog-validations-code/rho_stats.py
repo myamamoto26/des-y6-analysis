@@ -279,8 +279,8 @@ def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='pif
         qcat = treecorr.Catalog(x=x, y=y, x_units='arcsec', y_units='arcsec', g1=q1, g2=q2)
         wcat = treecorr.Catalog(x=x, y=y, x_units='arcsec', y_units='arcsec', g1=w1, g2=w2, k=dt)
     else:
-        ra = piff_data['ra']
-        dec = piff_data['dec']
+        ra = piff_data['RA']
+        dec = piff_data['DEC']
         if max_mag > 0:
             ra = ra[m<max_mag]
             dec = dec[m<max_mag]
