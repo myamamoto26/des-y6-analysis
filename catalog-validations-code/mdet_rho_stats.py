@@ -264,7 +264,7 @@ def main(argv):
     max_mag = 0
     name = 'all' #'y3_cuts'
     tag = 'griz'
-    stats = measure_rho(piff_stars, max_sep, max_mag, subtract_mean=True, do_rho0=True)
+    stats = measure_rho(good_piffs_table, max_sep, max_mag, subtract_mean=True, do_rho0=True)
     stat_file = os.path.join('/global/cscratch1/sd/myamamot/metadetect', "rho_%s_%s.json"%(name, tag))
     write_stats(stat_file,*stats)
     plot_overall_rho('/global/cscratch1/sd/myamamot/metadetect', name)
