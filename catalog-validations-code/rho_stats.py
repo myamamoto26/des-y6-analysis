@@ -2,6 +2,8 @@ import json
 import numpy as np
 import os
 from matplotlib import pyplot as plt
+import fitsio as fio
+import glob
 
 def flux2mag(flux, zero_pt=30):
     return zero_pt - 2.5 * np.log10(flux)
@@ -136,7 +138,7 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
     return results
 
 
-def write_stats(stat_file, rho1, rho2, rho3, rho4, rho5, rho0=None, tao0=None, tao2=None, tao5=None, corr_tt=None):
+def write_stats(stat_file, rho1, rho2, rho3, rho4, rho5, rho0=None, corr_tt=None):
 
     stats = [
         rho1.meanlogr.tolist(),
@@ -180,33 +182,6 @@ def write_stats(stat_file, rho1, rho2, rho3, rho4, rho5, rho0=None, tao0=None, t
             rho0.varxip.tolist(),
             rho0.varxim.tolist(),
         ])
-    if tao0 is not None:
-        stats.extend([
-            tao0.xip.tolist(),
-            tao0.xip_im.tolist(),
-            tao0.xim.tolist(),
-            tao0.xim_im.tolist(),
-            tao0.varxip.tolist(),
-            tao0.varxim.tolist(),
-        ])
-    if tao2 is not None:
-        stats.extend([
-            tao2.xip.tolist(),
-            tao2.xip_im.tolist(),
-            tao2.xim.tolist(),
-            tao2.xim_im.tolist(),
-            tao2.varxip.tolist(),
-            tao2.varxim.tolist(),
-        ])
-    if tao5 is not None:
-        stats.extend([
-            tao5.xip.tolist(),
-            tao5.xip_im.tolist(),
-            tao5.xim.tolist(),
-            tao5.xim_im.tolist(),
-            tao5.varxip.tolist(),
-            tao5.varxim.tolist(),
-        ])
     if corr_tt is not None:
         stats.extend([
             corr_tt.xi.tolist(),
@@ -218,23 +193,46 @@ def write_stats(stat_file, rho1, rho2, rho3, rho4, rho5, rho0=None, tao0=None, t
         json.dump([stats], fp)
     print('Done writing ',stat_file)
 
-def measure_tao(data1, data2, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
+def write_stats_tau(stat_file, tau0, tau2, tau5):
+
+    stats = [
+            tau0.xip.tolist(),
+            tau0.xip_im.tolist(),
+            tau0.xim.tolist(),
+            tau0.xim_im.tolist(),
+            tau0.varxip.tolist(),
+            tau0.varxim.tolist(),
+            tau2.xip.tolist(),
+            tau2.xip_im.tolist(),
+            tau2.xim.tolist(),
+            tau2.xim_im.tolist(),
+            tau2.varxip.tolist(),
+            tau2.varxim.tolist(),
+            tau5.xip.tolist(),
+            tau5.xip_im.tolist(),
+            tau5.xim.tolist(),
+            tau5.xim_im.tolist(),
+            tau5.varxip.tolist(),
+            tau5.varxim.tolist(),
+        ]
+    print('stat_file = ',stat_file)
+    with open(stat_file,'w') as fp:
+        json.dump([stats], fp)
+    print('Done writing ',stat_file)
+
+def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
                 alt_tt=False, opt=None, subtract_mean=False):
-    """Compute the rho statistics
+    """Compute the tau statistics
     """
     import treecorr
 
-    e1 = data1['obs_e1']
-    e2 = data1['obs_e2']
-    T = data1['obs_T']
-    p_e1 = data1[prefix+'_e1']
-    p_e2 = data1[prefix+'_e2']
-    p_T = data1[prefix+'_T']
-    m = data1['mag']
-
-    g_e1 = data2['gal_e1']
-    g_e2 = data2['gal_e2']
-    g_T = data2['gal_T']
+    e1 = piff_data['G1_DATA']
+    e2 = piff_data['G2_DATA']
+    T = piff_data['T_DATA']
+    p_e1 = piff_data['G1_MODEL']
+    p_e2 = piff_data['G2_MODEL']
+    p_T = piff_data['T_MODEL']
+    m = flux2mag(piff_data['FLUX'])
 
     if max_mag > 0:
         e1 = e1[m<max_mag]
@@ -243,9 +241,6 @@ def measure_tao(data1, data2, max_sep, max_mag, tag=None, use_xy=False, prefix='
         p_e1 = p_e1[m<max_mag]
         p_e2 = p_e2[m<max_mag]
         p_T = p_T[m<max_mag]
-        g_e1 = g_e1[m<max_mag]
-        g_e2 = g_e2[m<max_mag]
-        g_T = g_T[m<max_mag]
 
     q1 = e1-p_e1
     q2 = e2-p_e2
@@ -272,8 +267,8 @@ def measure_tao(data1, data2, max_sep, max_mag, tag=None, use_xy=False, prefix='
         dt -= np.mean(dt)
 
     if use_xy:
-        x = data1['fov_x']
-        y = data1['fov_y']
+        x = piff_data['X']
+        y = piff_data['Y']
         if max_mag > 0:
             x = x[m<max_mag]
             y = y[m<max_mag]
@@ -284,10 +279,8 @@ def measure_tao(data1, data2, max_sep, max_mag, tag=None, use_xy=False, prefix='
         qcat = treecorr.Catalog(x=x, y=y, x_units='arcsec', y_units='arcsec', g1=q1, g2=q2)
         wcat = treecorr.Catalog(x=x, y=y, x_units='arcsec', y_units='arcsec', g1=w1, g2=w2, k=dt)
     else:
-        ra = data1['ra']
-        dec = data1['dec']
-        ra_gal = data2['ra']
-        dec_gal = data2['dec']
+        ra = piff_data['ra']
+        dec = piff_data['dec']
         if max_mag > 0:
             ra = ra[m<max_mag]
             dec = dec[m<max_mag]
@@ -297,14 +290,12 @@ def measure_tao(data1, data2, max_sep, max_mag, tag=None, use_xy=False, prefix='
         ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2)
         qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2)
         wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt)
-        gcat = treecorr.Catalog(ra=ra_gal, dec=dec_gal, ra_units='deg', dec_units='deg', g1=g_e1, g2=g_e2)
 
     ecat.name = 'ecat'
     qcat.name = 'qcat'
     wcat.name = 'wcat'
-    gcat.name = 'gcat'
     if tag is not None:
-        for cat in [ ecat, qcat, wcat, gcat ]:
+        for cat in [ ecat, qcat, wcat]:
             cat.name = tag + ":"  + cat.name
 
     bin_config = dict(
@@ -327,24 +318,23 @@ def measure_tao(data1, data2, max_sep, max_mag, tag=None, use_xy=False, prefix='
         bin_config['max_sep'] = 2000.
         bin_config['bin_size'] = 0.01
 
-
-    pairs = [ (gcat, ecat),
-              (gcat, qcat),
-              (gcat, wcat) ]
-    
+    f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
+    R11, R22 = f_response.read().split('\n')
+    cat2_files = glob.glob('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
     results = []
-    for (cat1, cat2) in pairs:
-        print('Doing correlation of %s vs %s'%(cat1.name, cat2.name))
-
-        rho = treecorr.GGCorrelation(bin_config, verbose=2)
-
-        if cat1 is cat2:
-            rho.process(cat1)
-        else:
-            rho.process(cat1, cat2)
-        print('mean xi+ = ',rho.xip.mean())
-        print('mean xi- = ',rho.xim.mean())
-        results.append(rho)
+    for cat1 in [ecat, qcat, wcat]:
+        print('Doing correlation of %s vs %s'%(cat1.name, 'shear'))
+        gg = treecorr.GGCorrelation(bin_config, verbose=2)
+        for i,cat2_f in enumerate(cat2_files):
+            d = fio.read(cat2_f)
+            mask_noshear = (d['mdet_step'] == 'noshear')
+            g1 = d[mask_noshear]['mdet_g_1']/np.float64(R11)
+            g2 = d[mask_noshear]['mdet_g_2']/np.float64(R22)
+            cat2 = treecorr.Catalog(ra=d[mask_noshear]['ra'], dec=d[mask_noshear]['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2)
+        
+            gg.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
+            cat2.unload()
+        results.append(gg)
 
     if alt_tt:
         print('Doing alt correlation of %s vs %s'%(dtcat.name, dtcat.name))
@@ -354,36 +344,6 @@ def measure_tao(data1, data2, max_sep, max_mag, tag=None, use_xy=False, prefix='
         results.append(rho)
 
     return results
-
-def write_stats_tao(stat_file, tao0, tao2, tao5):
-
-    stats = [
-        tao0.meanlogr.tolist(),
-        tao0.xip.tolist(),
-        tao0.xip_im.tolist(),
-        tao0.xim.tolist(),
-        tao0.xim_im.tolist(),
-        tao0.varxip.tolist(),
-        tao0.varxim.tolist(),
-        tao2.xip.tolist(),
-        tao2.xip_im.tolist(),
-        tao2.xim.tolist(),
-        tao2.xim_im.tolist(),
-        tao2.varxip.tolist(),
-        tao2.varxim.tolist(),
-        tao5.xip.tolist(),
-        tao5.xip_im.tolist(),
-        tao5.xim.tolist(),
-        tao5.xim_im.tolist(),
-        tao5.varxip.tolist(),
-        tao5.varxim.tolist(),
-    ]
-    
-    #print('stats = ',stats)
-    print('stat_file = ',stat_file)
-    with open(stat_file,'w') as fp:
-        json.dump([stats], fp)
-    print('Done writing ',stat_file)
 
 def pretty_rho1(meanr, rho, sig, sqrtn, rho3=None, sig3=None, rho4=None, sig4=None, gband=False):
     import matplotlib.patches as mp
