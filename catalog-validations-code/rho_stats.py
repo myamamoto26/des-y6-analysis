@@ -12,13 +12,13 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
     """
     import treecorr
 
-    e1 = data['g1_data']
-    e2 = data['g2_data']
-    T = data['t_data']
-    p_e1 = data['g1_model']
-    p_e2 = data['g2_model']
-    p_T = data['t_model']
-    m = flux2mag(data['flux'])
+    e1 = data['G1_DATA']
+    e2 = data['G2_DATA']
+    T = data['T_DATA']
+    p_e1 = data['G1_MODEL']
+    p_e2 = data['G2_MODEL']
+    p_T = data['T_MODEL']
+    m = flux2mag(data['FLUX'])
 
     if max_mag > 0:
         e1 = e1[m<max_mag]
@@ -53,8 +53,8 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         dt -= np.mean(dt)
 
     if use_xy:
-        x = data['x']
-        y = data['y']
+        x = data['X']
+        y = data['Y']
         if max_mag > 0:
             x = x[m<max_mag]
             y = y[m<max_mag]
@@ -65,8 +65,8 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         qcat = treecorr.Catalog(x=x, y=y, x_units='arcsec', y_units='arcsec', g1=q1, g2=q2)
         wcat = treecorr.Catalog(x=x, y=y, x_units='arcsec', y_units='arcsec', g1=w1, g2=w2, k=dt)
     else:
-        ra = data['ra']
-        dec = data['dec']
+        ra = data['RA']
+        dec = data['DEC']
         if max_mag > 0:
             ra = ra[m<max_mag]
             dec = dec[m<max_mag]
