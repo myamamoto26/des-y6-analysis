@@ -272,6 +272,8 @@ def main(argv):
 
     # tau-stats?
     print('Computing tau-stats...')
+    max_sep = 250
+    max_mag = 0
     name = 'all' #'y3_cuts'
     tag = 'griz'
     stats = measure_tau(good_piffs_table, mdet_filenames, max_sep, max_mag, subtract_mean=True)
