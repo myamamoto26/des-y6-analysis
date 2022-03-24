@@ -3,19 +3,22 @@ import numpy as np
 import os
 from matplotlib import pyplot as plt
 
+def flux2mag(flux, zero_pt=30):
+    return zero_pt - 2.5 * np.log10(flux)
+
 def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
                 alt_tt=False, opt=None, subtract_mean=False, do_rho0=False):
     """Compute the rho statistics
     """
     import treecorr
 
-    e1 = data['obs_e1']
-    e2 = data['obs_e2']
-    T = data['obs_T']
-    p_e1 = data[prefix+'_e1']
-    p_e2 = data[prefix+'_e2']
-    p_T = data[prefix+'_T']
-    m = data['mag']
+    e1 = data['g1_data']
+    e2 = data['g2_data']
+    T = data['t_data']
+    p_e1 = data['g1_model']
+    p_e2 = data['g2_model']
+    p_T = data['t_model']
+    m = flux2mag(data['flux'])
 
     if max_mag > 0:
         e1 = e1[m<max_mag]
@@ -50,8 +53,8 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         dt -= np.mean(dt)
 
     if use_xy:
-        x = data['fov_x']
-        y = data['fov_y']
+        x = data['x']
+        y = data['y']
         if max_mag > 0:
             x = x[m<max_mag]
             y = y[m<max_mag]
@@ -633,7 +636,7 @@ def plot_corr_tt(meanr, corr, sig):
 
 def plot_overall_rho(work, name):
 
-    base_keys = ['r', 'i', 'z']
+    base_keys = ['griz']
     keys = [ name+'_' + k for k in base_keys ]
 
     for key in keys:
