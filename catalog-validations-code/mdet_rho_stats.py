@@ -256,16 +256,19 @@ def main(argv):
     tilenames = [d.split('_')[0] for d in mdet_filenames]
 
     # rho-stats -> Just need to pass the piff catalog.
-    good_piffs_table = fio.read('/global/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v2_hsm_allres_collated.fits')
-    print('Computing rho-stats...')
-    max_sep = 250
-    max_mag = 0
-    name = 'all' #'y3_cuts'
-    tag = 'griz'
-    stats = measure_rho(good_piffs_table, max_sep, max_mag, subtract_mean=True, do_rho0=True)
-    stat_file = os.path.join('/global/cscratch1/sd/myamamot/metadetect', "rho_%s_%s.json"%(name, tag))
-    write_stats(stat_file,*stats)
-    # plot_overall_rho('/global/cscratch1/sd/myamamot/metadetect', name)
+    if not os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect', 'rho_all_griz.json')): 
+        good_piffs_table = fio.read('/global/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v2_hsm_allres_collated.fits')
+        print('Computing rho-stats...')
+        max_sep = 250
+        max_mag = 0
+        name = 'all' #'y3_cuts'
+        tag = 'griz'
+        stats = measure_rho(good_piffs_table, max_sep, max_mag, subtract_mean=True, do_rho0=True)
+        stat_file = os.path.join('/global/cscratch1/sd/myamamot/metadetect', "rho_%s_%s.json"%(name, tag))
+        write_stats(stat_file,*stats)
+        # plot_overall_rho('/global/cscratch1/sd/myamamot/metadetect', name)
+    else:
+        print('Skipping rho-stats. ')
 
     # tau-stats?
     name = 'all' #'y3_cuts'
