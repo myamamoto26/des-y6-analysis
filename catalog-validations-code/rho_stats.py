@@ -196,6 +196,7 @@ def write_stats(stat_file, rho1, rho2, rho3, rho4, rho5, rho0=None, corr_tt=None
 def write_stats_tau(stat_file, tau0, tau2, tau5):
 
     stats = [
+            tau0.meanlogr.tolist(),
             tau0.xip.tolist(),
             tau0.xip_im.tolist(),
             tau0.xim.tolist(),
