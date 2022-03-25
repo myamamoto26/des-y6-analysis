@@ -465,16 +465,25 @@ def tangential_shear_field_center(fs):
 def mean_shear_tomoz(gold_f, fs):
 
     import smatch
+    import pickle 
     gold = fio.read(gold_f)
 
     nside = 4096
     maxmatch = 1
     radius = 0.263/3600 # degrees
 
-    tomobin = {'bin1': [], 'bin2': [], 'bin3': [], 'bin4': []}
-    # tomobin_shear = {'g': np.zeros(5,2), 'g_count': np.zeros(5,2)}
-    psfe = {'bin1': {'e1': [], 'e2': []}, 'bin2': {'e1': [], 'e2': []}, 'bin3': {'e1': [], 'e2': []}, 'bin4': {'e1': [], 'e2': []}}
-    shear = {'bin1': {'e1': [], 'e2': []}, 'bin2': {'e1': [], 'e2': []}, 'bin3': {'e1': [], 'e2': []}, 'bin4': {'e1': [], 'e2': []}}
+    with open('/global/cscratch1/sd/myamamot/metadetect/500tiles_test1/mdet_bin_psfg1.pickle', 'rb') as f:
+        psfbin = pickle.load(f)
+    f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
+    R11, R22 = f_response.read().split('\n')
+
+    tomobin = {'bin1': [], 'bin2': [], 'bin3': [], 'bin4': [], 'all': []}
+    tomobin_shear = {'bin1': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
+                     'bin2': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
+                     'bin3': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
+                     'bin4': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
+                     'all': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
+                    }
     for fname in tqdm(fs):
         d = fio.read(os.path.join(work_mdet_cuts, fname))
         mask_noshear = d['mdet_step'] == 'noshear'
@@ -485,18 +494,18 @@ def mean_shear_tomoz(gold_f, fs):
         for i,b in enumerate(['bin1', 'bin2', 'bin3', 'bin4']):
             msk_bin = ((zs > tomobin[b][0]) & (zs < tomobin[b][1]))
             psfe1 = d_match[msk_bin]['psfrec_g_1']
-            psfe2 = d_match[msk_bin]['psfrec_g_2']
-            psfe[b]['e1'].append(psfe1)
-            psfe[b]['e2'].append(psfe2)
-            e1 = d_match[msk_bin]['mdet_g_1']
-            e2 = d_match[msk_bin]['mdet_g_2']
-            shear[b]['e1'].append(e1)
-            shear[b]['e2'].append(e2)
-            # np.add.at(tomobin_shear['g'], (i, 0), np.sum(d_match[msk_bin]['mdet_g_1']))
-            # np.add.at(tomobin_shear['g'], (i, 1), np.sum(d_match[msk_bin]['mdet_g_2']))
-            # np.add.at(tomobin_shear['g_count'], (i, 0), len(d_match[msk_bin]['mdet_g_1']))
-            # np.add.at(tomobin_shear['g_count'], (i, 1), len(d_match[msk_bin]['mdet_g_2']))
-    print(shear)
+            # psfe2 = d_match[msk_bin]['psfrec_g_2']
+            d_bin = d_match[msk_bin]
+            
+            for j, pbin in enumerate(zip(psfbin['low'], psfbin['high'])):
+                msk_psf = ((psfe1 > pbin[0]) & (psfe1 < pbin[1]))
+                d_psfbin = d_bin[msk_psf]
+                msk_noshear = (d_psfbin['mdet_step'] == 'noshear')
+                np.add.at(tomobin_shear[b]['g1'], (i), np.sum(d_psfbin[msk_noshear]['mdet_g_1'] / np.float64(R11)))
+                np.add.at(tomobin_shear[b]['g2'], (i), np.sum(d_psfbin[msk_noshear]['mdet_g_2'] / np.float64(R11)))
+                np.add.at(tomobin_shear[b]['g1_count'], (i), len(d_psfbin[msk_noshear]['mdet_g_1']))
+                np.add.at(tomobin_shear[b]['g2_count'], (i), len(d_psfbin[msk_noshear]['mdet_g_2']))
+    print(tomobin_shear)
 
 def main(argv):
 
