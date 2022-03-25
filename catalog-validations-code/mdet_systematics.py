@@ -477,7 +477,7 @@ def mean_shear_tomoz(gold_f, fs):
     f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
     R11, R22 = f_response.read().split('\n')
 
-    tomobin = {'bin1': [], 'bin2': [], 'bin3': [], 'bin4': [], 'all': []}
+    tomobin = {'bin1': [0,0.36], 'bin2': [0.36,0.63], 'bin3': [0.63,0.87], 'bin4': [0.87,2.0], 'all': [0.0,2.0]}
     tomobin_shear = {'bin1': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
                      'bin2': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
                      'bin3': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
