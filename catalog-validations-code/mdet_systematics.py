@@ -474,7 +474,10 @@ def mean_shear_tomoz(gold_f, fs):
     radius = 0.263/3600 # degrees
 
     with open('/global/cscratch1/sd/myamamot/metadetect/500tiles_test1/mdet_bin_psfg1.pickle', 'rb') as f:
-        psfbin = pickle.load(f)
+        psf1bin = pickle.load(f)
+    with open('/global/cscratch1/sd/myamamot/metadetect/500tiles_test1/mdet_bin_psfg2.pickle', 'rb') as f2:
+        psf2bin = pickle.load(f2)
+
     f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
     R11, R22 = f_response.read().split('\n')
 
@@ -502,17 +505,23 @@ def mean_shear_tomoz(gold_f, fs):
         for i,b in enumerate(['bin1', 'bin2', 'bin3', 'bin4']):
             msk_bin = ((zs > tomobin[b][0]) & (zs < tomobin[b][1]))
             psfe1 = d_match[msk_bin]['psfrec_g_1']
-            # psfe2 = d_match[msk_bin]['psfrec_g_2']
+            psfe2 = d_match[msk_bin]['psfrec_g_2']
             d_bin = d_match[msk_bin]
             
-            for j, pbin in enumerate(zip(psfbin['low'], psfbin['high'])):
+            for j, pbin in enumerate(zip(psf1bin['low'], psf1bin['high'])):
                 msk_psf = ((psfe1 > pbin[0]) & (psfe1 < pbin[1]))
                 d_psfbin = d_bin[msk_psf]
-                np.add.at(tomobin_shear[b]['g1'], (i), np.sum(d_psfbin['mdet_g_1'] / np.float64(R11)))
-                # np.add.at(tomobin_shear[b]['g2'], (i), np.sum(d_psfbin[msk_noshear]['mdet_g_2'] / np.float64(R22)))
-                np.add.at(tomobin_shear[b]['g1_count'], (i), len(d_psfbin['mdet_g_1']))
-                # np.add.at(tomobin_shear[b]['g2_count'], (i), len(d_psfbin[msk_noshear]['mdet_g_2']))
-        print(tomobin_shear)
+                np.add.at(tomobin_shear[b]['g1'], (j), np.sum(d_psfbin['mdet_g_1'] / np.float64(R11)))
+                np.add.at(tomobin_shear[b]['g1_count'], (j), len(d_psfbin['mdet_g_1']))
+                
+            for j, pbin in enumerate(zip(psf2bin['low'], psf2bin['high'])):
+                msk_psf = ((psfe2 > pbin[0]) & (psfe2 < pbin[1]))
+                d_psfbin = d_bin[msk_psf]
+                np.add.at(tomobin_shear[b]['g2'], (j), np.sum(d_psfbin['mdet_g_2'] / np.float64(R22)))
+                np.add.at(tomobin_shear[b]['g2_count'], (j), len(d_psfbin['mdet_g_2']))
+    print(tomobin_shear)
+    with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_e1.pickle', 'wb') as ft:
+        pickle.dump(tomobin_shear, ft, protocol=pickle.HIGHEST_PROTOCOL)
 
 def main(argv):
 
