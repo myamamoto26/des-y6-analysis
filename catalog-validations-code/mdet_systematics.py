@@ -466,6 +466,7 @@ def mean_shear_tomoz(gold_f, fs):
 
     import smatch
     import pickle 
+    import time 
     gold = fio.read(gold_f)
 
     nside = 4096
@@ -487,10 +488,12 @@ def mean_shear_tomoz(gold_f, fs):
     for fname in tqdm(fs):
         d = fio.read(os.path.join(work_mdet_cuts, fname))
         mask_noshear = d['mdet_step'] == 'noshear'
+        t0 = time.time()
         matches = smatch.match(d[mask_noshear]['ra'], d[mask_noshear]['dec'], radius, gold['RA'], gold['DEC'], nside=nside, maxmatch=maxmatch)
-
+        print('time it takes to match, ', time.time()-t0)
         zs = gold[matches['i2']]['DNF_Z']
         d_match = d[mask_noshear][matches['i1']]
+        t0 = time.time()
         for i,b in enumerate(['bin1', 'bin2', 'bin3', 'bin4']):
             msk_bin = ((zs > tomobin[b][0]) & (zs < tomobin[b][1]))
             psfe1 = d_match[msk_bin]['psfrec_g_1']
@@ -500,11 +503,11 @@ def mean_shear_tomoz(gold_f, fs):
             for j, pbin in enumerate(zip(psfbin['low'], psfbin['high'])):
                 msk_psf = ((psfe1 > pbin[0]) & (psfe1 < pbin[1]))
                 d_psfbin = d_bin[msk_psf]
-                msk_noshear = (d_psfbin['mdet_step'] == 'noshear')
-                np.add.at(tomobin_shear[b]['g1'], (i), np.sum(d_psfbin[msk_noshear]['mdet_g_1'] / np.float64(R11)))
-                np.add.at(tomobin_shear[b]['g2'], (i), np.sum(d_psfbin[msk_noshear]['mdet_g_2'] / np.float64(R11)))
-                np.add.at(tomobin_shear[b]['g1_count'], (i), len(d_psfbin[msk_noshear]['mdet_g_1']))
-                np.add.at(tomobin_shear[b]['g2_count'], (i), len(d_psfbin[msk_noshear]['mdet_g_2']))
+                np.add.at(tomobin_shear[b]['g1'], (i), np.sum(d_psfbin['mdet_g_1'] / np.float64(R11)))
+                # np.add.at(tomobin_shear[b]['g2'], (i), np.sum(d_psfbin[msk_noshear]['mdet_g_2'] / np.float64(R22)))
+                np.add.at(tomobin_shear[b]['g1_count'], (i), len(d_psfbin['mdet_g_1']))
+                # np.add.at(tomobin_shear[b]['g2_count'], (i), len(d_psfbin[msk_noshear]['mdet_g_2']))
+            print('time it takes to go through each bin, ', time.time()-t0)
     print(tomobin_shear)
 
 def main(argv):
