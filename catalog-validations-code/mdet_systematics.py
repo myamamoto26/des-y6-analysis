@@ -499,7 +499,6 @@ def mean_shear_tomoz(gold_f, fs):
         print('time it takes to match, ', time.time()-t0)
         zs = gold_msked[matches['i2']]['DNF_Z']
         d_match = d[mask_noshear][matches['i1']]
-        t0 = time.time()
         for i,b in enumerate(['bin1', 'bin2', 'bin3', 'bin4']):
             msk_bin = ((zs > tomobin[b][0]) & (zs < tomobin[b][1]))
             psfe1 = d_match[msk_bin]['psfrec_g_1']
@@ -513,8 +512,7 @@ def mean_shear_tomoz(gold_f, fs):
                 # np.add.at(tomobin_shear[b]['g2'], (i), np.sum(d_psfbin[msk_noshear]['mdet_g_2'] / np.float64(R22)))
                 np.add.at(tomobin_shear[b]['g1_count'], (i), len(d_psfbin['mdet_g_1']))
                 # np.add.at(tomobin_shear[b]['g2_count'], (i), len(d_psfbin[msk_noshear]['mdet_g_2']))
-            print('time it takes to go through each bin, ', time.time()-t0)
-    print(tomobin_shear)
+        print(tomobin_shear)
 
 def main(argv):
 
