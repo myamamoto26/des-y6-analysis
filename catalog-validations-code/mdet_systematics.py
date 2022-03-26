@@ -502,7 +502,7 @@ def mean_shear_tomoz(gold_f, fs):
         print('time it takes to match, ', time.time()-t0)
         zs = gold_msked[matches['i2']]['DNF_Z']
         d_match = d[mask_noshear][matches['i1']]
-        for i,b in enumerate(['bin1', 'bin2', 'bin3', 'bin4']):
+        for i,b in enumerate(['bin1', 'bin2', 'bin3', 'bin4', 'all']):
             msk_bin = ((zs > tomobin[b][0]) & (zs < tomobin[b][1]))
             psfe1 = d_match[msk_bin]['psfrec_g_1']
             psfe2 = d_match[msk_bin]['psfrec_g_2']
@@ -520,7 +520,7 @@ def mean_shear_tomoz(gold_f, fs):
                 np.add.at(tomobin_shear[b]['g2'], (j), np.sum(d_psfbin['mdet_g_2'] / np.float64(R22)))
                 np.add.at(tomobin_shear[b]['g2_count'], (j), len(d_psfbin['mdet_g_2']))
     print(tomobin_shear)
-    with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_e1.pickle', 'wb') as ft:
+    with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_e1e2.pickle', 'wb') as ft:
         pickle.dump(tomobin_shear, ft, protocol=pickle.HIGHEST_PROTOCOL)
 
 def main(argv):
