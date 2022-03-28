@@ -489,7 +489,11 @@ def mean_shear_tomoz(gold_f, fs):
                      'all': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
                     }
     for fname in tqdm(fs):
-        d = fio.read(os.path.join(work_mdet_cuts, fname))
+        fp = os.path.join(work_mdet_cuts, fname)
+        if os.path.exists(fp):
+            d = fio.read(fp)
+        else:
+            continue
         mask_noshear = d['mdet_step'] == 'noshear'
         ra_min = np.min(d[mask_noshear]['ra'])
         ra_max = np.max(d[mask_noshear]['ra'])
@@ -497,9 +501,7 @@ def mean_shear_tomoz(gold_f, fs):
         dec_max = np.max(d[mask_noshear]['dec'])
         gold_msked = gold[((gold['RA'] > ra_min) & (gold['RA'] < ra_max) & (gold['DEC'] > dec_min) & (gold['DEC'] < dec_max))]
 
-        t0 = time.time()
         matches = smatch.match(d[mask_noshear]['ra'], d[mask_noshear]['dec'], radius, gold_msked['RA'], gold_msked['DEC'], nside=nside, maxmatch=maxmatch)
-        print('time it takes to match, ', time.time()-t0)
         zs = gold_msked[matches['i2']]['DNF_Z']
         d_match = d[mask_noshear][matches['i1']]
         for i,b in enumerate(['bin1', 'bin2', 'bin3', 'bin4', 'all']):
