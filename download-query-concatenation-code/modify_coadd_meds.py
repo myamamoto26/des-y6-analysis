@@ -11,5 +11,5 @@ f=glob.glob('/global/cscratch1/sd/myamamot/pizza-slice/test/*.fits.fz', recursiv
 for coadd in f:
     data1,hdr1 = fits.getdata(coadd, 'image_info', header=True)
     data2,hdr2 = fits.getdata(coadd, 'epochs_info', header=True)
-    fits.writeto(coadd, data1, header=hdr1)
+    fits.writeto(coadd, data1, header=hdr1, overwrite=True)
     fits.append(coadd, data2, header=hdr2)
