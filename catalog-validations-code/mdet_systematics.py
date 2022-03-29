@@ -12,7 +12,8 @@ import fitsio as fio
 import matplotlib as mpl
 
 work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
-work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
+# work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
+work_mdet_cuts = '/global/cscratch1/sd/myamamot/metadetect/cuts_v2'
 
 
 # Figure 4; galaxy count, shear response, variance of e, shear weight as a function of S/N and size ratio.
@@ -247,7 +248,7 @@ def shear_stellar_contamination():
     cat1_bright = treecorr.Catalog(ra=d_piff[mask_bright]['RA'], dec=d_piff[mask_bright]['DEC'], ra_units='deg', dec_units='deg', npatch=20)
     cat1_faint = treecorr.Catalog(ra=d_piff[mask_faint]['RA'], dec=d_piff[mask_faint]['DEC'], ra_units='deg', dec_units='deg', npatch=20)
     
-    cat2_files = glob.glob('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
+    cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
     cat2_list = []
     for cat2_file in tqdm(cat2_files):
         d_mdet = fio.read(cat2_file)
@@ -407,7 +408,7 @@ def tangential_shear_field_center(fs):
     if save_objects:
         # For each tilename, save a file that contains each object's location, shear, and field centers. 
         for t in tqdm(tilenames):
-            d = fio.read(os.path.join('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2', mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
+            d = fio.read(os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_v2', mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
             # msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T'] <1.2))
             find_and_save_objects(t, d, R11, R22, expnum_field_centers)
     else:
@@ -425,7 +426,7 @@ def tangential_shear_field_center(fs):
 
         cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
         cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=100)
-        cat2_files = glob.glob('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
+        cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
         ng = treecorr.NGCorrelation(bin_config, verbose=2)
         for i,cat2_f in enumerate(cat2_files):
             d = fio.read(cat2_f)
@@ -440,7 +441,7 @@ def tangential_shear_field_center(fs):
         # random point subtraction. 
         cat1r_file = '/global/homes/m/myamamot/DES/des-y6-analysis/y6-combined-hsmap_random.fits'
         cat1r = treecorr.Catalog(cat1r_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', patch_centers=cat1.patch_centers)
-        cat2_files = glob.glob('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
+        cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
         ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
         for i,cat2_f in enumerate(cat2_files):
             d = fio.read(cat2_f)
