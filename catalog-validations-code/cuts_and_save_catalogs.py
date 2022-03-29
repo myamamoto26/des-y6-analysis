@@ -29,4 +29,4 @@ for fname in tqdm(mdet_filenames):
 
     total_msk = (msk & in_footprint)
     d_msk = d[total_msk]
-    fio.write('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/'+fname, d_msk)
+    fio.write('/global/cscratch1/sd/myamamot/metadetect/cuts_v2/'+fname, d_msk)
