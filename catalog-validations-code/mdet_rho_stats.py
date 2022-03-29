@@ -270,7 +270,7 @@ def main(argv):
     else:
         print('Skipping rho-stats. ')
 
-    # tau-stats?
+    # tau-stats. 
     print('Computing tau-stats...')
     max_sep = 250
     max_mag = 0
@@ -279,54 +279,6 @@ def main(argv):
     stats = measure_tau(good_piffs_table, max_sep, max_mag, subtract_mean=True)
     stat_file = os.path.join('/global/cscratch1/sd/myamamot/metadetect', "tau_%s_%s.json"%(name, tag))
     write_stats_tau(stat_file,*stats)
-
-
-    sys.exit()
-    # tau-stats -> Need to grab expnum and ccdnum to match the mdet objects and piff models. 
-    coadd_info = fio.read('/global/project/projectdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info.fits')
-    coadd_files = {t: [] for t in tilenames}
-    bands = {t: [] for t in tilenames}
-    for coadd in coadd_info:
-        tname = coadd['FILENAME'].split('_')[0]
-        fname = coadd['FILENAME'] + coadd['COMPRESSION']
-        bandname = coadd['FILENAME'].split('_')[2]
-        if tname in list(coadd_files.keys()):
-            coadd_files[tname].append(fname)
-            bands[tname].append(bandname)
-
-    pizza_meds = glob.glob('/global/project/projectdirs/des/myamamot/pizza-slice/OPS/multiepoch/Y6A2_PIZZACUTTER/**/*.fits.fz', recursive=True)
-    tmp_filenames = [meds.split('/')[-1] for meds in pizza_meds]
-    if not os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect', 'rho_all_griz.json')): 
-        for tilename in tqdm(tilenames):
-            f1 = os.path.join('/global/project/projectdirs/des/myamamot', 'metadetect/'+tilename+'_metadetect-v5_mdetcat_part0000.fits')
-            coadd_filenames = np.array(coadd_files[tilename])
-            path = np.where(np.in1d(tmp_filenames, coadd_filenames))[0]
-            f2 = tmp_filenames[path]
-
-            if (not os.path.exists(f1)) or (not os.path.exists(f2)):
-                print('this tilename ', tilename, ' does not have either mdet cat or coadd info.')
-                continue
-
-            print('Getting CCD number and exposure number for this coadd tile.')
-            gal_d_columns = [('ind', int), ('ra', float), ('dec', float), ('gal_e1', float), ('gal_e2', float), ('gal_T', float)]
-            query, gal_d, se_d = get_ccdnum_expnum(tilename, good_piffs_table, gal_d_columns, band)
-
-            print('Query data...')
-            piff_model_out = os.path.join(work, tilename+'_newcuts_piff_model.fits')
-            if (not os.path.exists(piff_model_out)):
-                get_coaddtile_geom(query, piff_model_out)
-            nstars, piff_stars_dict = find_piff_stars(piff_model_out, se_d)
-
-            # need to create a new dict that contains, [ra, dec, obs_e1, obs_e2, obs_T, ccdnum, expnum, model_e1, model_e2, model_T etc...]
-            gal_star_columns = [('ind', int), ('ccdnum', int), ('expnum', int), ('ra', float), ('dec', float), ('mag', float), 
-                                ('obs_e1', float), ('obs_e2', float), ('obs_T', float), ('flux', float), ('piff_e1', float), 
-                                ('piff_e2', float), ('piff_T', float)]
-
-            if piff_stars is None:
-                piff_stars = make_stars_catalog(nstars, piff_stars_dict, gal_star_columns)
-            else:
-                piff_stars_ = make_stars_catalog(nstars, piff_stars_dict, gal_star_columns)
-                piff_stars = np.concatenate([piff_stars, piff_stars_], axis=0)
     
 
 if __name__ == "__main__":
