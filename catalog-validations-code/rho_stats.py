@@ -321,7 +321,7 @@ def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='pif
 
     f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
     R11, R22 = f_response.read().split('\n')
-    cat2_files = glob.glob('/global/project/projectdirs/des/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
+    cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
     results = []
     for cat1 in [ecat, qcat, wcat]:
         print('Doing correlation of %s vs %s'%(cat1.name, 'shear'))
