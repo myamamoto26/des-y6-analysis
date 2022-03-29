@@ -13,6 +13,9 @@ mdet_filenames = [fname.split('/')[-1] for fname in fs]
 tilenames = [d.split('_')[0] for d in mdet_filenames]
 
 for fname in tqdm(mdet_filenames):
+
+    if os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_v2', fname)):
+        continue
     d = fio.read(os.path.join('/global/project/projectdirs/des/myamamot/metadetect', fname))
     mag_g = 30.0 - 2.5*np.log10(d["mdet_g_flux"])
     mag_r = 30.0 - 2.5*np.log10(d["mdet_r_flux"])
