@@ -491,13 +491,27 @@ def mean_shear_tomoz(gold_f, fs):
     R11, R22 = f_response.read().split('\n')
 
     tomobin = {'bin1': [0,0.36], 'bin2': [0.36,0.63], 'bin3': [0.63,0.87], 'bin4': [0.87,2.0], 'all': [0.0,2.0]}
-    tomobin_shear = {'bin1': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
-                     'bin2': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
-                     'bin3': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
-                     'bin4': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
-                     'all': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
+    # tomobin_shear = {'bin1': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1p': np.zeros(15),  'g1m': np.zeros(15),  'g2p': np.zeros(15),  'g2m': np.zeros(15),  'g1_count': np.zeros(15), 'g2_count': np.zeros(15), 'g1p_count': np.zeros(15), 'g1m_count': np.zeros(15), 'g2p_count': np.zeros(15), 'g2m_count': np.zeros(15)}, 
+    #                  'bin2': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1p': np.zeros(15),  'g1m': np.zeros(15),  'g2p': np.zeros(15),  'g2m': np.zeros(15),  'g1_count': np.zeros(15), 'g2_count': np.zeros(15), 'g1p_count': np.zeros(15), 'g1m_count': np.zeros(15), 'g2p_count': np.zeros(15), 'g2m_count': np.zeros(15)}, 
+    #                  'bin3': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1p': np.zeros(15),  'g1m': np.zeros(15),  'g2p': np.zeros(15),  'g2m': np.zeros(15),  'g1_count': np.zeros(15), 'g2_count': np.zeros(15), 'g1p_count': np.zeros(15), 'g1m_count': np.zeros(15), 'g2p_count': np.zeros(15), 'g2m_count': np.zeros(15)}, 
+    #                  'bin4': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1p': np.zeros(15),  'g1m': np.zeros(15),  'g2p': np.zeros(15),  'g2m': np.zeros(15),  'g1_count': np.zeros(15), 'g2_count': np.zeros(15), 'g1p_count': np.zeros(15), 'g1m_count': np.zeros(15), 'g2p_count': np.zeros(15), 'g2m_count': np.zeros(15)}, 
+    #                  'all': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1p': np.zeros(15),  'g1m': np.zeros(15),  'g2p': np.zeros(15),  'g2m': np.zeros(15),  'g1_count': np.zeros(15), 'g2_count': np.zeros(15), 'g1p_count': np.zeros(15), 'g1m_count': np.zeros(15), 'g2p_count': np.zeros(15), 'g2m_count': np.zeros(15)}, 
+    #                 }
+    tomobin_shear = {'raw_sum': {
+                     'bin1': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
+                     'bin2': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)},
+                     'bin3': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)},
+                     'bin4': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)},
+                     'all': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}
+                    },  
+                    'mean_tile':  {
+                    'bin1': {'g1': np.zeros(15, len(fs)), 'g2': np.zeros(15, len(fs))}, 
+                    'bin2': {'g1': np.zeros(15, len(fs)), 'g2': np.zeros(15, len(fs))}, 
+                    'bin3': {'g1': np.zeros(15, len(fs)), 'g2': np.zeros(15, len(fs))}, 
+                    'bin4': {'g1': np.zeros(15, len(fs)), 'g2': np.zeros(15, len(fs))}, 
+                    'all': {'g1': np.zeros(15, len(fs)), 'g2': np.zeros(15, len(fs))}}
                     }
-    for fname in tqdm(fs):
+    for i, fname in tqdm(enumerate(fs)):
         fp = os.path.join(work_mdet_cuts, fname)
         if os.path.exists(fp):
             d = fio.read(fp)
@@ -513,7 +527,7 @@ def mean_shear_tomoz(gold_f, fs):
         matches = smatch.match(d[mask_noshear]['ra'], d[mask_noshear]['dec'], radius, gold_msked['RA'], gold_msked['DEC'], nside=nside, maxmatch=maxmatch)
         zs = gold_msked[matches['i2']]['DNF_Z']
         d_match = d[mask_noshear][matches['i1']]
-        for i,b in enumerate(['bin1', 'bin2', 'bin3', 'bin4', 'all']):
+        for b in ['bin1', 'bin2', 'bin3', 'bin4', 'all']:
             msk_bin = ((zs > tomobin[b][0]) & (zs < tomobin[b][1]))
             psfe1 = d_match[msk_bin]['psfrec_g_1']
             psfe2 = d_match[msk_bin]['psfrec_g_2']
@@ -522,14 +536,17 @@ def mean_shear_tomoz(gold_f, fs):
             for j, pbin in enumerate(zip(psf1bin['low'], psf1bin['high'])):
                 msk_psf = ((psfe1 > pbin[0]) & (psfe1 < pbin[1]))
                 d_psfbin = d_bin[msk_psf]
-                np.add.at(tomobin_shear[b]['g1'], (j), np.sum(d_psfbin['mdet_g_1'] / np.float64(R11)))
-                np.add.at(tomobin_shear[b]['g1_count'], (j), len(d_psfbin['mdet_g_1']))
+                np.add.at(tomobin_shear['raw_sum'][b]['g1'], (j), np.sum(d_psfbin['mdet_g_1'] / np.float64(R11)))
+                np.add.at(tomobin_shear['raw_sum'][b]['g1_count'], (j), len(d_psfbin['mdet_g_1']))
+                tomobin_shear['mean_tile'][b]['g1'][j, i] = np.mean(d_psfbin['mdet_g_1'] / np.float64(R11))
                 
             for j, pbin in enumerate(zip(psf2bin['low'], psf2bin['high'])):
                 msk_psf = ((psfe2 > pbin[0]) & (psfe2 < pbin[1]))
                 d_psfbin = d_bin[msk_psf]
-                np.add.at(tomobin_shear[b]['g2'], (j), np.sum(d_psfbin['mdet_g_2'] / np.float64(R22)))
-                np.add.at(tomobin_shear[b]['g2_count'], (j), len(d_psfbin['mdet_g_2']))
+                np.add.at(tomobin_shear['raw_sum'][b]['g2'], (j), np.sum(d_psfbin['mdet_g_2'] / np.float64(R22)))
+                np.add.at(tomobin_shear['raw_sum'][b]['g2_count'], (j), len(d_psfbin['mdet_g_2']))
+                tomobin_shear['mean_tile'][b]['g2'][j, i] = np.mean(d_psfbin['mdet_g_2'] / np.float64(R22))
+
     print(tomobin_shear)
     with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_e1e2.pickle', 'wb') as ft:
         pickle.dump(tomobin_shear, ft, protocol=pickle.HIGHEST_PROTOCOL)
