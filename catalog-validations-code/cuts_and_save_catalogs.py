@@ -16,7 +16,7 @@ for fname in tqdm(mdet_filenames):
 
     if os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_v2', fname)):
         continue
-    elif os.path.exists(os.path.join('/global/project/projectdirs/des/myamamot/metadetect', fname)):
+    elif not os.path.exists(os.path.join('/global/project/projectdirs/des/myamamot/metadetect', fname)):
         print(fname)
         continue
     else:
