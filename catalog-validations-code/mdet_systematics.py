@@ -343,19 +343,27 @@ def tangential_shear_field_center(fs):
 
         coadd_info = fio.read('/global/project/projectdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info.fits')
         coadd_files = {t: [] for t in tilenames}
+        coadd_paths = {t: [] for t in tilenames}
         bands = {t: [] for t in tilenames}
         for coadd in coadd_info:
             tname = coadd['FILENAME'].split('_')[0]
             fname = coadd['FILENAME'] + coadd['COMPRESSION']
+            fpath = coadd['PATH'] + coadd['FILENAME'] + coadd['COMPRESSION']
             bandname = coadd['FILENAME'].split('_')[2]
             if tname in list(coadd_files.keys()):
                 coadd_files[tname].append(fname)
+                coadd_paths[tname].append(os.path.join('/global/project/projectdirs/des/myamamot/pizza-slice', fpath))
                 bands[tname].append(bandname)
 
         exp_num = []
+        existing_coadd_filepaths = glob.glob('/global/project/projectdirs/des/myamamot/pizza-slice/OPS/multiepoch/Y6A2_PIZZACUTTER/**/*.fits.fz', recursive=True)
         for t in tqdm(tilenames):
-            for pizza_f in coadd_files[t]:
-                coadd = fio.FITS(os.path.join('/global/project/projectdirs/des/myamamot/pizza-slice/griz', pizza_f))
+            for pizza_f in coadd_paths[t]:
+
+                if pizza_f not in existing_coadd_filepaths:
+                    continue
+
+                coadd = fio.FITS(pizza_f)
                 try:
                     epochs = coadd['epochs_info'].read()
                     image_info = coadd['image_info'].read()
@@ -461,7 +469,7 @@ def tangential_shear_field_center(fs):
         ng_final['raw_xi'] = ng.raw_xi
         ng_final['raw_varxi'] = ng.raw_varxi
         
-        fio.write('/global/cscratch1/sd/myamamot/metadetect/field_centers/cross_correlation_final_output.fits', ng_final)
+        fio.write('/global/cscratch1/sd/myamamot/metadetect/cross_correlation_final_output.fits', ng_final)
 
 def mean_shear_tomoz(gold_f, fs):
 
