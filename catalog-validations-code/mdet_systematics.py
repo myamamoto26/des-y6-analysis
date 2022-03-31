@@ -509,11 +509,11 @@ def mean_shear_tomoz(gold_f, fs):
                      'all': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}
                     },  
                     'mean_tile':  {
-                    'bin1': {'g1': np.zeros(15, len(fs)), 'g2': np.zeros(15, len(fs))}, 
-                    'bin2': {'g1': np.zeros(15, len(fs)), 'g2': np.zeros(15, len(fs))}, 
-                    'bin3': {'g1': np.zeros(15, len(fs)), 'g2': np.zeros(15, len(fs))}, 
-                    'bin4': {'g1': np.zeros(15, len(fs)), 'g2': np.zeros(15, len(fs))}, 
-                    'all': {'g1': np.zeros(15, len(fs)), 'g2': np.zeros(15, len(fs))}}
+                    'bin1': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}, 
+                    'bin2': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}, 
+                    'bin3': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}, 
+                    'bin4': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}, 
+                    'all': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}}
                     }
     for i, fname in tqdm(enumerate(fs)):
         fp = os.path.join(work_mdet_cuts, fname)
