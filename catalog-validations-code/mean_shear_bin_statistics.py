@@ -18,6 +18,7 @@ import matplotlib
 # from ../metadetect_mask import exclude_gold_mask_objects
 
 work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
+work_mdet_cuts = '/global/cscratch1/sd/myamamot/metadetect/cuts_v2'
 
 def _make_cuts(d, shear, additional_cuts=None):
 
@@ -428,19 +429,11 @@ def statistics_per_tile_without_bins(fs):
            '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
            '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
     for fname in tqdm(filenames):
-        d = fio.read(os.path.join(work_mdet, fname))
-        mag_g = 30.0 - 2.5*np.log10(d["mdet_g_flux"])
-        mag_r = 30.0 - 2.5*np.log10(d["mdet_r_flux"])
-        mag_i = 30.0 - 2.5*np.log10(d["mdet_i_flux"])
-        mag_z = 30.0 - 2.5*np.log10(d["mdet_z_flux"])
-        gmr = mag_g - mag_r
-        rmi = mag_r - mag_i
-        imz = mag_i - mag_z
-
-        msk = ((d["flags"] == 0) & (d["mask_flags"] == 0) & (d["mdet_flux_flags"] == 0) & (d["mdet_T_ratio"] > 0.5) & (d["mdet_s2n"] > 10) & (d["mfrac"] < 0.1) & (d["mdet_T"] < 1.9 - 2.8*d["mdet_T_err"]) & (np.abs(gmr) < 5) & (np.abs(rmi) < 5) & (np.abs(imz) < 5) & np.isfinite(mag_g) & np.isfinite(mag_r) & np.isfinite(mag_i) & np.isfinite(mag_z) & (mag_g < 26.5) & (mag_r < 26.5) & (mag_i < 26.2) & (mag_z < 25.6))
-        # msk_default = ((mdet_tile['flags']==0) & (mdet_tile['mdet_s2n']>10) & (mdet_tile['mfrac']<0.02) & (mdet_tile['mdet_T_ratio']>1.2) & (mdet_tile['mask_flags']==0))
-        d = d[msk]
-
+        fp = os.path.join(work_mdet_cuts, fname)
+        if os.path.exists(fp):
+            d = fio.read(fp)
+        else:
+            continue
         res = _accum_shear_per_tile_without_bin(res, d['mdet_step'], d['mdet_g_1'], d['mdet_g_2'], 0)
     R11, R22 = _compute_g1_g2(res, binnum, method='just_response')
     f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'w')
