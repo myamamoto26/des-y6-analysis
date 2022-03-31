@@ -184,7 +184,11 @@ def inverse_variance_weight(steps, fs):
     # Accumulate raw sums of shear and mean shear corrected with response per tile. 
     total_count = 0
     for fname in tqdm(filenames):
-        d = fio.read(os.path.join(work_mdet_cuts, fname))
+        fp = os.path.join(work_mdet_cuts, fname)
+        if os.path.exists(fp):
+            d = fio.read(fp)
+        else:
+            continue
         total_count += len(d[d['mdet_step']=='noshear'])
         d = d[d['mdet_T_ratio'] < 3.0]
         
@@ -408,7 +412,7 @@ def tangential_shear_field_center(fs):
     # Create ccdnum and expnum text file if it has not been created yet, and query from DESDM table. Should only be done once. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
         find_exposure_numbers(fs)
-        query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 30)
+        query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 60)
     
     expnum_field_centers = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits')
     print('number of field centers', len(expnum_field_centers))
@@ -556,7 +560,7 @@ def main(argv):
     gold_f = '/global/project/projectdirs/des/myamamot/y6_gold_dnf_z.fits'
     f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
-
+    
     # inverse_variance_weight(20, fs)
     # shear_stellar_contamination()
     # tangential_shear_field_center(fs)
