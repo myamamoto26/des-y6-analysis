@@ -19,8 +19,11 @@ for fname in tqdm(mdet_filenames):
     elif not os.path.exists(os.path.join('/global/project/projectdirs/des/myamamot/metadetect', fname)):
         print(fname)
         continue
-
-    d = fio.read(os.path.join('/global/project/projectdirs/des/myamamot/metadetect', fname))
+    try:
+        d = fio.read(os.path.join('/global/project/projectdirs/des/myamamot/metadetect', fname))
+    except:
+        print(fname)
+        continue
     mag_g = 30.0 - 2.5*np.log10(d["mdet_g_flux"])
     mag_r = 30.0 - 2.5*np.log10(d["mdet_r_flux"])
     mag_i = 30.0 - 2.5*np.log10(d["mdet_i_flux"])
