@@ -363,7 +363,7 @@ def tangential_shear_field_center(fs):
         existing_coadd_filepaths = glob.glob('/global/project/projectdirs/des/myamamot/pizza-slice/OPS/multiepoch/Y6A2_PIZZACUTTER/**/*.fits.fz', recursive=True)
         for t in tqdm(tilenames):
             for pizza_f in coadd_paths[t]:
-
+                print(pizza_f, existing_coadd_filepaths)
                 if pizza_f not in existing_coadd_filepaths:
                     continue
 
@@ -385,7 +385,7 @@ def tangential_shear_field_center(fs):
         exp_num = np.unique(np.array(exp_num))
         total_exp_num = len(exp_num)
         print('total exposure number', total_exp_num)
-
+        sys.exit()
         with open('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 'w') as f:
             for l in exp_num:
                 f.write(str(l))
