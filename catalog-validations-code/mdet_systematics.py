@@ -437,7 +437,7 @@ def tangential_shear_field_center(fs):
                     )
 
         cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
-        cat1 = treecorr.Catalog(cat1_file, ra_col='AVG(I.RA_CENT)', dec_col='AVG(I.DEC_CENT)', ra_units='deg', dec_units='deg', npatch=100)
+        cat1 = treecorr.Catalog(cat1_file, ra_col='RA_CENT', dec_col='DEC_CENT', ra_units='deg', dec_units='deg', npatch=100)
         cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
         ng = treecorr.NGCorrelation(bin_config, verbose=2)
         for i,cat2_f in enumerate(cat2_files):
