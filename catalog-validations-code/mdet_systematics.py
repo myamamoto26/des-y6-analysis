@@ -352,7 +352,7 @@ def tangential_shear_field_center(fs):
         for coadd in coadd_info:
             tname = coadd['FILENAME'].split('_')[0]
             fname = coadd['FILENAME'] + coadd['COMPRESSION']
-            fpath = coadd['PATH'] + coadd['FILENAME'] + coadd['COMPRESSION']
+            fpath = coadd['PATH'] + '/' + coadd['FILENAME'] + coadd['COMPRESSION']
             bandname = coadd['FILENAME'].split('_')[2]
             if tname in list(coadd_files.keys()):
                 coadd_files[tname].append(fname)
@@ -385,7 +385,7 @@ def tangential_shear_field_center(fs):
         exp_num = np.unique(np.array(exp_num))
         total_exp_num = len(exp_num)
         print('total exposure number', total_exp_num)
-        sys.exit()
+
         with open('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 'w') as f:
             for l in exp_num:
                 f.write(str(l))
@@ -412,7 +412,7 @@ def tangential_shear_field_center(fs):
     # Create ccdnum and expnum text file if it has not been created yet, and query from DESDM table. Should only be done once. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
         find_exposure_numbers(fs)
-        query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 60)
+        query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 100)
     
     expnum_field_centers = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits')
     print('number of field centers', len(expnum_field_centers))
