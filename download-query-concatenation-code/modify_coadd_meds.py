@@ -12,6 +12,8 @@ f=glob.glob('/global/project/projectdirs/des/myamamot/pizza-slice/OPS/multiepoch
 #     '/global/project/projectdirs/des/myamamot/pizza-slice/OPS/multiepoch/Y6A2_PIZZACUTTER/r5763/DES0022-5914/p01/pizza-cutter/DES0022-5914_r5763p01_g_pizza-cutter-slices.fits.fz', 
 #     '/global/project/projectdirs/des/myamamot/pizza-slice/OPS/multiepoch/Y6A2_PIZZACUTTER/r5763/DES0022-5914/p01/pizza-cutter/DES0022-5914_r5763p01_r_pizza-cutter-slices.fits.fz']
 for coadd in tqdm(f):
+    if len(fits.open(coadd)) == 3:
+        continue
     data1,hdr1 = fits.getdata(coadd, 'image_info', header=True)
     data2,hdr2 = fits.getdata(coadd, 'epochs_info', header=True)
     fits.writeto(coadd, data1, header=hdr1, overwrite=True)
