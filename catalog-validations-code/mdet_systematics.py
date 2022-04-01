@@ -486,9 +486,9 @@ def mean_shear_tomoz(gold_f, fs):
     maxmatch = 1
     radius = 0.263/3600 # degrees
 
-    with open('/global/cscratch1/sd/myamamot/metadetect/500tiles_test1/mdet_bin_psfg1.pickle', 'rb') as f:
+    with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_psfe1.pickle', 'rb') as f:
         psf1bin = pickle.load(f)
-    with open('/global/cscratch1/sd/myamamot/metadetect/500tiles_test1/mdet_bin_psfg2.pickle', 'rb') as f2:
+    with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_psfe2.pickle', 'rb') as f2:
         psf2bin = pickle.load(f2)
 
     f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
@@ -552,7 +552,7 @@ def mean_shear_tomoz(gold_f, fs):
                 tomobin_shear['mean_tile'][b]['g2'][j, i] = np.mean(d_psfbin['mdet_g_2'] / np.float64(R22))
 
     print(tomobin_shear)
-    with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_e1e2.pickle', 'wb') as ft:
+    with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_newbin_e1e2.pickle', 'wb') as ft:
         pickle.dump(tomobin_shear, ft, protocol=pickle.HIGHEST_PROTOCOL)
 
 def main(argv):
@@ -561,10 +561,10 @@ def main(argv):
     f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
     
-    inverse_variance_weight(20, fs)
+    # inverse_variance_weight(20, fs)
     # shear_stellar_contamination()
     # tangential_shear_field_center(fs)
-    # mean_shear_tomoz(gold_f, fs)
+    mean_shear_tomoz(gold_f, fs)
 
 if __name__ == "__main__":
     main(sys.argv)
