@@ -477,6 +477,9 @@ def tangential_shear_field_center(fs):
 
 def mean_shear_tomoz(gold_f, fs):
 
+    def flux2mag(flux, zero_pt=30):
+        return zero_pt - 2.5 * np.log10(flux)
+
     import smatch
     import pickle 
     import time 
@@ -513,7 +516,15 @@ def mean_shear_tomoz(gold_f, fs):
                     'bin2': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}, 
                     'bin3': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}, 
                     'bin4': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}, 
-                    'all': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}}
+                    'all': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}
+                    }, 
+                    'gi_color': {
+                    'bin1': {'mag': 0.0, 'num': 0.0}, 
+                    'bin2': {'mag': 0.0, 'num': 0.0}, 
+                    'bin3': {'mag': 0.0, 'num': 0.0}, 
+                    'bin4': {'mag': 0.0, 'num': 0.0}, 
+                    'all': {'mag': 0.0, 'num': 0.0}
+                    }, 
                     }
     for i, fname in tqdm(enumerate(fs)):
         fp = os.path.join(work_mdet_cuts, fname)
@@ -533,10 +544,15 @@ def mean_shear_tomoz(gold_f, fs):
         d_match = d[mask_noshear][matches['i1']]
         for b in ['bin1', 'bin2', 'bin3', 'bin4', 'all']:
             msk_bin = ((zs > tomobin[b][0]) & (zs < tomobin[b][1]))
-            psfe1 = d_match[msk_bin]['psfrec_g_1']
-            psfe2 = d_match[msk_bin]['psfrec_g_2']
+            # psfe1 = d_match[msk_bin]['psfrec_g_1']
+            # psfe2 = d_match[msk_bin]['psfrec_g_2']
             d_bin = d_match[msk_bin]
-            
+
+            # save magnitude here.
+            gi_color = flux2mag(d_bin['mdet_g_flux']) - flux2mag(d_bin['mdet_i_flux'])
+            np.add.at(tomobin_shear['gi_color'][b]['mag'], (), np.sum(gi_color))
+            np.add.at(tomobin_shear['gi_color'][b]['num'], (), len(gi_color))
+            """
             for j, pbin in enumerate(zip(psf1bin['low'], psf1bin['high'])):
                 msk_psf = ((psfe1 > pbin[0]) & (psfe1 < pbin[1]))
                 d_psfbin = d_bin[msk_psf]
@@ -550,10 +566,13 @@ def mean_shear_tomoz(gold_f, fs):
                 np.add.at(tomobin_shear['raw_sum'][b]['g2'], (j), np.sum(d_psfbin['mdet_g_2'] / np.float64(R22)))
                 np.add.at(tomobin_shear['raw_sum'][b]['g2_count'], (j), len(d_psfbin['mdet_g_2']))
                 tomobin_shear['mean_tile'][b]['g2'][j, i] = np.mean(d_psfbin['mdet_g_2'] / np.float64(R22))
+            """
 
-    print(tomobin_shear)
-    with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_newbin_e1e2.pickle', 'wb') as ft:
-        pickle.dump(tomobin_shear, ft, protocol=pickle.HIGHEST_PROTOCOL)
+    for b in ['bin1', 'bin2', 'bin3', 'bin4', 'all']:
+        mean_gi_color = tomobin_shear['gi_color'][b]['mag'] / tomobin_shear['gi_color'][b]['num']
+        print(mean_gi_color)
+    # with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_newbin_e1e2.pickle', 'wb') as ft:
+    #     pickle.dump(tomobin_shear, ft, protocol=pickle.HIGHEST_PROTOCOL)
 
 def survey_systematic_maps(fs):
 
@@ -639,8 +658,8 @@ def main(argv):
     # inverse_variance_weight(20, fs)
     # shear_stellar_contamination()
     # tangential_shear_field_center(fs)
-    # mean_shear_tomoz(gold_f, fs)
-    survey_systematic_maps(fs)
+    mean_shear_tomoz(gold_f, fs)
+    # survey_systematic_maps(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
