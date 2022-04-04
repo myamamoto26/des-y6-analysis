@@ -550,9 +550,9 @@ def mean_shear_tomoz(gold_f, fs):
             d_bin = d_match[msk_bin]
 
             # save magnitude here.
-            gi_color = flux2mag(d_bin['mdet_g_flux']) - flux2mag(d_bin['mdet_i_flux'])
-            tomobin_color['gi_color'][b]['mag'] += np.sum(gi_color)
-            tomobin_color['gi_color'][b]['num'] += len(gi_color)
+            # gi_color = flux2mag(d_bin['mdet_g_flux']) - flux2mag(d_bin['mdet_i_flux'])
+            # tomobin_color['gi_color'][b]['mag'] += np.sum(gi_color)
+            # tomobin_color['gi_color'][b]['num'] += len(gi_color)
             
             for j, pbin in enumerate(zip(psf1bin['low'], psf1bin['high'])):
                 msk_psf = ((psfe1 > pbin[0]) & (psfe1 < pbin[1]))
@@ -640,7 +640,7 @@ def survey_systematic_maps(fs):
                             '2p': np.zeros(2), 'num_2p': np.zeros(2),
                             '2m': np.zeros(2), 'num_2m': np.zeros(2)}
     signal_dict = {pix: raw_shear_dict for pix in airmass_g['PIXEL']}    
-    mean_shear_dict = {pix: {'signal': 0.0, 'shear': np.zeros(2)} for pix in airmass_g['PIXEL']}
+    mean_shear_output = np.zeros(len(airmass_g['PIXEL']), dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
     for i, fname in tqdm(enumerate(fs)):
         fp = os.path.join(work_mdet_cuts, fname)
         if os.path.exists(fp):
@@ -654,13 +654,13 @@ def survey_systematic_maps(fs):
             mdet_pix = d[msk_pix]
             _accum_shear_(signal_dict[pix], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
 
-    for pix in list(signal_dict):
+    for i, pix in enumerate(list(signal_dict)):
         g1, g2 = _compute_g1g2(signal_dict[pix]['shear'])
-        mean_shear_dict[pix][0] = g1
-        mean_shear_dict[pix][1] = g2
-        mean_shear_dict[pix]['signal'] += airmass_g[np.where(np.in1d(pix, airmass_g['PIXEL']))[0]]['SIGNAL']
-
-    print(mean_shear_dict)
+        mean_shear_output['pixel'][i] = pix
+        mean_shear_output['signal'][i] = airmass_g[np.where(np.in1d(pix, airmass_g['PIXEL']))[0]]['SIGNAL']
+        mean_shear_output['g1'][i] = g1
+        mean_shear_output['g2'][i] = g2
+    fio.write('/global/cscratch1/sd/myamamot/metadetect/airmass_g_systematics.fits', mean_shear_output)
 
 def main(argv):
 
@@ -671,8 +671,8 @@ def main(argv):
     # inverse_variance_weight(20, fs)
     # shear_stellar_contamination()
     # tangential_shear_field_center(fs)
-    # mean_shear_tomoz(gold_f, fs)
-    survey_systematic_maps(fs)
+    mean_shear_tomoz(gold_f, fs)
+    # survey_systematic_maps(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
