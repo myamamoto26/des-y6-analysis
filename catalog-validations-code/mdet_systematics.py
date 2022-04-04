@@ -479,6 +479,18 @@ def mean_shear_tomoz(gold_f, fs):
 
     def flux2mag(flux, zero_pt=30):
         return zero_pt - 2.5 * np.log10(flux)
+    def _compute_g1g2(res, bind):
+        g1 = res['noshear'][0][bind] / res['num_noshear'][0][bind]
+        g1p = res['1p'][0][bind] / res['num_1p'][0][bind]
+        g1m = res['1m'][0][bind] / res['num_1m'][0][bind]
+        R11 = (g1p - g1m) / 2 / 0.01
+
+        g2 = res['noshear'][1][bind] / res['num_noshear'][1][bind]
+        g2p = res['2p'][1][bind] / res['num_2p'][1][bind]
+        g2m = res['2m'][1][bind] / res['num_2m'][1][bind]
+        R22 = (g2p - g2m) / 2 / 0.01
+        
+        return g1/R11, g2/R22
 
     import smatch
     import pickle 
@@ -494,36 +506,30 @@ def mean_shear_tomoz(gold_f, fs):
     with open('/global/cscratch1/sd/myamamot/metadetect/mdet_bin_psfe2.pickle', 'rb') as f2:
         psf2bin = pickle.load(f2)
 
-    f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
-    R11, R22 = f_response.read().split('\n')
+    # f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
+    # R11, R22 = f_response.read().split('\n')
 
     tomobin = {'bin1': [0,0.36], 'bin2': [0.36,0.63], 'bin3': [0.63,0.87], 'bin4': [0.87,2.0], 'all': [0.0,2.0]}
-    # tomobin_shear = {'bin1': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1p': np.zeros(15),  'g1m': np.zeros(15),  'g2p': np.zeros(15),  'g2m': np.zeros(15),  'g1_count': np.zeros(15), 'g2_count': np.zeros(15), 'g1p_count': np.zeros(15), 'g1m_count': np.zeros(15), 'g2p_count': np.zeros(15), 'g2m_count': np.zeros(15)}, 
-    #                  'bin2': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1p': np.zeros(15),  'g1m': np.zeros(15),  'g2p': np.zeros(15),  'g2m': np.zeros(15),  'g1_count': np.zeros(15), 'g2_count': np.zeros(15), 'g1p_count': np.zeros(15), 'g1m_count': np.zeros(15), 'g2p_count': np.zeros(15), 'g2m_count': np.zeros(15)}, 
-    #                  'bin3': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1p': np.zeros(15),  'g1m': np.zeros(15),  'g2p': np.zeros(15),  'g2m': np.zeros(15),  'g1_count': np.zeros(15), 'g2_count': np.zeros(15), 'g1p_count': np.zeros(15), 'g1m_count': np.zeros(15), 'g2p_count': np.zeros(15), 'g2m_count': np.zeros(15)}, 
-    #                  'bin4': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1p': np.zeros(15),  'g1m': np.zeros(15),  'g2p': np.zeros(15),  'g2m': np.zeros(15),  'g1_count': np.zeros(15), 'g2_count': np.zeros(15), 'g1p_count': np.zeros(15), 'g1m_count': np.zeros(15), 'g2p_count': np.zeros(15), 'g2m_count': np.zeros(15)}, 
-    #                  'all': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1p': np.zeros(15),  'g1m': np.zeros(15),  'g2p': np.zeros(15),  'g2m': np.zeros(15),  'g1_count': np.zeros(15), 'g2_count': np.zeros(15), 'g1p_count': np.zeros(15), 'g1m_count': np.zeros(15), 'g2p_count': np.zeros(15), 'g2m_count': np.zeros(15)}, 
-    #                 }
+    tomobin_color = {'gi_color': {
+                    'bin1': {'mag': 0.0, 'num': 0.0}, 
+                    'bin2': {'mag': 0.0, 'num': 0.0}, 
+                    'bin3': {'mag': 0.0, 'num': 0.0}, 
+                    'bin4': {'mag': 0.0, 'num': 0.0}, 
+                    'all': {'mag': 0.0, 'num': 0.0}
+                    },}
     tomobin_shear = {'raw_sum': {
-                     'bin1': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}, 
-                     'bin2': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)},
-                     'bin3': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)},
-                     'bin4': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)},
-                     'all': {'g1': np.zeros(15), 'g2': np.zeros(15), 'g1_count': np.zeros(15), 'g2_count': np.zeros(15)}
-                    },  
+                     'bin1': {'noshear': np.zeros((2,15)), '1p': np.zeros((2,15)),  '1m': np.zeros((2,15)),  '2p': np.zeros((2,15)),  '2m': np.zeros((2,15)),  'num_noshear': np.zeros((2,15)), 'num_1p': np.zeros((2,15)), 'num_1m': np.zeros((2,15)), 'num_2p': np.zeros((2,15)), 'num_2m': np.zeros((2,15))}, 
+                     'bin2': {'noshear': np.zeros((2,15)), '1p': np.zeros((2,15)),  '1m': np.zeros((2,15)),  '2p': np.zeros((2,15)),  '2m': np.zeros((2,15)),  'num_noshear': np.zeros((2,15)), 'num_1p': np.zeros((2,15)), 'num_1m': np.zeros((2,15)), 'num_2p': np.zeros((2,15)), 'num_2m': np.zeros((2,15))}, 
+                     'bin3': {'noshear': np.zeros((2,15)), '1p': np.zeros((2,15)),  '1m': np.zeros((2,15)),  '2p': np.zeros((2,15)),  '2m': np.zeros((2,15)),  'num_noshear': np.zeros((2,15)), 'num_1p': np.zeros((2,15)), 'num_1m': np.zeros((2,15)), 'num_2p': np.zeros((2,15)), 'num_2m': np.zeros((2,15))}, 
+                     'bin4': {'noshear': np.zeros((2,15)), '1p': np.zeros((2,15)),  '1m': np.zeros((2,15)),  '2p': np.zeros((2,15)),  '2m': np.zeros((2,15)),  'num_noshear': np.zeros((2,15)), 'num_1p': np.zeros((2,15)), 'num_1m': np.zeros((2,15)), 'num_2p': np.zeros((2,15)), 'num_2m': np.zeros((2,15))}, 
+                     'all': {'noshear': np.zeros((2,15)), '1p': np.zeros((2,15)),  '1m': np.zeros((2,15)),  '2p': np.zeros((2,15)),  '2m': np.zeros((2,15)),  'num_noshear': np.zeros((2,15)), 'num_1p': np.zeros((2,15)), 'num_1m': np.zeros((2,15)), 'num_2p': np.zeros((2,15)), 'num_2m': np.zeros((2,15))}, 
+                    },
                     'mean_tile':  {
                     'bin1': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}, 
                     'bin2': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}, 
                     'bin3': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}, 
                     'bin4': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}, 
                     'all': {'g1': np.zeros((15, len(fs))), 'g2': np.zeros((15, len(fs)))}
-                    }, 
-                    'gi_color': {
-                    'bin1': {'mag': 0.0, 'num': 0.0}, 
-                    'bin2': {'mag': 0.0, 'num': 0.0}, 
-                    'bin3': {'mag': 0.0, 'num': 0.0}, 
-                    'bin4': {'mag': 0.0, 'num': 0.0}, 
-                    'all': {'mag': 0.0, 'num': 0.0}
                     }, 
                     }
     for i, fname in tqdm(enumerate(fs)):
@@ -532,47 +538,54 @@ def mean_shear_tomoz(gold_f, fs):
             d = fio.read(fp)
         else:
             continue
-        mask_noshear = d['mdet_step'] == 'noshear'
-        ra_min = np.min(d[mask_noshear]['ra'])
-        ra_max = np.max(d[mask_noshear]['ra'])
-        dec_min = np.min(d[mask_noshear]['dec'])
-        dec_max = np.max(d[mask_noshear]['dec'])
-        gold_msked = gold[((gold['RA'] > ra_min) & (gold['RA'] < ra_max) & (gold['DEC'] > dec_min) & (gold['DEC'] < dec_max))]
 
-        matches = smatch.match(d[mask_noshear]['ra'], d[mask_noshear]['dec'], radius, gold_msked['RA'], gold_msked['DEC'], nside=nside, maxmatch=maxmatch)
+        gold_msked = gold[((gold['RA'] > np.min(d['ra'])) & (gold['RA'] < np.max(d['ra'])) & (gold['DEC'] > np.min(d['dec'])) & (gold['DEC'] < np.max(d['dec'])))]
+        matches = smatch.match(d['ra'], d['dec'], radius, gold_msked['RA'], gold_msked['DEC'], nside=nside, maxmatch=maxmatch)
         zs = gold_msked[matches['i2']]['DNF_Z']
-        d_match = d[mask_noshear][matches['i1']]
+        d_match = d[matches['i1']]
         for b in ['bin1', 'bin2', 'bin3', 'bin4', 'all']:
             msk_bin = ((zs > tomobin[b][0]) & (zs < tomobin[b][1]))
-            # psfe1 = d_match[msk_bin]['psfrec_g_1']
-            # psfe2 = d_match[msk_bin]['psfrec_g_2']
+            psfe1 = d_match[msk_bin]['psfrec_g_1']
+            psfe2 = d_match[msk_bin]['psfrec_g_2']
             d_bin = d_match[msk_bin]
 
             # save magnitude here.
             gi_color = flux2mag(d_bin['mdet_g_flux']) - flux2mag(d_bin['mdet_i_flux'])
-            tomobin_shear['gi_color'][b]['mag'] += np.sum(gi_color)
-            tomobin_shear['gi_color'][b]['num'] += len(gi_color)
-            """
+            tomobin_color['gi_color'][b]['mag'] += np.sum(gi_color)
+            tomobin_color['gi_color'][b]['num'] += len(gi_color)
+            
             for j, pbin in enumerate(zip(psf1bin['low'], psf1bin['high'])):
                 msk_psf = ((psfe1 > pbin[0]) & (psfe1 < pbin[1]))
                 d_psfbin = d_bin[msk_psf]
-                np.add.at(tomobin_shear['raw_sum'][b]['g1'], (j), np.sum(d_psfbin['mdet_g_1'] / np.float64(R11)))
-                np.add.at(tomobin_shear['raw_sum'][b]['g1_count'], (j), len(d_psfbin['mdet_g_1']))
-                tomobin_shear['mean_tile'][b]['g1'][j, i] = np.mean(d_psfbin['mdet_g_1'] / np.float64(R11))
+                for step in ['noshear', '1p', '1m', '2p', '2m']:
+                    msk_step = (d_bin['mdet_step'] == step)
+                    np.add.at(tomobin_shear['raw_sum'][b][step], (0, j), np.sum(d_psfbin[msk_step]['mdet_g_1']))
+                    np.add.at(tomobin_shear['raw_sum'][b][step], (1, j), np.sum(d_psfbin[msk_step]['mdet_g_2']))
+                    np.add.at(tomobin_shear['raw_sum'][b]['num_'+step], (0, j), len(d_psfbin[msk_step]['mdet_g_1']))
+                    np.add.at(tomobin_shear['raw_sum'][b]['num_'+step], (1, j), len(d_psfbin[msk_step]['mdet_g_2']))
+                g1, g2 = _compute_g1g2(tomobin_shear['raw_sum'][b], j)
+                tomobin_shear['mean_tile'][b]['g1'][j, i] = g1
+                tomobin_shear['mean_tile'][b]['g2'][j, i] = g2
                 
             for j, pbin in enumerate(zip(psf2bin['low'], psf2bin['high'])):
                 msk_psf = ((psfe2 > pbin[0]) & (psfe2 < pbin[1]))
                 d_psfbin = d_bin[msk_psf]
-                np.add.at(tomobin_shear['raw_sum'][b]['g2'], (j), np.sum(d_psfbin['mdet_g_2'] / np.float64(R22)))
-                np.add.at(tomobin_shear['raw_sum'][b]['g2_count'], (j), len(d_psfbin['mdet_g_2']))
-                tomobin_shear['mean_tile'][b]['g2'][j, i] = np.mean(d_psfbin['mdet_g_2'] / np.float64(R22))
-            """
-
+                for step in ['noshear', '1p', '1m', '2p', '2m']:
+                    msk_step = (d_bin['mdet_step'] == step)
+                    np.add.at(tomobin_shear['raw_sum'][b][step], (0, j), np.sum(d_psfbin[msk_step]['mdet_g_1']))
+                    np.add.at(tomobin_shear['raw_sum'][b][step], (1, j), np.sum(d_psfbin[msk_step]['mdet_g_2']))
+                    np.add.at(tomobin_shear['raw_sum'][b]['num_'+step], (0, j), len(d_psfbin[msk_step]['mdet_g_1']))
+                    np.add.at(tomobin_shear['raw_sum'][b]['num_'+step], (1, j), len(d_psfbin[msk_step]['mdet_g_2']))
+                g1, g2 = _compute_g1g2(tomobin_shear['raw_sum'][b], j)
+                tomobin_shear['mean_tile'][b]['g1'][j, i] = g1
+                tomobin_shear['mean_tile'][b]['g2'][j, i] = g2
+            
     for b in ['bin1', 'bin2', 'bin3', 'bin4', 'all']:
         mean_gi_color = tomobin_shear['gi_color'][b]['mag'] / tomobin_shear['gi_color'][b]['num']
         print(mean_gi_color)
-    # with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_newbin_e1e2.pickle', 'wb') as ft:
-    #     pickle.dump(tomobin_shear, ft, protocol=pickle.HIGHEST_PROTOCOL)
+
+    with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_binresponse_e1e2.pickle', 'wb') as ft:
+        pickle.dump(tomobin_shear, ft, protocol=pickle.HIGHEST_PROTOCOL)
 
 def survey_systematic_maps(fs):
 
