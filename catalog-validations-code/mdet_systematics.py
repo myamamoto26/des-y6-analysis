@@ -555,6 +555,81 @@ def mean_shear_tomoz(gold_f, fs):
     with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_newbin_e1e2.pickle', 'wb') as ft:
         pickle.dump(tomobin_shear, ft, protocol=pickle.HIGHEST_PROTOCOL)
 
+def survey_systematic_maps(fs):
+
+    import healpy as hp
+
+    def _compute_g1g2(res):
+        g1 = res['noshear'][0] / res['num_noshear'][0]
+        g1p = res['1p'][0] / res['num_1p'][0]
+        g1m = res['1m'][0] / res['num_1m'][0]
+        R11 = (g1p - g1m) / 2 / 0.01
+
+        g2 = res['noshear'][1] / res['num_noshear'][1]
+        g2p = res['2p'][1] / res['num_2p'][1]
+        g2m = res['2m'][1] / res['num_2m'][1]
+        R22 = (g2p - g2m) / 2 / 0.01
+        
+        return g1/R11, g2/R22
+
+    def _accum_shear_(res, mdet_step, g1, g2):
+
+        # Function to compute mean shear without any bins.
+        for step in ['noshear', '1p', '1m', '2p', '2m']:
+            msk_s = np.where(mdet_step == step)[0]
+            
+            np.add.at(
+                res[step], 
+                (0), 
+                np.sum(g1[msk_s]),
+            )
+            np.add.at(
+                res[step], 
+                (1), 
+                np.sum(g2[msk_s]),
+            )
+            np.add.at(
+                res["num_" + step], 
+                (0), 
+                len(g1[msk_s]),
+            )
+            np.add.at(
+                res["num_" + step], 
+                (1), 
+                len(g2[msk_s]),
+            )
+
+    # Airmass
+    airmass_g = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits')
+
+    raw_shear_dict       = {'noshear': np.zeros(2), 'num_noshear': np.zeros(2), 
+                            '1p': np.zeros(2), 'num_1p': np.zeros(2), 
+                            '1m': np.zeros(2), 'num_1m': np.zeros(2),
+                            '2p': np.zeros(2), 'num_2p': np.zeros(2),
+                            '2m': np.zeros(2), 'num_2m': np.zeros(2)}
+    signal_dict = {pix: raw_shear_dict for pix in airmass_g['PIXEL']}    
+    mean_shear_dict = {pix: {'signal': 0.0, 'shear': np.zeros(2)} for pix in airmass_g['PIXEL']}
+    for i, fname in tqdm(enumerate(fs)):
+        fp = os.path.join(work_mdet_cuts, fname)
+        if os.path.exists(fp):
+            d = fio.read(fp)
+        else:
+            continue
+        
+        d_pix = hp.ang2pix(4096, d['ra'], d['dec'], nest=True, lonlat=True)
+        for pix in enumerate(np.unique(d_pix)):
+            msk_pix = np.where(np.in1d(d_pix, pix))[0]
+            mdet_pix = d[msk_pix]
+            _accum_shear_(signal_dict[pix], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
+
+    for pix in list(signal_dict):
+        g1, g2 = _compute_g1g2(signal_dict[pix]['shear'])
+        mean_shear_dict[pix][0] = g1
+        mean_shear_dict[pix][1] = g2
+        mean_shear_dict[pix]['signal'] += airmass_g[np.where(np.in1d(pix, airmass_g['PIXEL']))[0]]['SIGNAL']
+
+    print(mean_shear_dict)
+
 def main(argv):
 
     gold_f = '/global/project/projectdirs/des/myamamot/y6_gold_dnf_z.fits'
@@ -564,7 +639,8 @@ def main(argv):
     # inverse_variance_weight(20, fs)
     # shear_stellar_contamination()
     # tangential_shear_field_center(fs)
-    mean_shear_tomoz(gold_f, fs)
+    # mean_shear_tomoz(gold_f, fs)
+    survey_systematic_maps(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
