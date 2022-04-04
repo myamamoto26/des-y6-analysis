@@ -550,9 +550,9 @@ def mean_shear_tomoz(gold_f, fs):
             d_bin = d_match[msk_bin]
 
             # save magnitude here.
-            # gi_color = flux2mag(d_bin['mdet_g_flux']) - flux2mag(d_bin['mdet_i_flux'])
-            # tomobin_color['gi_color'][b]['mag'] += np.sum(gi_color)
-            # tomobin_color['gi_color'][b]['num'] += len(gi_color)
+            gi_color = flux2mag(d_bin['mdet_g_flux']) - flux2mag(d_bin['mdet_i_flux'])
+            tomobin_color['gi_color'][b]['mag'] += np.sum(gi_color)
+            tomobin_color['gi_color'][b]['num'] += len(gi_color)
             
             for j, pbin in enumerate(zip(psf1bin['low'], psf1bin['high'])):
                 msk_psf = ((psfe1 > pbin[0]) & (psfe1 < pbin[1]))
