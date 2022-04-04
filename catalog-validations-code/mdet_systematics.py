@@ -558,7 +558,7 @@ def mean_shear_tomoz(gold_f, fs):
                 msk_psf = ((psfe1 > pbin[0]) & (psfe1 < pbin[1]))
                 d_psfbin = d_bin[msk_psf]
                 for step in ['noshear', '1p', '1m', '2p', '2m']:
-                    msk_step = (d_bin['mdet_step'] == step)
+                    msk_step = (d_psfbin['mdet_step'] == step)
                     np.add.at(tomobin_shear['raw_sum'][b][step], (0, j), np.sum(d_psfbin[msk_step]['mdet_g_1']))
                     np.add.at(tomobin_shear['raw_sum'][b][step], (1, j), np.sum(d_psfbin[msk_step]['mdet_g_2']))
                     np.add.at(tomobin_shear['raw_sum'][b]['num_'+step], (0, j), len(d_psfbin[msk_step]['mdet_g_1']))
@@ -571,7 +571,7 @@ def mean_shear_tomoz(gold_f, fs):
                 msk_psf = ((psfe2 > pbin[0]) & (psfe2 < pbin[1]))
                 d_psfbin = d_bin[msk_psf]
                 for step in ['noshear', '1p', '1m', '2p', '2m']:
-                    msk_step = (d_bin['mdet_step'] == step)
+                    msk_step = (d_psfbin['mdet_step'] == step)
                     np.add.at(tomobin_shear['raw_sum'][b][step], (0, j), np.sum(d_psfbin[msk_step]['mdet_g_1']))
                     np.add.at(tomobin_shear['raw_sum'][b][step], (1, j), np.sum(d_psfbin[msk_step]['mdet_g_2']))
                     np.add.at(tomobin_shear['raw_sum'][b]['num_'+step], (0, j), len(d_psfbin[msk_step]['mdet_g_1']))
