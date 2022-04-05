@@ -579,13 +579,13 @@ def mean_shear_tomoz(gold_f, fs):
                 g1, g2 = _compute_g1g2(tomobin_shear['raw_sum'][b], j)
                 tomobin_shear['mean_tile'][b]['g1'][j, i] = g1
                 tomobin_shear['mean_tile'][b]['g2'][j, i] = g2
-            
-    for b in ['bin1', 'bin2', 'bin3', 'bin4', 'all']:
-        mean_gi_color = tomobin_shear['gi_color'][b]['mag'] / tomobin_shear['gi_color'][b]['num']
-        print(mean_gi_color)
 
     with open('/global/cscratch1/sd/myamamot/metadetect/mean_shear_tomobin_binresponse_e1e2.pickle', 'wb') as ft:
         pickle.dump(tomobin_shear, ft, protocol=pickle.HIGHEST_PROTOCOL)
+
+    for b in ['bin1', 'bin2', 'bin3', 'bin4', 'all']:
+        mean_gi_color = tomobin_color['gi_color'][b]['mag'] / tomobin_color['gi_color'][b]['num']
+        print(mean_gi_color)
 
 def survey_systematic_maps(fs):
 
