@@ -655,7 +655,7 @@ def survey_systematic_maps(fs):
             _accum_shear_(signal_dict[pix], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
 
     for i, pix in enumerate(list(signal_dict)):
-        g1, g2 = _compute_g1g2(signal_dict[pix]['shear'])
+        g1, g2 = _compute_g1g2(signal_dict[pix])
         mean_shear_output['pixel'][i] = pix
         mean_shear_output['signal'][i] = airmass_g[np.where(np.in1d(pix, airmass_g['PIXEL']))[0]]['SIGNAL']
         mean_shear_output['g1'][i] = g1
