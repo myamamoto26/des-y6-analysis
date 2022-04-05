@@ -14,6 +14,7 @@ f=glob.glob('/global/project/projectdirs/des/myamamot/pizza-slice/OPS/multiepoch
 for coadd in tqdm(f):
     if len(fits.open(coadd)) == 3:
         continue
+    print('rewriting', coadd)
     data1,hdr1 = fits.getdata(coadd, 'image_info', header=True)
     data2,hdr2 = fits.getdata(coadd, 'epochs_info', header=True)
     fits.writeto(coadd, data1, header=hdr1, overwrite=True)
