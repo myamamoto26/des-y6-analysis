@@ -261,24 +261,26 @@ def main(argv):
         print('Computing rho-stats...')
         max_sep = 250
         max_mag = 0
-        name = 'all' #'y3_cuts'
+        name = 'all' 
         tag = 'griz'
         stats = measure_rho(good_piffs_table, max_sep, max_mag, subtract_mean=True, do_rho0=True)
         stat_file = os.path.join('/global/cscratch1/sd/myamamot/metadetect', "rho_%s_%s.json"%(name, tag))
         write_stats(stat_file,*stats)
-        # plot_overall_rho('/global/cscratch1/sd/myamamot/metadetect', name)
     else:
         print('Skipping rho-stats. ')
 
     # tau-stats. 
-    print('Computing tau-stats...')
-    max_sep = 250
-    max_mag = 0
-    name = 'all' #'y3_cuts'
-    tag = 'griz'
-    stats = measure_tau(good_piffs_table, max_sep, max_mag, subtract_mean=True)
-    stat_file = os.path.join('/global/cscratch1/sd/myamamot/metadetect', "tau_%s_%s.json"%(name, tag))
-    write_stats_tau(stat_file,*stats)
+    if not os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect', 'tau_all_griz.json')): 
+        print('Computing tau-stats...')
+        max_sep = 250
+        max_mag = 0
+        name = 'all' 
+        tag = 'griz'
+        stats = measure_tau(good_piffs_table, max_sep, max_mag, subtract_mean=True)
+        stat_file = os.path.join('/global/cscratch1/sd/myamamot/metadetect', "tau_%s_%s.json"%(name, tag))
+        write_stats_tau(stat_file,*stats)
+    else:
+        print('Skipping tau-stats. ')
     
 
 if __name__ == "__main__":
