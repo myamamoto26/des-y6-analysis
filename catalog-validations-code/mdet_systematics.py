@@ -657,7 +657,7 @@ def survey_systematic_maps(fs):
     for i, pix in tqdm(enumerate(list(signal_dict))):
         g1, g2 = _compute_g1g2(signal_dict[pix])
         mean_shear_output['pixel'][i] = pix
-        mean_shear_output['signal'][i] = airmass_g[np.where(np.in1d(pix, airmass_g['PIXEL']))[0]]['SIGNAL']
+        mean_shear_output['signal'][i] = airmass_g[np.where(airmass_g['PIXEL'] == pix)[0]]['SIGNAL']
         mean_shear_output['g1'][i] = g1
         mean_shear_output['g2'][i] = g2
     fio.write('/global/cscratch1/sd/myamamot/metadetect/airmass_g_systematics.fits', mean_shear_output)
@@ -671,8 +671,8 @@ def main(argv):
     # inverse_variance_weight(20, fs)
     # shear_stellar_contamination()
     # tangential_shear_field_center(fs)
-    mean_shear_tomoz(gold_f, fs)
-    # survey_systematic_maps(fs)
+    # mean_shear_tomoz(gold_f, fs)
+    survey_systematic_maps(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
