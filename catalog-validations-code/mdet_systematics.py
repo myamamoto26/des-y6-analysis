@@ -632,15 +632,15 @@ def survey_systematic_maps(fs):
             )
 
     # Airmass
-    airmass_g = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits')
+    syst = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits')
 
     raw_shear_dict       = {'noshear': np.zeros(2), 'num_noshear': np.zeros(2), 
                             '1p': np.zeros(2), 'num_1p': np.zeros(2), 
                             '1m': np.zeros(2), 'num_1m': np.zeros(2),
                             '2p': np.zeros(2), 'num_2p': np.zeros(2),
                             '2m': np.zeros(2), 'num_2m': np.zeros(2)}
-    signal_dict = {pix: raw_shear_dict for pix in airmass_g['PIXEL']}    
-    mean_shear_output = np.zeros(len(airmass_g['PIXEL']), dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
+    signal_dict = {syst[pix]['PIXEL']: {'shear': raw_shear_dict, 'signal': syst[pix]['SIGNAL']} for pix in range(len(syst['PIXEL']))}    
+    mean_shear_output = np.zeros(len(syst['PIXEL']), dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
     for i, fname in tqdm(enumerate(fs)):
         fp = os.path.join(work_mdet_cuts, fname)
         if os.path.exists(fp):
@@ -652,12 +652,12 @@ def survey_systematic_maps(fs):
         for pix in np.unique(d_pix):
             msk_pix = np.where(np.in1d(d_pix, pix))[0]
             mdet_pix = d[msk_pix]
-            _accum_shear_(signal_dict[pix], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
+            _accum_shear_(signal_dict[pix]['shear'], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
 
     for i, pix in tqdm(enumerate(list(signal_dict))):
-        g1, g2 = _compute_g1g2(signal_dict[pix])
+        g1, g2 = _compute_g1g2(signal_dict[pix]['shear'])
         mean_shear_output['pixel'][i] = pix
-        mean_shear_output['signal'][i] = airmass_g[np.where(airmass_g['PIXEL'] == pix)[0]]['SIGNAL']
+        mean_shear_output['signal'][i] = signal_dict[pix]['SIGNAL']
         mean_shear_output['g1'][i] = g1
         mean_shear_output['g2'][i] = g2
     fio.write('/global/cscratch1/sd/myamamot/metadetect/airmass_g_systematics.fits', mean_shear_output)
