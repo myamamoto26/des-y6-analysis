@@ -657,7 +657,7 @@ def survey_systematic_maps(fs):
     for i, pix in tqdm(enumerate(list(signal_dict))):
         g1, g2 = _compute_g1g2(signal_dict[pix]['shear'])
         mean_shear_output['pixel'][i] = pix
-        mean_shear_output['signal'][i] = signal_dict[pix]['SIGNAL']
+        mean_shear_output['signal'][i] = signal_dict[pix]['signal']
         mean_shear_output['g1'][i] = g1
         mean_shear_output['g2'][i] = g2
     fio.write('/global/cscratch1/sd/myamamot/metadetect/airmass_g_systematics.fits', mean_shear_output)
