@@ -647,14 +647,12 @@ def survey_systematic_maps(fs):
             d = fio.read(fp)
         else:
             continue
-        print(fp)
+
         d_pix = hp.ang2pix(4096, d['ra'], d['dec'], nest=True, lonlat=True)
         for pix in tqdm(np.unique(d_pix)):
-            print(pix)
             msk_pix = np.where(np.in1d(d_pix, pix))[0]
             mdet_pix = d[msk_pix]
             _accum_shear_(signal_dict[pix]['shear'], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
-        print(signal_dict)
 
     for i, pix in tqdm(enumerate(list(signal_dict))):
         g1, g2 = _compute_g1g2(signal_dict[pix]['shear'])
