@@ -615,19 +615,9 @@ def survey_systematic_maps(fs):
             res["num_" + step][0] += len(g1[msk_s])
             res["num_" + step][1] += len(g2[msk_s])
 
-        return res
-
     # Airmass
-    syst = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits')
-
-    raw_shear_dict       = {'noshear': np.zeros(2), 'num_noshear': np.zeros(2), 
-                            '1p': np.zeros(2), 'num_1p': np.zeros(2), 
-                            '1m': np.zeros(2), 'num_1m': np.zeros(2),
-                            '2p': np.zeros(2), 'num_2p': np.zeros(2),
-                            '2m': np.zeros(2), 'num_2m': np.zeros(2)}
-    signal_dict = {syst[pix]['PIXEL']: {'shear': raw_shear_dict, 'signal': syst[pix]['SIGNAL']} for pix in range(len(syst['PIXEL']))}    
-    dict_items = signal_dict.items()
-    print(list(dict_items)[:3])
+    syst = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits') 
+    signal_dict = {}
     mean_shear_output = np.zeros(len(syst['PIXEL']), dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
     for i, fname in tqdm(enumerate(fs)):
         fp = os.path.join(work_mdet_cuts, fname)
@@ -640,7 +630,15 @@ def survey_systematic_maps(fs):
         for pix in np.unique(d_pix):
             msk_pix = np.where(np.in1d(d_pix, pix))[0]
             mdet_pix = d[msk_pix]
-            signal_dict[pix]['shear'] = _accum_shear_(signal_dict[pix]['shear'], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
+
+            if pix not in list(signal_dict):
+                raw_shear_dict = {'noshear': np.zeros(2), 'num_noshear': np.zeros(2), 
+                                  '1p': np.zeros(2), 'num_1p': np.zeros(2), 
+                                  '1m': np.zeros(2), 'num_1m': np.zeros(2),
+                                  '2p': np.zeros(2), 'num_2p': np.zeros(2),
+                                  '2m': np.zeros(2), 'num_2m': np.zeros(2)}
+                signal_dict[pix] = {'shear': raw_shear_dict, 'signal': syst[np.where(syst['PIXEL'] == pix)[0]]['SIGNAL']}
+            _accum_shear_(signal_dict[pix]['shear'], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
             print(pix, signal_dict[pix]['shear'])
         sys.exit()
 
