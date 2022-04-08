@@ -604,33 +604,33 @@ def survey_systematic_maps(fs):
         
         return g1/R11, g2/R22
 
-    def _accum_shear_(res, mdet_step, g1, g2):
+    def _accum_shear_(res, pix, mdet_step, g1, g2):
 
         # Function to compute mean shear without any bins.
         for step in ['noshear', '1p', '1m', '2p', '2m']:
             msk_s = np.where(mdet_step == step)[0]
             
             np.add.at(
-                res[step], 
+                res[pix]['shear'][step], 
                 (0), 
                 np.sum(g1[msk_s]),
             )
             np.add.at(
-                res[step], 
+                res[pix]['shear'][step], 
                 (1), 
                 np.sum(g2[msk_s]),
             )
             np.add.at(
-                res["num_" + step], 
+                res[pix]['shear']["num_" + step], 
                 (0), 
                 len(g1[msk_s]),
             )
             np.add.at(
-                res["num_" + step], 
+                res[pix]['shear']["num_" + step], 
                 (1), 
                 len(g2[msk_s]),
             )
-        return res 
+        return res[pix]['shear']
 
     # Airmass
     syst = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits')
@@ -653,9 +653,9 @@ def survey_systematic_maps(fs):
         for pix in np.unique(d_pix):
             msk_pix = np.where(np.in1d(d_pix, pix))[0]
             mdet_pix = d[msk_pix]
-            signal_dict[pix]['shear'] = _accum_shear_(signal_dict[pix]['shear'], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
-        print(signal_dict[list(signal_dict)[0]])
-        print(signal_dict[list(signal_dict)[1]])
+            signal_dict[pix]['shear'] = _accum_shear_(signal_dict, pix, mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
+        print(list(signal_dict)[0], signal_dict[list(signal_dict)[0]])
+        print(list(signal_dict)[1], signal_dict[list(signal_dict)[1]])
         sys.exit()
 
     for i, pix in tqdm(enumerate(list(signal_dict))):
