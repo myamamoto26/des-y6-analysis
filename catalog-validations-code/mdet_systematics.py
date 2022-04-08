@@ -610,10 +610,26 @@ def survey_systematic_maps(fs):
         for step in ['noshear', '1p', '1m', '2p', '2m']:
             msk_s = np.where(mdet_step == step)[0]
             
-            res[step][0] += np.sum(g1[msk_s])
-            res[step][1] += np.sum(g2[msk_s])
-            res["num_" + step][0] += len(g1[msk_s])
-            res["num_" + step][1] += len(g2[msk_s])
+            np.add.at(
+                res[step], 
+                (0), 
+                np.sum(g1[msk_s]),
+            )
+            np.add.at(
+                res[step], 
+                (1), 
+                np.sum(g2[msk_s]),
+            )
+            np.add.at(
+                res["num_" + step], 
+                (0), 
+                len(g1[msk_s]),
+            )
+            np.add.at(
+                res["num_" + step], 
+                (1), 
+                len(g2[msk_s]),
+            )
 
     # Airmass
     syst = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits') 
@@ -639,8 +655,6 @@ def survey_systematic_maps(fs):
                                   '2m': np.zeros(2), 'num_2m': np.zeros(2)}
                 signal_dict[pix] = {'shear': raw_shear_dict, 'signal': syst[np.where(syst['PIXEL'] == pix)[0]]['SIGNAL']}
             _accum_shear_(signal_dict[pix]['shear'], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
-            print(pix, signal_dict[pix]['shear'])
-        sys.exit()
 
     for i, pix in tqdm(enumerate(list(signal_dict))):
         g1, g2 = _compute_g1g2(signal_dict[pix]['shear'])
