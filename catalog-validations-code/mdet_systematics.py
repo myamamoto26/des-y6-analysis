@@ -671,9 +671,9 @@ def main(argv):
     
     # inverse_variance_weight(20, fs)
     # shear_stellar_contamination()
-    tangential_shear_field_center(fs)
+    # tangential_shear_field_center(fs)
     # mean_shear_tomoz(gold_f, fs)
-    # survey_systematic_maps(fs)
+    survey_systematic_maps(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
