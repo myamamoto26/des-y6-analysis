@@ -633,6 +633,7 @@ def survey_systematic_maps(fs):
 
     # Airmass
     syst = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits') 
+    pix_signal = {syst[pix]['PIXEL']: syst[pix]['SIGNAL'] for pix in range(len(syst['PIXEL']))}
     signal_dict = {}
     mean_shear_output = np.zeros(len(syst['PIXEL']), dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
     for i, fname in tqdm(enumerate(fs)):
@@ -653,7 +654,7 @@ def survey_systematic_maps(fs):
                                   '1m': np.zeros(2), 'num_1m': np.zeros(2),
                                   '2p': np.zeros(2), 'num_2p': np.zeros(2),
                                   '2m': np.zeros(2), 'num_2m': np.zeros(2)}
-                signal_dict[pix] = {'shear': raw_shear_dict, 'signal': syst[np.where(syst['PIXEL'] == pix)[0]]['SIGNAL']}
+                signal_dict[pix] = {'shear': raw_shear_dict, 'signal': pix_signal[pix]}
             _accum_shear_(signal_dict[pix]['shear'], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
 
     for i, pix in tqdm(enumerate(list(signal_dict))):
