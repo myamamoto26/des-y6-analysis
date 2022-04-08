@@ -412,7 +412,7 @@ def tangential_shear_field_center(fs):
     # Create ccdnum and expnum text file if it has not been created yet, and query from DESDM table. Should only be done once. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
         find_exposure_numbers(fs)
-        query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 100)
+        query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 150)
     
     expnum_field_centers = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits')
     print('number of field centers', len(expnum_field_centers))
@@ -672,9 +672,9 @@ def main(argv):
     
     # inverse_variance_weight(20, fs)
     # shear_stellar_contamination()
-    # tangential_shear_field_center(fs)
+    tangential_shear_field_center(fs)
     # mean_shear_tomoz(gold_f, fs)
-    survey_systematic_maps(fs)
+    # survey_systematic_maps(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
