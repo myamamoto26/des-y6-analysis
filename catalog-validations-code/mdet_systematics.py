@@ -645,11 +645,9 @@ def survey_systematic_maps(fs):
             continue
 
         d_pix = hp.ang2pix(4096, d['ra'], d['dec'], nest=True, lonlat=True)
-        for pix in np.unique(d_pix):
-            t0 = time.time()
+        for pix in tqdm(np.unique(d_pix)):
             msk_pix = np.where(np.in1d(d_pix, pix))[0]
             mdet_pix = d[msk_pix]
-            print(time.time()-t0)
 
             if pix not in list(signal_dict):
                 raw_shear_dict = {'noshear': np.zeros(2), 'num_noshear': np.zeros(2), 
@@ -658,9 +656,8 @@ def survey_systematic_maps(fs):
                                   '2p': np.zeros(2), 'num_2p': np.zeros(2),
                                   '2m': np.zeros(2), 'num_2m': np.zeros(2)}
                 signal_dict[pix] = {'shear': raw_shear_dict, 'signal': pix_signal[pix]}
-            t0 = time.time()
             _accum_shear_(signal_dict[pix]['shear'], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
-            print(time.time()-t0)
+
     for i, pix in tqdm(enumerate(list(signal_dict))):
         g1, g2 = _compute_g1g2(signal_dict[pix]['shear'])
         mean_shear_output['pixel'][i] = pix
