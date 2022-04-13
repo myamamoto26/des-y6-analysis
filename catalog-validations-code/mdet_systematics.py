@@ -6,6 +6,7 @@
 
 from nis import match
 import os, sys
+from tokenize import group
 from tqdm import tqdm
 import numpy as np
 import fitsio as fio
@@ -591,9 +592,10 @@ def survey_systematic_maps(fs):
 
     import healpy as hp
     import time
+    import numpy_groupies as npg
 
-    def _compute_g1g2(res):
-        g1 = res['noshear'][0] / res['num_noshear'][0]
+    def _compute_g1g2(shear_output, number_output):
+        g1 = shear_output / res['num_noshear'][0]
         g1p = res['1p'][0] / res['num_1p'][0]
         g1m = res['1m'][0] / res['num_1m'][0]
         R11 = (g1p - g1m) / 2 / 0.01
@@ -605,38 +607,45 @@ def survey_systematic_maps(fs):
         
         return g1/R11, g2/R22
 
-    def _accum_shear_(res, mdet_step, g1, g2):
+    def _accum_shear_(d, d_pix, total_shear_output, total_number_output):
+   
+        for i, step in enumerate(['noshear', '1p', '1m', '2p', '2m']):
+            msk_s = np.where(d['mdet_step'] == step)[0]
 
-        # Function to compute mean shear without any bins.
-        for step in ['noshear', '1p', '1m', '2p', '2m']:
-            msk_s = np.where(mdet_step == step)[0]
+            group_e1 = npg.aggregate(d_pix[msk_s], d[msk_s]['mdet_g_1'].astype('float'), func='sum', fill_value=0)
+            group_e2 = npg.aggregate(d_pix[msk_s], d[msk_s]['mdet_g_2'].astype('float'), func='sum', fill_value=0)
+            group_nume1 = npg.aggregate(d_pix[msk_s], len(d[msk_s]['mdet_g_1']), func='sum', fill_value=0)
+            group_nume2 = npg.aggregate(d_pix[msk_s], len(d[msk_s]['mdet_g_2']), func='sum', fill_value=0)
+
+            index_pixel_e1 = np.where(group_e1)[0]
+            index_pixel_e2 = np.where(group_e2)[0]
+            index_pixel_nume1 = np.where(group_nume1)[0]
+            index_pixel_nume2 = np.where(group_nume2)[0]
+
+            total_shear_output[i][index_pixel_e1, 0] = group_e1[index_pixel_e1]
+            total_shear_output[i][index_pixel_e2, 1] = group_e2[index_pixel_e2]
+            total_number_output[i][index_pixel_nume1, 0] = group_nume1[index_pixel_nume1]
+            total_number_output[i][index_pixel_nume2, 1] = group_nume2[index_pixel_nume2]
+
+        return total_shear_output, total_number_output
             
-            np.add.at(
-                res[step], 
-                (0), 
-                np.sum(g1[msk_s]),
-            )
-            np.add.at(
-                res[step], 
-                (1), 
-                np.sum(g2[msk_s]),
-            )
-            np.add.at(
-                res["num_" + step], 
-                (0), 
-                len(g1[msk_s]),
-            )
-            np.add.at(
-                res["num_" + step], 
-                (1), 
-                len(g2[msk_s]),
-            )
-
     # Airmass
     syst = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits') 
     pix_signal = {syst[pix]['PIXEL']: syst[pix]['SIGNAL'] for pix in range(len(syst['PIXEL']))}
-    signal_dict = {}
     mean_shear_output = np.zeros(len(syst['PIXEL']), dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
+    group_noshear_output = np.zeros((len(syst['PIXEL']), 2))
+    group_1p_output = np.zeros((len(syst['PIXEL']), 2))
+    group_1m_output = np.zeros((len(syst['PIXEL']), 2))
+    group_2p_output = np.zeros((len(syst['PIXEL']), 2))
+    group_2m_output = np.zeros((len(syst['PIXEL']), 2))
+    num_noshear_output = np.zeros((len(syst['PIXEL']), 2))
+    num_1p_output = np.zeros((len(syst['PIXEL']), 2))
+    num_1m_output = np.zeros((len(syst['PIXEL']), 2))
+    num_2p_output = np.zeros((len(syst['PIXEL']), 2))
+    num_2m_output = np.zeros((len(syst['PIXEL']), 2))
+    group_shear_output = [group_noshear_output, group_1p_output, group_1m_output, group_2p_output, group_2m_output]
+    group_number_output = [num_noshear_output, num_1p_output, num_1m_output, num_2p_output, num_2m_output]
+
     for i, fname in tqdm(enumerate(fs)):
         fp = os.path.join(work_mdet_cuts, fname)
         if os.path.exists(fp):
@@ -645,25 +654,21 @@ def survey_systematic_maps(fs):
             continue
 
         d_pix = hp.ang2pix(4096, d['ra'], d['dec'], nest=True, lonlat=True)
-        for pix in tqdm(np.unique(d_pix)):
-            msk_pix = np.where(np.in1d(d_pix, pix))[0]
-            mdet_pix = d[msk_pix]
+        group_shear_output, group_number_output = _accum_shear_(d, d_pix, group_shear_output, group_number_output)
 
-            if pix not in list(signal_dict):
-                raw_shear_dict = {'noshear': np.zeros(2), 'num_noshear': np.zeros(2), 
-                                  '1p': np.zeros(2), 'num_1p': np.zeros(2), 
-                                  '1m': np.zeros(2), 'num_1m': np.zeros(2),
-                                  '2p': np.zeros(2), 'num_2p': np.zeros(2),
-                                  '2m': np.zeros(2), 'num_2m': np.zeros(2)}
-                signal_dict[pix] = {'shear': raw_shear_dict, 'signal': pix_signal[pix]}
-            _accum_shear_(signal_dict[pix]['shear'], mdet_pix['mdet_step'], mdet_pix['mdet_g_1'], mdet_pix['mdet_g_2'])
+    for pix in tqdm(range(len(group_shear_output[0][:]))):
+        num_noshear = group_number_output[0][pix]
+        if num_noshear[0] == 0:
+            continue
+        R11 = (group_shear_output[1][pix,0]/group_number_output[1][pix,0] - group_shear_output[2][pix,0]/group_number_output[2][pix,0])/0.02
+        R22 = (group_shear_output[3][pix,1]/group_number_output[3][pix,1] - group_shear_output[4][pix,1]/group_number_output[4][pix,1])/0.02
+        g1 = (group_shear_output[0][pix,0]/group_number_output[0][pix,0])/R11
+        g2 = (group_shear_output[0][pix,1]/group_number_output[0][pix,1])/R22
 
-    for i, pix in tqdm(enumerate(list(signal_dict))):
-        g1, g2 = _compute_g1g2(signal_dict[pix]['shear'])
-        mean_shear_output['pixel'][i] = pix
-        mean_shear_output['signal'][i] = signal_dict[pix]['signal']
-        mean_shear_output['g1'][i] = g1
-        mean_shear_output['g2'][i] = g2
+        mean_shear_output['pixel'][pix] = pix
+        mean_shear_output['signal'][pix] = pix_signal[pix]
+        mean_shear_output['g1'][pix] = g1
+        mean_shear_output['g2'][pix] = g2
     fio.write('/global/cscratch1/sd/myamamot/metadetect/airmass_g_systematics.fits', mean_shear_output)
 
 def main(argv):
