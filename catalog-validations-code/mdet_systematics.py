@@ -631,20 +631,21 @@ def survey_systematic_maps(fs):
             
     # Airmass
     syst = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits') 
+    healpix = hp.nside2npix(4096)
     pix_signal = {syst[pix]['PIXEL']: syst[pix]['SIGNAL'] for pix in range(len(syst['PIXEL']))}
     mean_shear_output = np.zeros(len(syst['PIXEL']), dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
-    group_noshear_output = np.zeros((len(syst['PIXEL']), 2))
-    group_1p_output = np.zeros((len(syst['PIXEL']), 2))
-    group_1m_output = np.zeros((len(syst['PIXEL']), 2))
-    group_2p_output = np.zeros((len(syst['PIXEL']), 2))
-    group_2m_output = np.zeros((len(syst['PIXEL']), 2))
-    num_noshear_output = np.zeros((len(syst['PIXEL']), 2))
-    num_1p_output = np.zeros((len(syst['PIXEL']), 2))
-    num_1m_output = np.zeros((len(syst['PIXEL']), 2))
-    num_2p_output = np.zeros((len(syst['PIXEL']), 2))
-    num_2m_output = np.zeros((len(syst['PIXEL']), 2))
-    group_shear_output = [group_noshear_output, group_1p_output, group_1m_output, group_2p_output, group_2m_output]
-    group_number_output = [num_noshear_output, num_1p_output, num_1m_output, num_2p_output, num_2m_output]
+    # group_noshear_output = np.zeros((len(syst['PIXEL']), 2))
+    # group_1p_output = np.zeros((len(syst['PIXEL']), 2))
+    # group_1m_output = np.zeros((len(syst['PIXEL']), 2))
+    # group_2p_output = np.zeros((len(syst['PIXEL']), 2))
+    # group_2m_output = np.zeros((len(syst['PIXEL']), 2))
+    # num_noshear_output = np.zeros((len(syst['PIXEL']), 2))
+    # num_1p_output = np.zeros((len(syst['PIXEL']), 2))
+    # num_1m_output = np.zeros((len(syst['PIXEL']), 2))
+    # num_2p_output = np.zeros((len(syst['PIXEL']), 2))
+    # num_2m_output = np.zeros((len(syst['PIXEL']), 2))
+    group_shear_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
+    group_number_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
 
     for i, fname in tqdm(enumerate(fs)):
         fp = os.path.join(work_mdet_cuts, fname)
