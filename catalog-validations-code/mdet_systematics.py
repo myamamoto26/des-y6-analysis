@@ -631,10 +631,10 @@ def survey_systematic_maps(fs):
             # print('index', time.time()-t0)
 
             t0 = time.time()
-            total_shear_output[i][index_pixel_e1, 0] = group_e1[index_pixel_e1]
-            total_shear_output[i][index_pixel_e2, 1] = group_e2[index_pixel_e2]
-            total_number_output[i][index_pixel_nume1, 0] = group_nume1[index_pixel_nume1]
-            total_number_output[i][index_pixel_nume2, 1] = group_nume2[index_pixel_nume2]
+            total_shear_output[i][index_pixel_e1, 0] += group_e1[index_pixel_e1]
+            total_shear_output[i][index_pixel_e2, 1] += group_e2[index_pixel_e2]
+            total_number_output[i][index_pixel_nume1, 0] += group_nume1[index_pixel_nume1]
+            total_number_output[i][index_pixel_nume2, 1] += group_nume2[index_pixel_nume2]
             # print('accumulate', time.time()-t0)
 
         return total_shear_output, total_number_output
