@@ -643,13 +643,11 @@ def survey_systematic_maps(fs):
     syst = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits') 
     healpix = hp.nside2npix(4096)
     pix_signal = {syst[pix]['PIXEL']: syst[pix]['SIGNAL'] for pix in range(len(syst['PIXEL']))}
-    mean_shear_output = np.zeros(len(syst['PIXEL']), dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
+    mean_shear_output = np.zeros(healpix, dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
     group_shear_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
     group_number_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
 
     for i, fname in tqdm(enumerate(fs)):
-        if i > 50:
-            break
         fp = os.path.join(work_mdet_cuts, fname)
         if os.path.exists(fp):
             d = fio.read(fp)
@@ -672,7 +670,7 @@ def survey_systematic_maps(fs):
         mean_shear_output['signal'][pix] = pix_signal[pix]
         mean_shear_output['g1'][pix] = g1
         mean_shear_output['g2'][pix] = g2
-    sys.exit()
+
     fio.write('/global/cscratch1/sd/myamamot/metadetect/airmass_g_systematics.fits', mean_shear_output)
 
 def main(argv):
