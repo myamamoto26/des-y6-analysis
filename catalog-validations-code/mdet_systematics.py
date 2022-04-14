@@ -615,8 +615,8 @@ def survey_systematic_maps(fs):
             t0 = time.time()
             group_e1 = npg.aggregate(d_pix[msk_s], d[msk_s]['mdet_g_1'].astype('float'), func='sum', fill_value=0)
             group_e2 = npg.aggregate(d_pix[msk_s], d[msk_s]['mdet_g_2'].astype('float'), func='sum', fill_value=0)
-            group_nume1 = npg.aggregate(d_pix[msk_s], len(d[msk_s]['mdet_g_1']), func='sum', fill_value=0)
-            group_nume2 = npg.aggregate(d_pix[msk_s], len(d[msk_s]['mdet_g_2']), func='sum', fill_value=0)
+            group_nume1 =  np.bincount(d_pix[msk_s])
+            group_nume2 =  np.bincount(d_pix[msk_s])
             print('grouping', time.time()-t0)
 
             t0 = time.time()
