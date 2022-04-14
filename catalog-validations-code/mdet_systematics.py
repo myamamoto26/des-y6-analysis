@@ -620,10 +620,14 @@ def survey_systematic_maps(fs):
             print('grouping', time.time()-t0)
 
             t0 = time.time()
-            index_pixel_e1 = np.nonzero(group_e1)[0]
-            index_pixel_e2 = np.nonzero(group_e2)[0]
-            index_pixel_nume1 = np.nonzero(group_nume1)[0]
-            index_pixel_nume2 = np.nonzero(group_nume2)[0]
+            msk_nonzero = (group_e1 != 0)
+            index_pixel_e1 = np.where(msk_nonzero)[0]
+            msk_nonzero = (group_e2 != 0)
+            index_pixel_e2 = np.where(msk_nonzero)[0]
+            msk_nonzero = (group_nume1 != 0)
+            index_pixel_nume1 = np.where(msk_nonzero)[0]
+            msk_nonzero = (group_nume2 != 0)
+            index_pixel_nume2 = np.where(msk_nonzero)[0]
             print('index', time.time()-t0)
 
             t0 = time.time()
