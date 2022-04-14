@@ -617,7 +617,7 @@ def survey_systematic_maps(fs):
             group_e2 = npg.aggregate(d_pix[msk_s], d[msk_s]['mdet_g_2'].astype('float'), func='sum', fill_value=0)
             group_nume1 =  np.bincount(d_pix[msk_s])
             group_nume2 =  np.bincount(d_pix[msk_s])
-            print('grouping', time.time()-t0)
+            # print('grouping', time.time()-t0)
 
             t0 = time.time()
             msk_nonzero = (group_e1 != 0)
@@ -628,14 +628,14 @@ def survey_systematic_maps(fs):
             index_pixel_nume1 = np.where(msk_nonzero)[0]
             msk_nonzero = (group_nume2 != 0)
             index_pixel_nume2 = np.where(msk_nonzero)[0]
-            print('index', time.time()-t0)
+            # print('index', time.time()-t0)
 
             t0 = time.time()
             total_shear_output[i][index_pixel_e1, 0] = group_e1[index_pixel_e1]
             total_shear_output[i][index_pixel_e2, 1] = group_e2[index_pixel_e2]
             total_number_output[i][index_pixel_nume1, 0] = group_nume1[index_pixel_nume1]
             total_number_output[i][index_pixel_nume2, 1] = group_nume2[index_pixel_nume2]
-            print('accumulate', time.time()-t0)
+            # print('accumulate', time.time()-t0)
 
         return total_shear_output, total_number_output
             
@@ -648,6 +648,8 @@ def survey_systematic_maps(fs):
     group_number_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
 
     for i, fname in tqdm(enumerate(fs)):
+        if i > 50:
+            break
         fp = os.path.join(work_mdet_cuts, fname)
         if os.path.exists(fp):
             d = fio.read(fp)
@@ -670,6 +672,7 @@ def survey_systematic_maps(fs):
         mean_shear_output['signal'][pix] = pix_signal[pix]
         mean_shear_output['g1'][pix] = g1
         mean_shear_output['g2'][pix] = g2
+    sys.exit()
     fio.write('/global/cscratch1/sd/myamamot/metadetect/airmass_g_systematics.fits', mean_shear_output)
 
 def main(argv):
