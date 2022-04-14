@@ -612,20 +612,26 @@ def survey_systematic_maps(fs):
         for i, step in enumerate(['noshear', '1p', '1m', '2p', '2m']):
             msk_s = np.where(d['mdet_step'] == step)[0]
 
+            t0 = time.time()
             group_e1 = npg.aggregate(d_pix[msk_s], d[msk_s]['mdet_g_1'].astype('float'), func='sum', fill_value=0)
             group_e2 = npg.aggregate(d_pix[msk_s], d[msk_s]['mdet_g_2'].astype('float'), func='sum', fill_value=0)
             group_nume1 = npg.aggregate(d_pix[msk_s], len(d[msk_s]['mdet_g_1']), func='sum', fill_value=0)
             group_nume2 = npg.aggregate(d_pix[msk_s], len(d[msk_s]['mdet_g_2']), func='sum', fill_value=0)
+            print('grouping', time.time()-t0)
 
+            t0 = time.time()
             index_pixel_e1 = np.where(group_e1)[0]
             index_pixel_e2 = np.where(group_e2)[0]
             index_pixel_nume1 = np.where(group_nume1)[0]
             index_pixel_nume2 = np.where(group_nume2)[0]
+            print('index', time.time()-t0)
 
+            t0 = time.time()
             total_shear_output[i][index_pixel_e1, 0] = group_e1[index_pixel_e1]
             total_shear_output[i][index_pixel_e2, 1] = group_e2[index_pixel_e2]
             total_number_output[i][index_pixel_nume1, 0] = group_nume1[index_pixel_nume1]
             total_number_output[i][index_pixel_nume2, 1] = group_nume2[index_pixel_nume2]
+            print('accumulate', time.time()-t0)
 
         return total_shear_output, total_number_output
             
@@ -634,16 +640,6 @@ def survey_systematic_maps(fs):
     healpix = hp.nside2npix(4096)
     pix_signal = {syst[pix]['PIXEL']: syst[pix]['SIGNAL'] for pix in range(len(syst['PIXEL']))}
     mean_shear_output = np.zeros(len(syst['PIXEL']), dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
-    # group_noshear_output = np.zeros((len(syst['PIXEL']), 2))
-    # group_1p_output = np.zeros((len(syst['PIXEL']), 2))
-    # group_1m_output = np.zeros((len(syst['PIXEL']), 2))
-    # group_2p_output = np.zeros((len(syst['PIXEL']), 2))
-    # group_2m_output = np.zeros((len(syst['PIXEL']), 2))
-    # num_noshear_output = np.zeros((len(syst['PIXEL']), 2))
-    # num_1p_output = np.zeros((len(syst['PIXEL']), 2))
-    # num_1m_output = np.zeros((len(syst['PIXEL']), 2))
-    # num_2p_output = np.zeros((len(syst['PIXEL']), 2))
-    # num_2m_output = np.zeros((len(syst['PIXEL']), 2))
     group_shear_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
     group_number_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
 
