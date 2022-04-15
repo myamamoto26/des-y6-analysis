@@ -75,9 +75,9 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         print('ra = ',ra)
         print('dec = ',dec)
 
-        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2)
-        qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2)
-        wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt)
+        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=20)
+        qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, npatch=20)
+        wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, npatch=20)
 
     ecat.name = 'ecat'
     qcat.name = 'qcat'
@@ -93,6 +93,8 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         min_sep = 0.5,
         max_sep = max_sep,
         bin_size = 0.2,
+
+        var_method = 'jackknife'
     )
 
     if opt == 'lucas':
@@ -126,6 +128,7 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
             rho.process(cat1, cat2)
         print('mean xi+ = ',rho.xip.mean())
         print('mean xi- = ',rho.xim.mean())
+        np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/'+cat1.name+'_'+cat2.name+'_cov.npy', rho.cov)
         results.append(rho)
 
     if alt_tt:
