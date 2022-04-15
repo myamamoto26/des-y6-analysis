@@ -78,6 +78,7 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=20)
         qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, npatch=20)
         wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, npatch=20)
+        print('catalog done')
 
     ecat.name = 'ecat'
     qcat.name = 'qcat'
