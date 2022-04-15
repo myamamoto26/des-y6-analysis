@@ -75,10 +75,13 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         print('ra = ',ra)
         print('dec = ',dec)
 
+        print('making ecat')
         ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=20)
+        print('making qcat')
         qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, patch_centers=ecat.patch_centers)
+        print('making wcat')
         wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, patch_centers=ecat.patch_centers)
-        print('initial catalog to define patches done')
+        print('catalog done')
 
     ecat.name = 'ecat'
     qcat.name = 'qcat'
@@ -293,9 +296,10 @@ def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='pif
         print('ra = ',ra)
         print('dec = ',dec)
 
-        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2)
-        qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2)
-        wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt)
+        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=20)
+        qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, patch_centers=ecat.patch_centers)
+        wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, patch_centers=ecat.patch_centers)
+        print('catalog done')
 
     ecat.name = 'ecat'
     qcat.name = 'qcat'
@@ -336,7 +340,7 @@ def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='pif
             mask_noshear = (d['mdet_step'] == 'noshear')
             g1 = d[mask_noshear]['mdet_g_1']/np.float64(R11)
             g2 = d[mask_noshear]['mdet_g_2']/np.float64(R22)
-            cat2 = treecorr.Catalog(ra=d[mask_noshear]['ra'], dec=d[mask_noshear]['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2)
+            cat2 = treecorr.Catalog(ra=d[mask_noshear]['ra'], dec=d[mask_noshear]['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=ecat.patch_centers)
         
             gg.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
             cat2.unload()
