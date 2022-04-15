@@ -268,7 +268,7 @@ def main(argv):
         write_stats(stat_file,*stats)
     else:
         print('Skipping rho-stats. ')
-    sys.exit()
+
     # tau-stats. 
     if not os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats', 'tau_all_JK_griz.json')): 
         print('Computing tau-stats...')
