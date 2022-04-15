@@ -75,23 +75,17 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         print('ra = ',ra)
         print('dec = ',dec)
 
-        ecat_cen = 'ecat_patch_centers.fits'
-        qcat_cen = 'qcat_patch_centers.fits'
-        wcat_cen = 'wcat_patch_centers.fits'
-        init_ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=20)
-        init_ecat.write_patch_centers(ecat_cen)
-        init_qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, npatch=20)
-        init_qcat.write_patch_centers(qcat_cen)
-        init_wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, npatch=20)
-        init_wcat.write_patch_centers(wcat_cen)
+        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=20)
+        qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, patch_centers=ecat.patch_centers)
+        wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, patch_centers=ecat.patch_centers)
         print('initial catalog to define patches done')
 
-    # ecat.name = 'ecat'
-    # qcat.name = 'qcat'
-    # wcat.name = 'wcat'
-    # if tag is not None:
-    #     for cat in [ ecat, qcat, wcat ]:
-    #         cat.name = tag + ":"  + cat.name
+    ecat.name = 'ecat'
+    qcat.name = 'qcat'
+    wcat.name = 'wcat'
+    if tag is not None:
+        for cat in [ ecat, qcat, wcat ]:
+            cat.name = tag + ":"  + cat.name
 
     bin_config = dict(
         sep_units = 'arcmin',
@@ -116,40 +110,27 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         bin_config['bin_size'] = 0.01
 
 
-    pairs = [ ('qcat', 'qcat'),
-              ('ecat', 'qcat'),
-              ('wcat', 'wcat'),
-              ('qcat', 'wcat'),
-              ('ecat', 'wcat') ]
+    pairs = [ (qcat, qcat),
+              (ecat, qcat),
+              (wcat, wcat),
+              (qcat, wcat),
+              (ecat, wcat) ]
     if do_rho0:
-        pairs.append( ('ecat', 'ecat') )
+        pairs.append( (ecat, ecat) )
     results = []
     for (cat1, cat2) in pairs:
-        print('Doing correlation of %s vs %s'%(cat1, cat2))
+        print('Doing correlation of %s vs %s'%(cat1.name, cat2.name))
 
         rho = treecorr.GGCorrelation(bin_config, verbose=2)
 
         if cat1 is cat2:
-            if cat1 == 'ecat':
-                rho.process(init_ecat)
-            elif cat1 == 'qcat':
-                rho.process(init_qcat)
-            elif cat1 == 'wcat':
-                rho.process(init_wcat)
+            rho.process(cat1)
         else:
-            if cat1 == 'ecat' and cat2 == 'qcat':
-                catalog = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, patch_centers=ecat_cen)
-                rho.process(init_ecat, catalog)
-            elif cat1 == 'qcat' and cat2 == 'wcat':
-                catalog = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, patch_centers=qcat_cen)
-                rho.process(init_qcat, catalog)
-            elif cat1 == 'ecat' and cat2 == 'wcat':
-                catalog = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, patch_centers=ecat_cen)
-                rho.process(init_ecat, catalog)
+            rho.process(cat1, cat2)
             
         print('mean xi+ = ',rho.xip.mean())
         print('mean xi- = ',rho.xim.mean())
-        np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/'+cat1+'_'+cat2+'_cov.npy', rho.cov)
+        np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/'+cat1.name+'_'+cat2.name+'_cov.npy', rho.cov)
         results.append(rho)
 
     if alt_tt:
