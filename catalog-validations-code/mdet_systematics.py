@@ -692,14 +692,14 @@ def survey_systematic_maps(fs):
         mean_bin = np.zeros((binnum, 2))
         bind_ = np.digitize(pix_val, bin_edges) - 1
         bind_[bind_ == 20] = 19
-        print(bind_)
         np.add.at(mean_bin, (bind_, 0), pix_val)
         np.add.at(mean_bin, (bind_, 1), 1)
+        print(mean_bin)
         for bind in range(binnum):
             R11 = (group_shear_output[1][bind, 0]-group_shear_output[2][bind, 0])/0.02
             R22 = (group_shear_output[3][bind, 1]-group_shear_output[4][bind, 1])/0.02
             g1 = (group_shear_output[0][bind,0]/group_number_output[0][bind,0])/R11
-            g2 = g1 = (group_shear_output[0][bind,1]/group_number_output[0][bind,1])/R22
+            g2 = (group_shear_output[0][bind,1]/group_number_output[0][bind,1])/R22
 
             mean_shear_output['g1'][bind] = g1
             mean_shear_output['g2'][bind] = g2
