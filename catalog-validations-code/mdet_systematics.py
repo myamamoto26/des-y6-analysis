@@ -594,20 +594,9 @@ def survey_systematic_maps(fs):
     import time
     import numpy_groupies as npg
 
-    def _compute_g1g2(shear_output, number_output):
-        g1 = shear_output / res['num_noshear'][0]
-        g1p = res['1p'][0] / res['num_1p'][0]
-        g1m = res['1m'][0] / res['num_1m'][0]
-        R11 = (g1p - g1m) / 2 / 0.01
+    
 
-        g2 = res['noshear'][1] / res['num_noshear'][1]
-        g2p = res['2p'][1] / res['num_2p'][1]
-        g2m = res['2m'][1] / res['num_2m'][1]
-        R22 = (g2p - g2m) / 2 / 0.01
-        
-        return g1/R11, g2/R22
-
-    def _accum_shear_(d, d_pix, total_shear_output, total_number_output):
+    def _accum_shear_pixel(d, d_pix, total_shear_output, total_number_output):
    
         for i, step in enumerate(['noshear', '1p', '1m', '2p', '2m']):
             msk_s = np.where(d['mdet_step'] == step)[0]
@@ -638,16 +627,38 @@ def survey_systematic_maps(fs):
             # print('accumulate', time.time()-t0)
 
         return total_shear_output, total_number_output
+
+    def _accum_shear_bin(d, d_bin_signal, bin_edges, total_shear_output, total_number_output):
+   
+        for i, step in enumerate(['noshear', '1p', '1m', '2p', '2m']):
+            msk_s = np.where(d['mdet_step'] == step)[0]
+            bin_index = np.digitize(d_bin_signal, bin_edges) - 1
+
+            t0 = time.time()
+            np.add.at(total_shear_output[i], (bin_index, 0), d[msk_s]['mdet_g_1']) 
+            np.add.at(total_shear_output[i], (bin_index, 1), d[msk_s]['mdet_g_2']) 
+            np.add.at(total_number_output[i], (bin_index, 0), len(d[msk_s]['mdet_g_1']))
+            np.add.at(total_number_output[i], (bin_index, 1), len(d[msk_s]['mdet_g_2']))
+            # print('accumulate', time.time()-t0)
+
+        # return total_shear_output, total_number_output
             
     # Airmass
+    method = 'bin'
     syst = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits') 
     healpix = hp.nside2npix(4096)
     pix_signal = {syst[pix]['PIXEL']: syst[pix]['SIGNAL'] for pix in range(len(syst['PIXEL']))}
-    mean_shear_output = np.zeros(healpix, dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
-    group_shear_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
-    group_number_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
+    if method == 'pixel':
+        group_shear_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
+        group_number_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
+    elif method == 'bin':
+        binnum = 20
+        pix_val = np.array(list(pix_signal.values()))
+        bin_edges = np.histogram_bin_edges(pix_val, bins=binnum)
+        group_shear_output = [np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2))]
+        group_number_output = [np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2))]
 
-    for i, fname in tqdm(enumerate(fs)):
+    for i, fname in tqdm(enumerate(fs[:50])):
         fp = os.path.join(work_mdet_cuts, fname)
         if os.path.exists(fp):
             d = fio.read(fp)
@@ -655,8 +666,14 @@ def survey_systematic_maps(fs):
             continue
 
         d_pix = hp.ang2pix(4096, d['ra'], d['dec'], nest=True, lonlat=True)
-        group_shear_output, group_number_output = _accum_shear_(d, d_pix, group_shear_output, group_number_output)
-
+        if method=='pixel':
+            group_shear_output, group_number_output = _accum_shear_pixel(d, d_pix, group_shear_output, group_number_output)
+        elif method=='bin':
+            d_bin_signal = np.array([pix_signal[pix] for pix in d_pix])
+            _accum_shear_bin(d, d_bin_signal, bin_edges, group_shear_output, group_number_output)
+    print(group_shear_output, group_number_output)
+    sys.exit()
+    mean_shear_output = np.zeros(healpix, dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
     for pix in tqdm(range(len(group_shear_output[0][:]))):
         num_noshear = group_number_output[0][pix]
         if num_noshear[0] == 0:
