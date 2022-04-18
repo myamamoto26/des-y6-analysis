@@ -593,9 +593,8 @@ def survey_systematic_maps(fs):
     import healpy as hp
     import time
     import numpy_groupies as npg
-
+    from esutil import stat
     
-
     def _accum_shear_pixel(d, d_pix, total_shear_output, total_number_output):
    
         for i, step in enumerate(['noshear', '1p', '1m', '2p', '2m']):
@@ -652,9 +651,10 @@ def survey_systematic_maps(fs):
         group_shear_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
         group_number_output = [np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2)), np.zeros((healpix, 2))]
     elif method == 'bin':
-        binnum = 20
         pix_val = np.array(list(pix_signal.values()))
-        bin_edges = np.histogram_bin_edges(pix_val, bins=binnum)
+        hist = stat.histogram(pix_val, nperbin=1000000, more=True)
+        binnum = len(hist['mean'])
+        bin_edges = np.insert(hist['high'], 0, hist['low'][0])
         group_shear_output = [np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2))]
         group_number_output = [np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2))]
 
@@ -703,7 +703,7 @@ def survey_systematic_maps(fs):
 
             mean_shear_output['g1'][bind] = g1
             mean_shear_output['g2'][bind] = g2
-            mean_shear_output['mean_signal'] = mean_bin[bind][0]/mean_bin[bind][1]
+            mean_shear_output['mean_signal'][bind] = mean_bin[bind][0]/mean_bin[bind][1]
 
     print(mean_shear_output)
     sys.exit()
