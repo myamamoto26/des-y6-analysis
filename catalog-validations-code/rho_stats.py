@@ -135,6 +135,9 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         print('mean xi- = ',rho.xim.mean())
         np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/'+cat1.name+'_'+cat2.name+'_cov.npy', rho.cov)
         results.append(rho)
+    cov = treecorr.estimate_multi_cov([results[5], results[0], results[1], results[2], results[3], results[4]], 'jackknife')
+    print(cov)
+    np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/rho_multi_cov.npy',cov)
 
     if alt_tt:
         print('Doing alt correlation of %s vs %s'%(dtcat.name, dtcat.name))
@@ -348,6 +351,9 @@ def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='pif
             cat2.unload()
         results.append(gg)
         np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/'+cat1.name+'_shear_cov.npy', gg.cov)
+    cov = treecorr.estimate_multi_cov([results[0], results[1], results[2]], 'jackknife')
+    print(cov)
+    np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/tau_multi_cov.npy',cov)
 
     if alt_tt:
         print('Doing alt correlation of %s vs %s'%(dtcat.name, dtcat.name))
