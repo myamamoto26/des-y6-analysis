@@ -690,6 +690,7 @@ def survey_systematic_maps(fs):
     elif method == 'bin':
         mean_shear_output = np.zeros(binnum, dtype=[('mean_signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
         mean_bin = np.zeros((binnum, 2))
+        print(bin_edges, min(pix_val), max(pix_val))
         bind_ = np.digitize(pix_val, bin_edges) - 1
         np.add.at(mean_bin, (bind_, 0), pix_val)
         np.add.at(mean_bin, (bind_, 1), 1)
