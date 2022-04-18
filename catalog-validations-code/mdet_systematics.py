@@ -689,13 +689,7 @@ def survey_systematic_maps(fs):
             mean_shear_output['g2'][pix] = g2
     elif method == 'bin':
         mean_shear_output = np.zeros(binnum, dtype=[('mean_signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
-        mean_bin = np.zeros((binnum, 2))
-        bind_ = np.digitize(pix_val, bin_edges) - 1
-        bind_[bind_ == binnum] = binnum-1
-        np.add.at(mean_bin, (bind_, 0), pix_val)
-        np.add.at(mean_bin, (bind_, 1), 1)
-        print(mean_bin)
-        for bind in range(binnum):
+        for bind in tqdm(range(binnum)):
             R11 = (group_shear_output[1][bind, 0]-group_shear_output[2][bind, 0])/0.02
             R22 = (group_shear_output[3][bind, 1]-group_shear_output[4][bind, 1])/0.02
             g1 = (group_shear_output[0][bind,0]/group_number_output[0][bind,0])/R11
@@ -703,10 +697,8 @@ def survey_systematic_maps(fs):
 
             mean_shear_output['g1'][bind] = g1
             mean_shear_output['g2'][bind] = g2
-            mean_shear_output['mean_signal'][bind] = mean_bin[bind][0]/mean_bin[bind][1]
+            mean_shear_output['mean_signal'][bind] = hist['mean']
 
-    print(mean_shear_output)
-    sys.exit()
     fio.write('/global/cscratch1/sd/myamamot/metadetect/airmass_g_systematics.fits', mean_shear_output)
 
 def main(argv):
