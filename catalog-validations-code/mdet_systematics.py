@@ -690,8 +690,8 @@ def survey_systematic_maps(fs):
     elif method == 'bin':
         mean_shear_output = np.zeros(binnum, dtype=[('mean_signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
         for bind in tqdm(range(binnum)):
-            R11 = (group_shear_output[1][bind, 0]-group_shear_output[2][bind, 0])/0.02
-            R22 = (group_shear_output[3][bind, 1]-group_shear_output[4][bind, 1])/0.02
+            R11 = (group_shear_output[1][bind, 0]/group_number_output[1][bind,0]-group_shear_output[2][bind, 0]/group_number_output[2][bind,0])/0.02
+            R22 = (group_shear_output[3][bind, 1]/group_number_output[3][bind,1]-group_shear_output[4][bind, 1]/group_number_output[4][bind,1])/0.02
             g1 = (group_shear_output[0][bind,0]/group_number_output[0][bind,0])/R11
             g2 = (group_shear_output[0][bind,1]/group_number_output[0][bind,1])/R22
 
