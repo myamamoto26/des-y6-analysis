@@ -697,7 +697,7 @@ def survey_systematic_maps(fs):
 
             mean_shear_output['g1'][bind] = g1
             mean_shear_output['g2'][bind] = g2
-            mean_shear_output['mean_signal'][bind] = hist['mean']
+            mean_shear_output['mean_signal'][bind] = hist['mean'][bind]
 
     fio.write('/global/cscratch1/sd/myamamot/metadetect/airmass_g_systematics.fits', mean_shear_output)
 
