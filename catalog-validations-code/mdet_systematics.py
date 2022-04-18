@@ -637,8 +637,8 @@ def survey_systematic_maps(fs):
             t0 = time.time()
             np.add.at(total_shear_output[i], (bin_index, 0), d[msk_s]['mdet_g_1']) 
             np.add.at(total_shear_output[i], (bin_index, 1), d[msk_s]['mdet_g_2']) 
-            np.add.at(total_number_output[i], (bin_index, 0), len(d[msk_s]['mdet_g_1']))
-            np.add.at(total_number_output[i], (bin_index, 1), len(d[msk_s]['mdet_g_2']))
+            np.add.at(total_number_output[i], (bin_index, 0), 1)
+            np.add.at(total_number_output[i], (bin_index, 1), 1)
             # print('accumulate', time.time()-t0)
 
         # return total_shear_output, total_number_output
@@ -671,23 +671,40 @@ def survey_systematic_maps(fs):
         elif method=='bin':
             d_bin_signal = np.array([pix_signal[pix] for pix in d_pix])
             _accum_shear_bin(d, d_bin_signal, bin_edges, group_shear_output, group_number_output)
-    print(group_shear_output, group_number_output)
+
+    if method == 'pixel':
+        mean_shear_output = np.zeros(healpix, dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
+        for pix in tqdm(range(len(group_shear_output[0][:]))):
+            num_noshear = group_number_output[0][pix]
+            if num_noshear[0] == 0:
+                continue
+            R11 = (group_shear_output[1][pix,0]/group_number_output[1][pix,0] - group_shear_output[2][pix,0]/group_number_output[2][pix,0])/0.02
+            R22 = (group_shear_output[3][pix,1]/group_number_output[3][pix,1] - group_shear_output[4][pix,1]/group_number_output[4][pix,1])/0.02
+            g1 = (group_shear_output[0][pix,0]/group_number_output[0][pix,0])/R11
+            g2 = (group_shear_output[0][pix,1]/group_number_output[0][pix,1])/R22
+
+            mean_shear_output['pixel'][pix] = pix
+            mean_shear_output['signal'][pix] = pix_signal[pix]
+            mean_shear_output['g1'][pix] = g1
+            mean_shear_output['g2'][pix] = g2
+    elif method == 'bin':
+        mean_shear_output = np.zeros(binnum, dtype=[('mean_signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
+        mean_bin = np.zeros((binnum, 2))
+        bind_ = np.digitize(pix_val, bin_edges) - 1
+        np.add.at(mean_bin, (bind_, 0), pix_val)
+        np.add.at(mean_bin, (bind_, 1), 1)
+        for bind in range(binnum):
+            R11 = (group_shear_output[1][bind, 0]-group_shear_output[2][bind, 0])/0.02
+            R22 = (group_shear_output[3][bind, 1]-group_shear_output[4][bind, 1])/0.02
+            g1 = (group_shear_output[0][bind,0]/group_number_output[0][bind,0])/R11
+            g2 = g1 = (group_shear_output[0][bind,1]/group_number_output[0][bind,1])/R22
+
+            mean_shear_output['g1'][bind] = g1
+            mean_shear_output['g2'][bind] = g2
+            mean_shear_output['mean_signal'] = mean_bin[bind][0]/mean_bin[bind][1]
+
+    print(mean_shear_output)
     sys.exit()
-    mean_shear_output = np.zeros(healpix, dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
-    for pix in tqdm(range(len(group_shear_output[0][:]))):
-        num_noshear = group_number_output[0][pix]
-        if num_noshear[0] == 0:
-            continue
-        R11 = (group_shear_output[1][pix,0]/group_number_output[1][pix,0] - group_shear_output[2][pix,0]/group_number_output[2][pix,0])/0.02
-        R22 = (group_shear_output[3][pix,1]/group_number_output[3][pix,1] - group_shear_output[4][pix,1]/group_number_output[4][pix,1])/0.02
-        g1 = (group_shear_output[0][pix,0]/group_number_output[0][pix,0])/R11
-        g2 = (group_shear_output[0][pix,1]/group_number_output[0][pix,1])/R22
-
-        mean_shear_output['pixel'][pix] = pix
-        mean_shear_output['signal'][pix] = pix_signal[pix]
-        mean_shear_output['g1'][pix] = g1
-        mean_shear_output['g2'][pix] = g2
-
     fio.write('/global/cscratch1/sd/myamamot/metadetect/airmass_g_systematics.fits', mean_shear_output)
 
 def main(argv):
