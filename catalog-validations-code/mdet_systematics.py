@@ -632,7 +632,7 @@ def survey_systematic_maps(fs):
    
         for i, step in enumerate(['noshear', '1p', '1m', '2p', '2m']):
             msk_s = np.where(d['mdet_step'] == step)[0]
-            bin_index = np.digitize(d_bin_signal, bin_edges) - 1
+            bin_index = np.digitize(d_bin_signal[msk_s], bin_edges) - 1
 
             t0 = time.time()
             np.add.at(total_shear_output[i], (bin_index, 0), d[msk_s]['mdet_g_1']) 
