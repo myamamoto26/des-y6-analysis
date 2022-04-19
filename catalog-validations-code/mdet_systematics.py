@@ -644,7 +644,7 @@ def survey_systematic_maps(fs):
             
     # Airmass
     method = 'bin'
-    syst = fio.read('/global/project/projectdirs/des/myamamot/airmass_wmean_g.fits') 
+    syst = fio.read('/global/project/projectdirs/des/myamamot/survey_property_maps/airmass_wmean_i.fits') 
     healpix = hp.nside2npix(4096)
     pix_signal = {syst[pix]['PIXEL']: syst[pix]['SIGNAL'] for pix in range(len(syst['PIXEL']))}
     if method == 'pixel':
@@ -699,7 +699,7 @@ def survey_systematic_maps(fs):
             mean_shear_output['g2'][bind] = g2
             mean_shear_output['mean_signal'][bind] = hist['mean'][bind]
 
-    fio.write('/global/cscratch1/sd/myamamot/metadetect/airmass_g_systematics.fits', mean_shear_output)
+    fio.write('/global/cscratch1/sd/myamamot/survey_property_maps/airmass_i_systematics.fits', mean_shear_output)
 
 def main(argv):
 
