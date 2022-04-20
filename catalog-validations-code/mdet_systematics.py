@@ -594,6 +594,20 @@ def survey_systematic_maps(fs):
     import time
     import numpy_groupies as npg
     from esutil import stat
+
+    def _compute_shear(mean_shear_output, group_shear_output, group_number_output, binnum):
+        
+        for bind in tqdm(range(binnum)):
+            R11 = (group_shear_output[1][bind, 0]/group_number_output[1][bind,0]-group_shear_output[2][bind, 0]/group_number_output[2][bind,0])/0.02
+            R22 = (group_shear_output[3][bind, 1]/group_number_output[3][bind,1]-group_shear_output[4][bind, 1]/group_number_output[4][bind,1])/0.02
+            g1 = (group_shear_output[0][bind,0]/group_number_output[0][bind,0])/R11
+            g2 = (group_shear_output[0][bind,1]/group_number_output[0][bind,1])/R22
+
+            mean_shear_output['g1'][bind] = g1
+            mean_shear_output['g2'][bind] = g2
+            mean_shear_output['mean_signal'][bind] = hist['mean'][bind]
+
+        return mean_shear_output
     
     def _accum_shear_pixel(d, d_pix, total_shear_output, total_number_output):
    
@@ -643,8 +657,9 @@ def survey_systematic_maps(fs):
         # return total_shear_output, total_number_output
             
     # Airmass
+    pkdgrav = True
     method = 'bin'
-    syst = fio.read('/global/project/projectdirs/des/myamamot/survey_property_maps/airmass_wmean_i.fits') 
+    syst = fio.read('/global/project/projectdirs/des/myamamot/survey_property_maps/airmass_wmean_g.fits') 
     healpix = hp.nside2npix(4096)
     pix_signal = {syst[pix]['PIXEL']: syst[pix]['SIGNAL'] for pix in range(len(syst['PIXEL']))}
     if method == 'pixel':
@@ -657,6 +672,24 @@ def survey_systematic_maps(fs):
         bin_edges = np.insert(hist['high'], 0, hist['low'][0])
         group_shear_output = [np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2))]
         group_number_output = [np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2))]
+
+    if pkdgrav:
+        import pickle
+
+        nsim = 200
+        for n in tqdm(range(nsim)):
+            with open('/global/cscratch1/sd/myamamot/sample_variance/seed__fid_'+str(n+1)+'.pkl', 'rb') as handle:
+                res = pickle.load(handle)
+            d = res['sources'][0]
+            d_pix = hp.ang2pix(4096, d['ra'], d['dec'], nest=True, lonlat=True)
+            d_bin_signal = np.array([pix_signal[pix] for pix in d_pix])
+            _accum_shear_bin(d, d_bin_signal, bin_edges, group_shear_output, group_number_output)
+
+            mean_shear_output = np.zeros(binnum, dtype=[('mean_signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
+            mean_shear_output = _compute_shear(mean_shear_output, group_shear_output, group_number_output, binnum)
+            
+            fio.write('/global/cscratch1/sd/myamamot/sample_variance/airmass/seed__fid_'+str(n+1)+'_g.fits', mean_shear_output)
+        return None
 
     for i, fname in tqdm(enumerate(fs)):
         fp = os.path.join(work_mdet_cuts, fname)
@@ -689,17 +722,9 @@ def survey_systematic_maps(fs):
             mean_shear_output['g2'][pix] = g2
     elif method == 'bin':
         mean_shear_output = np.zeros(binnum, dtype=[('mean_signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
-        for bind in tqdm(range(binnum)):
-            R11 = (group_shear_output[1][bind, 0]/group_number_output[1][bind,0]-group_shear_output[2][bind, 0]/group_number_output[2][bind,0])/0.02
-            R22 = (group_shear_output[3][bind, 1]/group_number_output[3][bind,1]-group_shear_output[4][bind, 1]/group_number_output[4][bind,1])/0.02
-            g1 = (group_shear_output[0][bind,0]/group_number_output[0][bind,0])/R11
-            g2 = (group_shear_output[0][bind,1]/group_number_output[0][bind,1])/R22
+        mean_shear_output = _compute_shear(mean_shear_output, group_shear_output, group_number_output, binnum)
 
-            mean_shear_output['g1'][bind] = g1
-            mean_shear_output['g2'][bind] = g2
-            mean_shear_output['mean_signal'][bind] = hist['mean'][bind]
-
-    fio.write('/global/cscratch1/sd/myamamot/survey_property_maps/airmass_i_systematics.fits', mean_shear_output)
+    fio.write('/global/cscratch1/sd/myamamot/survey_property_maps/airmass_g_systematics.fits', mean_shear_output)
 
 def main(argv):
 
