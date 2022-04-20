@@ -18,7 +18,7 @@ def main(argv):
     good_piffs_table = fio.read('/global/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v2_hsm_allres_collated.fits')
 
     # rho-stats -> Just need to pass the piff catalog.
-    if not os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats', 'rho_all_JK_griz.json')): 
+    if not os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats', 'rho_all_JK_200patch_griz.json')): 
         print('Computing rho-stats...')
         max_sep = 200
         max_mag = 0
@@ -31,7 +31,7 @@ def main(argv):
         print('Skipping rho-stats. ')
 
     # tau-stats. 
-    if not os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats', 'tau_all_JK_griz.json')): 
+    if not os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats', 'tau_all_JK_200patch_griz.json')): 
         print('Computing tau-stats...')
         max_sep = 200
         max_mag = 0
