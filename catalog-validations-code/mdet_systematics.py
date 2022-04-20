@@ -698,6 +698,7 @@ def survey_systematic_maps(fs):
         for n in tqdm(range(nsim)):
             with open('/global/cscratch1/sd/myamamot/sample_variance/seed__fid_'+str(n+1)+'.pkl', 'rb') as handle:
                 res = pickle.load(handle)
+                handle.close()
             d = res['sources'][0]
             d_pix = hp.ang2pix(4096, d['ra'], d['dec'], nest=True, lonlat=True)
             d_bin_signal = np.array([pix_signal[pix] for pix in d_pix])
