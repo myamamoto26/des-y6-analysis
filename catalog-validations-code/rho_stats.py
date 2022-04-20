@@ -76,11 +76,14 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         print('dec = ',dec)
 
         print('making ecat')
-        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=20)
+        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=200)
+        ecat.nfields.clear()
         print('making qcat')
         qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, patch_centers=ecat.patch_centers)
+        qcat.nfields.clear()
         print('making wcat')
         wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, patch_centers=ecat.patch_centers)
+        wcat.nfields.clear()
         print('catalog done')
 
     ecat.name = 'ecat'
@@ -299,9 +302,12 @@ def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='pif
         print('ra = ',ra)
         print('dec = ',dec)
 
-        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=20)
+        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=200)
+        ecat.nfields.clear()
         qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, patch_centers=ecat.patch_centers)
+        qcat.nfields.clear()
         wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, patch_centers=ecat.patch_centers)
+        wcat.nfields.clear()
         print('catalog done')
 
     ecat.name = 'ecat'
