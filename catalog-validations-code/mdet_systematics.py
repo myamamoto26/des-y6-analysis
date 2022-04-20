@@ -595,17 +595,26 @@ def survey_systematic_maps(fs):
     import numpy_groupies as npg
     from esutil import stat
 
-    def _compute_shear(mean_shear_output, group_shear_output, group_number_output, binnum):
+    def _compute_shear(mean_shear_output, group_shear_output, group_number_output, binnum, pkdgrav=False):
         
-        for bind in tqdm(range(binnum)):
-            R11 = (group_shear_output[1][bind, 0]/group_number_output[1][bind,0]-group_shear_output[2][bind, 0]/group_number_output[2][bind,0])/0.02
-            R22 = (group_shear_output[3][bind, 1]/group_number_output[3][bind,1]-group_shear_output[4][bind, 1]/group_number_output[4][bind,1])/0.02
-            g1 = (group_shear_output[0][bind,0]/group_number_output[0][bind,0])/R11
-            g2 = (group_shear_output[0][bind,1]/group_number_output[0][bind,1])/R22
+        if pkdgrav:
+            for bind in tqdm(range(binnum)):
+                g1 = (group_shear_output[0][bind,0]/group_number_output[0][bind,0])
+                g2 = (group_shear_output[0][bind,1]/group_number_output[0][bind,1])
 
-            mean_shear_output['g1'][bind] = g1
-            mean_shear_output['g2'][bind] = g2
-            mean_shear_output['mean_signal'][bind] = hist['mean'][bind]
+                mean_shear_output['g1'][bind] = g1
+                mean_shear_output['g2'][bind] = g2
+                mean_shear_output['mean_signal'][bind] = hist['mean'][bind]
+        else:
+            for bind in tqdm(range(binnum)):
+                R11 = (group_shear_output[1][bind, 0]/group_number_output[1][bind,0]-group_shear_output[2][bind, 0]/group_number_output[2][bind,0])/0.02
+                R22 = (group_shear_output[3][bind, 1]/group_number_output[3][bind,1]-group_shear_output[4][bind, 1]/group_number_output[4][bind,1])/0.02
+                g1 = (group_shear_output[0][bind,0]/group_number_output[0][bind,0])/R11
+                g2 = (group_shear_output[0][bind,1]/group_number_output[0][bind,1])/R22
+
+                mean_shear_output['g1'][bind] = g1
+                mean_shear_output['g2'][bind] = g2
+                mean_shear_output['mean_signal'][bind] = hist['mean'][bind]
 
         return mean_shear_output
     
@@ -655,6 +664,15 @@ def survey_systematic_maps(fs):
             # print('accumulate', time.time()-t0)
 
         # return total_shear_output, total_number_output
+
+    def _accum_shear_bin_pkdgrav(d, d_bin_signal, bin_edges, total_shear_output, total_number_output):
+   
+        bin_index = np.digitize(d_bin_signal, bin_edges) - 1
+
+        np.add.at(total_shear_output[0], (bin_index, 0), d['e1']) 
+        np.add.at(total_shear_output[0], (bin_index, 1), d['e2']) 
+        np.add.at(total_number_output[0], (bin_index, 0), 1)
+        np.add.at(total_number_output[0], (bin_index, 1), 1)
             
     # Airmass
     pkdgrav = True
@@ -683,10 +701,10 @@ def survey_systematic_maps(fs):
             d = res['sources'][0]
             d_pix = hp.ang2pix(4096, d['ra'], d['dec'], nest=True, lonlat=True)
             d_bin_signal = np.array([pix_signal[pix] for pix in d_pix])
-            _accum_shear_bin(d, d_bin_signal, bin_edges, group_shear_output, group_number_output)
+            _accum_shear_bin_pkdgrav(d, d_bin_signal, bin_edges, group_shear_output, group_number_output)
 
             mean_shear_output = np.zeros(binnum, dtype=[('mean_signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
-            mean_shear_output = _compute_shear(mean_shear_output, group_shear_output, group_number_output, binnum)
+            mean_shear_output = _compute_shear(mean_shear_output, group_shear_output, group_number_output, binnum, pkdgrav=pkdgrav)
             
             fio.write('/global/cscratch1/sd/myamamot/sample_variance/airmass/seed__fid_'+str(n+1)+'_g.fits', mean_shear_output)
         return None
