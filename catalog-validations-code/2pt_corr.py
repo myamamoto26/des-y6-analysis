@@ -7,9 +7,10 @@ import pickle
 
 # Set outpath
 outpath = '/global/project/projectdirs/des/myamamot/2pt_corr/'
+subtract_mean = True
 
 # Load Y6 catalogs
-mdet_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
+# mdet_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
 with open('/global/cscratch1/sd/myamamot/sample_variance/data_catalogs_weighted.pkl', 'rb') as handle:
     res = pickle.load(handle)
     handle.close()
@@ -18,15 +19,25 @@ bin_config = dict(
         sep_units = 'arcmin',
         bin_slop = 0.1,
 
-        min_sep = 0.5,
-        max_sep = 250,
-        bin_size = 0.2,
+        min_sep = 1,
+        max_sep = 400,
+        nbins = 1000,
+        # bin_size = 0.2,
     
         output_dots = False,
     )
 
+e1 = res[0]['e1']
+e2 = res[0]['e2']
+ra = res[0]['ra']
+dec = res[0]['dec']
+
+if subtract_mean:
+    e1 -= np.mean(e1)
+    e2 -= np.mean(e2)
+
 gg = treecorr.GGCorrelation(bin_config, verbose=2)
-cat1 = treecorr.Catalog(ra=res[0]['ra'], dec=res[0]['dec'], ra_units='deg', dec_units='deg', g1=res[0]['e1'], g2=res[0]['e2'])
-cat2 = treecorr.Catalog(ra=res[0]['ra'], dec=res[0]['dec'], ra_units='deg', dec_units='deg', g1=res[0]['e1'], g2=res[0]['e2'])
+cat1 = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2)
+cat2 = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2)
 gg.process(cat1,cat2)
-gg.write(outpath+'shear2pt_nontomo_treecorrw.txt')
+gg.write(outpath+'y6_shear2pt_nontomo_subtract_mean.fits')
