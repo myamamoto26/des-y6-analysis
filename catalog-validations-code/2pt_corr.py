@@ -39,5 +39,7 @@ if subtract_mean:
 gg = treecorr.GGCorrelation(bin_config, verbose=2)
 cat1 = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2)
 cat2 = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2)
+print('catalog done')
 gg.process(cat1,cat2)
+print('calculation done')
 gg.write(outpath+'y6_shear2pt_nontomo_subtract_mean.fits')
