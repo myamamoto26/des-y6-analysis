@@ -17,7 +17,7 @@ with open('/global/cscratch1/sd/myamamot/sample_variance/data_catalogs_weighted.
 
 bin_config = dict(
         sep_units = 'arcmin',
-        bin_slop = 0.1,
+        bin_slop = 1.0,
 
         min_sep = 1,
         max_sep = 400,
@@ -37,6 +37,7 @@ if subtract_mean:
     e2 -= np.mean(e2)
 
 gg = treecorr.GGCorrelation(bin_config, verbose=2)
+print('making cat')
 cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2)
 print('catalog done')
 gg.process(cat,num_threads=32)
