@@ -14,13 +14,13 @@ tilenames = [d.split('_')[0] for d in mdet_filenames]
 
 for fname in tqdm(mdet_filenames):
 
-    if os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_v2', fname)):
+    if os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_v3', fname)):
         continue
-    elif not os.path.exists(os.path.join('/global/project/projectdirs/des/myamamot/metadetect', fname)):
+    elif not os.path.exists(os.path.join('/global/project/projectdirs/des/myamamot/metadetect/v3', fname)):
         print(fname)
         continue
     try:
-        d = fio.read(os.path.join('/global/project/projectdirs/des/myamamot/metadetect', fname))
+        d = fio.read(os.path.join('/global/project/projectdirs/des/myamamot/metadetect/v3', fname))
     except:
         print(fname)
         continue
@@ -39,4 +39,4 @@ for fname in tqdm(mdet_filenames):
 
     total_msk = (msk & in_footprint)
     d_msk = d[total_msk]
-    fio.write('/global/cscratch1/sd/myamamot/metadetect/cuts_v2/'+fname, d_msk)
+    fio.write('/global/cscratch1/sd/myamamot/metadetect/cuts_v3/'+fname, d_msk)
