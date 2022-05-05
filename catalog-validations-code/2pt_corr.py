@@ -2,7 +2,6 @@ import os, sys
 import glob
 import fitsio as fio
 import numpy as np
-import proplot as pplt
 import treecorr
 import pickle
 from mpi4py import MPI
