@@ -45,7 +45,7 @@ if rank == 0:
         cat_patch = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=50)
         cat_patch.write_patch_centers(outpath+'patch_centers.txt')
         print('patch center done')
-    del cat_patch
+        del cat_patch
 comm.Barrier()
 
 cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, patch_centers=outpath+'patch_centers.txt')
