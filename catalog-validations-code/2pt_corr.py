@@ -56,5 +56,7 @@ print('calculation done', rank)
 
 if rank == 0:
     gg.write(outpath+'y6_shear2pt_nontomo_subtract_mean.fits')
-
+    cov_jk = gg.estimate_cov('jackknife')
+    np.save(outpath+'y6_shear2pt_nontomo_JKcov.npy', cov_jk)
+    print('done')
 
