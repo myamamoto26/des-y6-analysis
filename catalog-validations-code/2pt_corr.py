@@ -48,7 +48,7 @@ if rank == 0:
     del cat_patch
 comm.Barrier()
 
-cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, patch_centers=outpath+'patch_center.txt')
+cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, patch_centers=outpath+'patch_centers.txt')
 print('catalog done', rank)
 gg = treecorr.GGCorrelation(bin_config, verbose=2)
 gg.process(cat, comm=comm)
