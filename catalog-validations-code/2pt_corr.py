@@ -73,6 +73,9 @@ print('calculation done', rank)
 
 if rank == 0:
     gg.write(outpath+'y6_shear2pt_nontomo_subtract_mean.fits')
+    with open(outpath+'y6_shear2pt_nontomo_subtract_mean.pkl', 'wb') as f: # save gg as a pickle file, so that we can refer to all the results later. 
+        pickle.dump(gg, f)
+
     cov_jk = gg.estimate_cov('jackknife')
     np.save(outpath+'y6_shear2pt_nontomo_JKcov.npy', cov_jk)
 
@@ -80,12 +83,17 @@ if rank == 0:
     corr_fs = glob.glob('../2pt_corr/B_mode/geb_Y6_*.pkl') # B-mode estimator (each bandpower)
     for i,fname in enumerate(corr_fs):
         fp, fm = read_fpfm(fname)
-        func_Xp = lambda corrs: np.sum((fp*corrs[0] + fm*corrs[1])/2) # Xp
-        func_Xm = lambda corrs: np.sum((fp*corrs[0] - fm*corrs[1])/2) # Xm
-        corrs = [gg.xip, gg.xim]
-        cov_Xp = treecorr.estimate_multi_cov(corrs, 'jackknife', func_Xp) # or 'bootstrap'
-        cov_Xm = treecorr.estimate_multi_cov(corrs, 'jackknife', func_Xm) # or 'bootstrap'
-        np.save(outpath+'Xp_JKcov_%d.npy'%i, cov_Xp)
-        np.save(outpath+'Xm_JKcov_%d.npy'%i, cov_Xm)
+        # func_Xp = lambda corrs: np.sum((fp*corrs[0] + fm*corrs[1])/2) # Xp
+        # func_Xm = lambda corrs: np.sum((fp*corrs[0] - fm*corrs[1])/2) # Xm
+        # cov_Xp = gg.estimate_cov(method='jackknife', func=func_Xp) # or 'bootstrap'
+        # cov_Xm = gg.estimate_cov(method='jackknife', func=func_Xm) # or 'bootstrap'
+        # np.save(outpath+'Xp_JKcov_%d.npy'%i, cov_Xp)
+        # np.save(outpath+'Xm_JKcov_%d.npy'%i, cov_Xm)
+
+        func = lambda corr: np.concatenate([np.sum((fp*corr.xip + fm*corr.xim)/2), # Xp
+                                            np.sum((fp*corr.xip - fm*corr.xim)/2)] # Xm
+                                          )
+        cov_XpXm = gg.estimate_cov(method='jackknife', func=func) # or 'bootstrap'
+        
     print('done')
 
