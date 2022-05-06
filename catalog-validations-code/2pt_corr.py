@@ -81,7 +81,7 @@ if rank == 0:
 
     # covariance for B-mode stats
     print('computing B-mode stats')
-    corr_fs = glob.glob('../2pt_corr/B_mode/geb_Y6_*.pkl') # B-mode estimator (each bandpower)
+    corr_fs = glob.glob(outpath+'B_mode/geb_Y6_*.pkl') # B-mode estimator (each bandpower)
     for i,fname in enumerate(corr_fs):
         fp, fm = read_fpfm(fname)
         # func_Xp = lambda corrs: np.sum((fp*corrs[0] + fm*corrs[1])/2) # Xp
