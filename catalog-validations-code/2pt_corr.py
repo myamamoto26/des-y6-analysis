@@ -96,6 +96,9 @@ if rank == 0:
                                           )
         XpXm = func(gg)
         cov_XpXm = gg.estimate_cov(method='jackknife', func=func) # or 'bootstrap'
+        np.save(outpath+'XpXm.npy', XpXm)
+        np.save(outpath+'XpXm_cov.npy', cov_XpXm)
+
         
     print('done')
 
