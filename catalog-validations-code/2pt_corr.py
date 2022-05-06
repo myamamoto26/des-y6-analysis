@@ -83,8 +83,8 @@ if rank == 0:
         func_Xp = lambda corrs: np.sum((fp*corrs[0] + fm*corrs[1])/2) # Xp
         func_Xm = lambda corrs: np.sum((fp*corrs[0] - fm*corrs[1])/2) # Xm
         corrs = [gg.xip, gg.xim]
-        cov_Xp = treecorr.estimate_multi_cov(corrs, 'jackknife', func_Xp)
-        cov_Xm = treecorr.estimate_multi_cov(corrs, 'jackknife', func_Xm)
+        cov_Xp = treecorr.estimate_multi_cov(corrs, 'jackknife', func_Xp) # or 'bootstrap'
+        cov_Xm = treecorr.estimate_multi_cov(corrs, 'jackknife', func_Xm) # or 'bootstrap'
         np.save(outpath+'Xp_JKcov_%d.npy'%i, cov_Xp)
         np.save(outpath+'Xm_JKcov_%d.npy'%i, cov_Xm)
     print('done')
