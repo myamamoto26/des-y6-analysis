@@ -8,7 +8,7 @@ import matplotlib as mpl
 
 work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
 # work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
-work_mdet_cuts = '/global/cscratch1/sd/myamamot/metadetect/cuts_v2'
+work_mdet_cuts = '/global/cscratch1/sd/myamamot/metadetect/cuts_v3'
 
 
 # Figure 4; galaxy count, shear response, variance of e, shear weight as a function of S/N and size ratio.
@@ -210,7 +210,7 @@ def inverse_variance_weight(steps, fs):
 
     res_measurement = {'xedges': xedges, 'yedges': yedges, 'count': count_all, 'meanes': new_meanes, 'response': new_response, 'weight': new_shearweight}
     if save_data:
-        with open('/global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v2_Trcut.pickle', 'wb') as dat:
+        with open('/global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut.pickle', 'wb') as dat:
             pickle.dump(res_measurement, dat, protocol=pickle.HIGHEST_PROTOCOL)
 
     print('total number count before cuts', total_count)
