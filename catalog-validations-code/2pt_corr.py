@@ -4,9 +4,26 @@ import fitsio as fio
 import numpy as np
 import treecorr
 import pickle
+sys.path.append('/global/project/projectdirs/des/myamamot/metadetect/')
+from hybrideb import hybrideb
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
+
+def read_fpfm(fname): #, gammat, gammax):
+    """Compute Xp, Xm using the already-defined B-mode estimator. 
+       Each bandpower is computed using theta_min=1.0, theta_max=400, Ntheta=1000. """
+    
+    # Read Gauss EB
+    with open(fname, 'rb') as f:
+        res = pickle.load(f)
+    f.close()
+    
+    theta_rad = res[0]
+    fp = res[1]
+    fm = res[2]
+    
+    return fp, fm
 
 # Set outpath
 outpath = '/global/project/projectdirs/des/myamamot/2pt_corr/'
@@ -42,7 +59,7 @@ if subtract_mean:
 
 if rank == 0:
     if not os.path.exists(outpath+'patch_centers.txt'):
-        cat_patch = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=50)
+        cat_patch = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=100)
         cat_patch.write_patch_centers(outpath+'patch_centers.txt')
         print('patch center done')
         del cat_patch
@@ -58,5 +75,17 @@ if rank == 0:
     gg.write(outpath+'y6_shear2pt_nontomo_subtract_mean.fits')
     cov_jk = gg.estimate_cov('jackknife')
     np.save(outpath+'y6_shear2pt_nontomo_JKcov.npy', cov_jk)
+
+    # covariance for B-mode stats
+    corr_fs = glob.glob('../2pt_corr/B_mode/geb_Y6_*.pkl') # B-mode estimator (each bandpower)
+    for i,fname in enumerate(corr_fs):
+        fp, fm = read_fpfm(fname)
+        func_Xp = lambda corrs: np.sum((fp*corrs[0] + fm*corrs[1])/2) # Xp
+        func_Xm = lambda corrs: np.sum((fp*corrs[0] - fm*corrs[1])/2) # Xm
+        corrs = [gg.xip, gg.xim]
+        cov_Xp = treecorr.estimate_multi_cov(corrs, 'jackknife', func_Xp)
+        cov_Xm = treecorr.estimate_multi_cov(corrs, 'jackknife', func_Xm)
+        np.save(outpath+'Xp_JKcov_%d.npy'%i, cov_Xp)
+        np.save(outpath+'Xm_JKcov_%d.npy'%i, cov_Xm)
     print('done')
 
