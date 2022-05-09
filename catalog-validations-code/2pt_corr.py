@@ -65,40 +65,49 @@ if rank == 0:
         del cat_patch
 comm.Barrier()
 
-cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, patch_centers=outpath+'patch_centers.txt')
-print('catalog done', rank)
-gg = treecorr.GGCorrelation(bin_config, verbose=2)
-gg.process(cat, comm=comm)
-print('calculation done', rank)
+if not os.path.exists(outpath+'y6_shear2pt_nontomo_subtract_mean.pkl'):
+    cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, patch_centers=outpath+'patch_centers.txt')
+    print('catalog done', rank)
+    gg = treecorr.GGCorrelation(bin_config, verbose=2)
+    gg.process(cat, comm=comm)
+    print('calculation done', rank)
+
+    if rank == 0:
+        gg.write(outpath+'y6_shear2pt_nontomo_subtract_mean.fits')
+        with open(outpath+'y6_shear2pt_nontomo_subtract_mean.pkl', 'wb') as f: # save gg as a pickle file, so that we can refer to all the results later. 
+            pickle.dump(gg, f)
+
+        cov_jk = gg.estimate_cov('jackknife')
+        np.save(outpath+'y6_shear2pt_nontomo_JKcov.npy', cov_jk)
+comm.Barrier()
 
 if rank == 0:
-    gg.write(outpath+'y6_shear2pt_nontomo_subtract_mean.fits')
-    with open(outpath+'y6_shear2pt_nontomo_subtract_mean.pkl', 'wb') as f: # save gg as a pickle file, so that we can refer to all the results later. 
-        pickle.dump(gg, f)
+    if os.path.exists(outpath+'y6_shear2pt_nontomo_subtract_mean.pkl'):
+        with open(outpath+'y6_shear2pt_nontomo_subtract_mean.pkl', 'rb') as f:
+            gg = pickle.load(f)
 
-    cov_jk = gg.estimate_cov('jackknife')
-    np.save(outpath+'y6_shear2pt_nontomo_JKcov.npy', cov_jk)
+        # covariance for B-mode stats
+        print('computing B-mode stats')
+        corr_fs = sorted(glob.glob(outpath+'B_mode/geb_Y6_*.pkl')) # B-mode estimator (each bandpower)
+        allfp = []
+        allfm = []
+        for fname in corr_fs:
+            fp, fm = read_fpfm(fname)
+            allfp.append(fp)
+            allfm.append(fm)
 
-    # covariance for B-mode stats
-    print('computing B-mode stats')
-    corr_fs = glob.glob(outpath+'B_mode/geb_Y6_*.pkl') # B-mode estimator (each bandpower)
-    for i,fname in enumerate(corr_fs):
-        fp, fm = read_fpfm(fname)
-        # func_Xp = lambda corrs: np.sum((fp*corrs[0] + fm*corrs[1])/2) # Xp
-        # func_Xm = lambda corrs: np.sum((fp*corrs[0] - fm*corrs[1])/2) # Xm
-        # cov_Xp = gg.estimate_cov(method='jackknife', func=func_Xp) # or 'bootstrap'
-        # cov_Xm = gg.estimate_cov(method='jackknife', func=func_Xm) # or 'bootstrap'
-        # np.save(outpath+'Xp_JKcov_%d.npy'%i, cov_Xp)
-        # np.save(outpath+'Xm_JKcov_%d.npy'%i, cov_Xm)
+        # Turn these into matrices
+        fp = np.array(allfp)
+        fm = np.array(allfm)
 
-        func = lambda corr: np.concatenate([np.sum((fp*corr.xip + fm*corr.xim)/2), # Xp
-                                            np.sum((fp*corr.xip - fm*corr.xim)/2)] # Xm
-                                          )
+        func = lambda corr: np.concatenate([(fp.dot(corr.xip) + fm.dot(corr.xim))/2, # Xp
+                                        (fp.dot(corr.xip) - fm.dot(corr.xim))/2] # Xm
+                                    )
         XpXm = func(gg)
         cov_XpXm = gg.estimate_cov(method='jackknife', func=func) # or 'bootstrap'
         np.save(outpath+'XpXm.npy', XpXm)
         np.save(outpath+'XpXm_cov.npy', cov_XpXm)
-
-        
-    print('done')
+        print('done')
+    else:
+        print('please compute correlation function first')
 
