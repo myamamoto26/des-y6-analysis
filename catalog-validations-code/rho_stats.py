@@ -339,9 +339,9 @@ def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='pif
         bin_config['max_sep'] = 2000.
         bin_config['bin_size'] = 0.01
 
-    f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'r')
+    f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v3.txt', 'r')
     R11, R22 = f_response.read().split('\n')
-    cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
+    cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/cuts_v3/*_metadetect-v5_mdetcat_part0000.fits')
     results = []
     for cat1 in [ecat, qcat, wcat]:
         print('Doing correlation of %s vs %s'%(cat1.name, 'shear'))
