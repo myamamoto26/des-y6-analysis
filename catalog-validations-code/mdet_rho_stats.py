@@ -31,11 +31,11 @@ def main(argv):
         print('Skipping rho-stats. ')
 
     # tau-stats. 
-    if not os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats', 'tau_all_JK_v2_griz.json')): 
+    if not os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats', 'tau_all_JK_v3_griz.json')): 
         print('Computing tau-stats...')
         max_sep = 60
         max_mag = 0
-        name = 'all_JK_v2' 
+        name = 'all_JK_v3' 
         tag = 'griz'
         stats = measure_tau(good_piffs_table, max_sep, max_mag, subtract_mean=True)
         stat_file = os.path.join('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats', "tau_%s_%s.json"%(name, tag))
