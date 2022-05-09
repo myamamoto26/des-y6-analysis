@@ -104,9 +104,9 @@ if rank == 0:
                                         (fp.dot(corr.xip) - fm.dot(corr.xim))/2] # Xm
                                     )
         XpXm = func(gg)
-        cov_XpXm = gg.estimate_cov(method='jackknife', func=func) # or 'bootstrap'
-        np.save(outpath+'XpXm.npy', XpXm)
-        np.save(outpath+'XpXm_cov.npy', cov_XpXm)
+        cov_XpXm = gg.estimate_cov(method='bootstrap', func=func) # or 'bootstrap'
+        np.save(outpath+'XpXm_BS.npy', XpXm)
+        np.save(outpath+'XpXm_BScov.npy', cov_XpXm)
         print('done')
     else:
         print('please compute correlation function first')
