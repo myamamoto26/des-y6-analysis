@@ -9,9 +9,9 @@ import glob
 
 work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
 # work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
-work_mdet_cuts = '/global/cscratch1/sd/myamamot/metadetect/cuts_v2'
+work_mdet_cuts = '/global/cscratch1/sd/myamamot/metadetect/cuts_v3'
 
-def survey_systematic_maps(fs, survey_property, method, pkdgrav, outpath, prop, band):
+def survey_systematic_maps(fs, survey_property, method, num_sim, outpath, prop, band):
 
     import healpy as hp
     import time
@@ -111,26 +111,8 @@ def survey_systematic_maps(fs, survey_property, method, pkdgrav, outpath, prop, 
         group_shear_output = [np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2))]
         group_number_output = [np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2))]
 
-    if pkdgrav:
-        import pickle
-
-        nsim = 200
-        for n in tqdm(range(nsim)):
-            with open('/global/cscratch1/sd/myamamot/sample_variance/seed__fid_'+str(n+1)+'.pkl', 'rb') as handle:
-                res = pickle.load(handle)
-                handle.close()
-            d = res['sources'][0]
-            d_pix = hp.ang2pix(4096, d['ra'], d['dec'], nest=True, lonlat=True)
-            d_bin_signal = np.array([pix_signal[pix] for pix in d_pix])
-            _accum_shear_bin_pkdgrav(d, d_bin_signal, bin_edges, group_shear_output, group_number_output)
-
-            mean_shear_output = np.zeros(binnum, dtype=[('mean_signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
-            mean_shear_output = _compute_shear(mean_shear_output, group_shear_output, group_number_output, binnum, pkdgrav=pkdgrav)
-            
-            fio.write(outpath+'seed__fid_'+str(n+1)+'_'+band+'.fits', mean_shear_output)
-        return None
-
     for i, fname in tqdm(enumerate(fs)):
+        print('computing survey systematics')
         fp = os.path.join(work_mdet_cuts, fname)
         if os.path.exists(fp):
             d = fio.read(fp)
@@ -165,6 +147,29 @@ def survey_systematic_maps(fs, survey_property, method, pkdgrav, outpath, prop, 
 
     fio.write(outpath+prop+'_'+band+'_systematics.fits', mean_shear_output)
 
+    pkdgrav_sim = len(glob.glob(outpath+'seed__fid_*_'+band+'.fits'))
+    if pkdgrav_sim != num_sim:
+        print('computing the variance from the pkdgrav sims.')
+        import pickle
+
+        nsim = 200
+        for n in tqdm(range(nsim)):
+            with open('/global/cscratch1/sd/myamamot/sample_variance/seed__fid_'+str(n+1)+'.pkl', 'rb') as handle:
+                res = pickle.load(handle)
+                handle.close()
+            d = res['sources'][0]
+            d_pix = hp.ang2pix(4096, d['ra'], d['dec'], nest=True, lonlat=True)
+            d_bin_signal = np.array([pix_signal[pix] for pix in d_pix])
+            _accum_shear_bin_pkdgrav(d, d_bin_signal, bin_edges, group_shear_output, group_number_output)
+
+            mean_shear_output = np.zeros(binnum, dtype=[('mean_signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
+            mean_shear_output = _compute_shear(mean_shear_output, group_shear_output, group_number_output, binnum, pkdgrav=True)
+            
+            fio.write(outpath+'seed__fid_'+str(n+1)+'_'+band+'.fits', mean_shear_output)
+        return None
+    else:
+        return None
+
 
 def main(argv):
 
@@ -178,10 +183,10 @@ def main(argv):
     band = sys.argv[2]
     survey_property = glob.glob('/global/project/projectdirs/des/myamamot/survey_property_maps/'+prop+'_*_'+band+'.fits')[0]
 
-    pkdgrav = False
+    num_sim = 200
     method = 'bin'
     outpath = '/global/cscratch1/sd/myamamot/survey_property_maps/'+prop+'/'
-    survey_systematic_maps(fs, survey_property, method, pkdgrav, outpath, prop, band)
+    survey_systematic_maps(fs, survey_property, method, num_sim, outpath, prop, band)
 
 if __name__ == "__main__":
     main(sys.argv)
