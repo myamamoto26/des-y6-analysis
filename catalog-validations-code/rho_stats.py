@@ -356,7 +356,7 @@ def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='pif
             gg.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
             cat2.unload()
         results.append(gg)
-        np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/'+cat1.name+'_shear_cov.npy', gg.cov)
+        # np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/'+cat1.name+'_shear_cov.npy', gg.cov)
     cov = treecorr.estimate_multi_cov([results[0], results[1], results[2]], 'jackknife')
     print(cov)
     np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/tau_multi_cov.npy',cov)
