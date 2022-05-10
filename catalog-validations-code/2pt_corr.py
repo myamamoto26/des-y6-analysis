@@ -31,7 +31,7 @@ subtract_mean = True
 
 # Load Y6 catalogs
 # mdet_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits')
-with open('/global/cscratch1/sd/myamamot/sample_variance/data_catalogs_weighted.pkl', 'rb') as handle:
+with open('/global/cscratch1/sd/myamamot/sample_variance/data_catalogs_weighted_v3.pkl', 'rb') as handle:
     res = pickle.load(handle)
     handle.close()
 
@@ -65,7 +65,7 @@ if rank == 0:
         del cat_patch
 comm.Barrier()
 
-if not os.path.exists(outpath+'y6_shear2pt_nontomo_subtract_mean.pkl'):
+if not os.path.exists(outpath+'y6_shear2pt_nontomo_v3.pkl'):
     cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, patch_centers=outpath+'patch_centers.txt')
     print('catalog done', rank)
     gg = treecorr.GGCorrelation(bin_config, verbose=2)
@@ -73,17 +73,17 @@ if not os.path.exists(outpath+'y6_shear2pt_nontomo_subtract_mean.pkl'):
     print('calculation done', rank)
 
     if rank == 0:
-        gg.write(outpath+'y6_shear2pt_nontomo_subtract_mean.fits')
-        with open(outpath+'y6_shear2pt_nontomo_subtract_mean.pkl', 'wb') as f: # save gg as a pickle file, so that we can refer to all the results later. 
+        gg.write(outpath+'y6_shear2pt_nontomo_v3.fits')
+        with open(outpath+'y6_shear2pt_nontomo_v3.pkl', 'wb') as f: # save gg as a pickle file, so that we can refer to all the results later. 
             pickle.dump(gg, f)
 
         cov_jk = gg.estimate_cov('jackknife')
-        np.save(outpath+'y6_shear2pt_nontomo_JKcov.npy', cov_jk)
+        np.save(outpath+'y6_shear2pt_nontomo_JKcov_v3.npy', cov_jk)
 comm.Barrier()
 
 if rank == 0:
-    if os.path.exists(outpath+'y6_shear2pt_nontomo_subtract_mean.pkl'):
-        with open(outpath+'y6_shear2pt_nontomo_subtract_mean.pkl', 'rb') as f:
+    if os.path.exists(outpath+'y6_shear2pt_nontomo_v3.pkl'):
+        with open(outpath+'y6_shear2pt_nontomo_v3.pkl', 'rb') as f:
             gg = pickle.load(f)
 
         # covariance for B-mode stats
@@ -104,9 +104,9 @@ if rank == 0:
                                         (fp.dot(corr.xip) - fm.dot(corr.xim))/2] # Xm
                                     )
         XpXm = func(gg)
-        cov_XpXm = gg.estimate_cov(method='bootstrap', func=func) # or 'bootstrap'
-        np.save(outpath+'XpXm_BS.npy', XpXm)
-        np.save(outpath+'XpXm_BScov.npy', cov_XpXm)
+        cov_XpXm = gg.estimate_cov(method='jackknife', func=func) # or 'bootstrap'
+        np.save(outpath+'XpXm_JK.npy', XpXm)
+        np.save(outpath+'XpXm_JKcov.npy', cov_XpXm)
         print('done')
     else:
         print('please compute correlation function first')
