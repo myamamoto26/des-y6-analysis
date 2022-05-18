@@ -159,7 +159,7 @@ def inverse_variance_weight(steps, fs):
 
     save_data = True
     snmin=10
-    snmax=300
+    snmax=1000
     sizemin=0.5
     sizemax=3
     steps=steps
@@ -210,7 +210,7 @@ def inverse_variance_weight(steps, fs):
 
     res_measurement = {'xedges': xedges, 'yedges': yedges, 'count': count_all, 'meanes': new_meanes, 'response': new_response, 'weight': new_shearweight}
     if save_data:
-        with open('/global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut.pickle', 'wb') as dat:
+        with open('/global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle', 'wb') as dat:
             pickle.dump(res_measurement, dat, protocol=pickle.HIGHEST_PROTOCOL)
 
     print('total number count before cuts', total_count)
