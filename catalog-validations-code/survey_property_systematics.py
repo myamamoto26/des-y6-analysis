@@ -111,8 +111,8 @@ def survey_systematic_maps(fs, survey_property, method, num_sim, outpath, prop, 
         group_shear_output = [np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2))]
         group_number_output = [np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2))]
 
+    print('computing survey systematics')
     for i, fname in tqdm(enumerate(fs)):
-        print('computing survey systematics')
         fp = os.path.join(work_mdet_cuts, fname)
         if os.path.exists(fp):
             d = fio.read(fp)
