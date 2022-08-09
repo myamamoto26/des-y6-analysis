@@ -6,17 +6,29 @@ import numpy as np
 import fitsio as fio
 import matplotlib as mpl
 
-work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
-# work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
-work_mdet_cuts = '/global/cscratch1/sd/myamamot/metadetect/cuts_v3'
 
+def inverse_variance_weight(mdet_tilename_filepath, mdet_input_filepaths, shear_wgt_output_filepath, steps, snmin, snmax, sizemin, sizemax):
 
-# Figure 4; galaxy count, shear response, variance of e, shear weight as a function of S/N and size ratio.
-def inverse_variance_weight(steps, fs):
+    """
+    Returns galaxy count, shear response, variance of e, shear weight as a function of S/N and size ratio.
 
-    # Input: 
-    #   steps = how many bins in each axis.
-    #   mdet_cat = metadetection catalog.
+    Parameters
+    ----------
+    mdet_tilename_filepath: Text file of the list of filenames of the metadetection catalogs
+    Example) /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt
+
+    mdet_input_filepaths: The file path to the directory in which the input metadetection catalogs exist
+    Example) /global/cscratch1/sd/myamamot/metadetect/cuts_v3
+
+    shear_wgt_output_filepath: The file path where the output pickle file is written
+    Example) /global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle
+
+    steps: The bin number in S/N and size ratio
+    snmin: The minimum S/N to be considered
+    snmax: The maximum S/N to be considered
+    sizemin: The minimum size ratio (T/Tpsf) to be considered
+    sizemax: The maximum size ratio to be considered
+    """
 
     import os
     np.random.seed(1738)
@@ -25,6 +37,9 @@ def inverse_variance_weight(steps, fs):
     import pylab as mplot
     import matplotlib.ticker as ticker
     import pickle
+
+    f = open(mdet_tilename_filepath, 'r')
+    fs = f.read().split('\n')[:-1]
 
     def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
         # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
@@ -158,11 +173,6 @@ def inverse_variance_weight(steps, fs):
         return new_response
 
     save_data = True
-    snmin=10
-    snmax=1000
-    sizemin=0.5
-    sizemax=3
-    steps=steps
     count_all = np.zeros((steps,steps))
     m = np.zeros((steps, steps))
     
@@ -176,16 +186,19 @@ def inverse_variance_weight(steps, fs):
            'g1m_count': np.zeros((steps, steps)),
            'g2p_count': np.zeros((steps, steps)),
            'g2m_count': np.zeros((steps, steps))}
+    
     # Accumulate raw sums of shear and mean shear corrected with response per tile. 
     total_count = 0
     for fname in tqdm(filenames):
-        fp = os.path.join(work_mdet_cuts, fname)
+        fp = os.path.join(mdet_input_filepaths, fname)
         if os.path.exists(fp):
             d = fio.read(fp)
         else:
             continue
         total_count += len(d[d['mdet_step']=='noshear'])
-        d = d[d['mdet_T_ratio'] < 3.0]
+        
+        # Since we set upper limits on S/N (<1000) and Tratio (<3.0) which are not considered in cuts_and_save_catalogs.py, we need to make additional cuts here. 
+        d = d[((d['mdet_s2n'] < snmax) & (d['mdet_T_ratio'] < sizemax))]
         
         mask_noshear = (d['mdet_step'] == 'noshear')
         mastercat_noshear_snr = d[mask_noshear]['mdet_s2n']
@@ -199,7 +212,7 @@ def inverse_variance_weight(steps, fs):
         new_count = np.zeros((steps, steps))
         np.add.at(new_count,(new_indexx,new_indexy), 1)
         np.add.at(count_all,(), new_count)
-        np.add.at(m,(new_indexx,new_indexy), np.sqrt((new_e1**2+new_e2**2)/2))
+        np.add.at(m,(new_indexx,new_indexy), np.sqrt((new_e1**2+new_e2**2)/2)) # RMS of shear isn't corrected for the response. 
         # new_meanes = mesh_average(new_means, np.sqrt((new_e1**2+new_e2**2)/2),new_indexx,new_indexy,steps,new_count)
 
     H, xedges, yedges = np.histogram2d(mastercat_noshear_snr, mastercat_noshear_Tr, bins=[np.logspace(log10(snmin),log10(snmax),steps+1), np.logspace(log10(sizemin),log10(sizemax),steps+1)])
@@ -209,9 +222,9 @@ def inverse_variance_weight(steps, fs):
     new_shearweight = (new_response/new_meanes)**2
 
     res_measurement = {'xedges': xedges, 'yedges': yedges, 'count': count_all, 'meanes': new_meanes, 'response': new_response, 'weight': new_shearweight}
-    if save_data:
-        with open('/global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle', 'wb') as dat:
-            pickle.dump(res_measurement, dat, protocol=pickle.HIGHEST_PROTOCOL)
+
+    with open(shear_wgt_output_filepath, 'wb') as dat:
+        pickle.dump(res_measurement, dat, protocol=pickle.HIGHEST_PROTOCOL)
 
     print('total number count before cuts', total_count)
     print('total number count after cuts', np.sum(count_all))
@@ -219,10 +232,16 @@ def inverse_variance_weight(steps, fs):
 
 def main(argv):
 
-    f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
-    fs = f.read().split('\n')[:-1]
+    mdet_tilename_filepath = sys.argv[1]
+    mdet_input_filepaths = sys.argv[2]
+    shear_wgt_output_filepath = sys.argv[3]
+    steps = 20
+    snmin=10
+    snmax=1000
+    sizemin=0.5
+    sizemax=3
     
-    inverse_variance_weight(20, fs)
+    inverse_variance_weight(mdet_tilename_filepath, mdet_input_filepaths, shear_wgt_output_filepath, steps, snmin, snmax, sizemin, sizemax)
 
 if __name__ == "__main__":
     main(sys.argv)
