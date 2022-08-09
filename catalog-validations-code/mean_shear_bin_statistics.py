@@ -82,19 +82,6 @@ def _compute_g1_g2(res, binnum, method='all', tile=None):
             g2m = res['all']['2m'][bin][1] / res['all']['num_2m'][bin][1]
             R22 = (g2p - g2m) / 2 / 0.01
 
-        elif method=='just_response':
-            g1 = res['noshear'][bin][0] / res['num_noshear'][bin][0]
-            g1p = res['1p'][bin][0] / res['num_1p'][bin][0]
-            g1m = res['1m'][bin][0] / res['num_1m'][bin][0]
-            R11 = (g1p - g1m) / 2 / 0.01
-
-            g2 = res['noshear'][bin][1] / res['num_noshear'][bin][1]
-            g2p = res['2p'][bin][1] / res['num_2p'][bin][1]
-            g2m = res['2m'][bin][1] / res['num_2m'][bin][1]
-            R22 = (g2p - g2m) / 2 / 0.01
-            
-            return R11, R22
-
         corrected_g1g2[bin, 0] = g1/R11
         corrected_g1g2[bin, 1] = g2/R22
     return corrected_g1g2
@@ -159,34 +146,6 @@ def _accum_shear_all(res, tilename, binnum):
                 (bin, 1), 
                 res[tilename]["num_" + step][bin][1],
             )
-    return res
-
-def _accum_shear_per_tile_without_bin(res, mdet_step, g1, g2, bin):
-
-    # Function to compute mean shear without any bins.
-    for step in ['noshear', '1p', '1m', '2p', '2m']:
-        msk_s = np.where(mdet_step == step)[0]
-        
-        np.add.at(
-            res[step], 
-            (bin, 0), 
-            np.sum(g1[msk_s]),
-        )
-        np.add.at(
-            res[step], 
-            (bin, 1), 
-            np.sum(g2[msk_s]),
-        )
-        np.add.at(
-            res["num_" + step], 
-            (bin, 0), 
-            len(g1[msk_s]),
-        )
-        np.add.at(
-            res["num_" + step], 
-            (bin, 1), 
-            len(g2[msk_s]),
-        )
     return res
 
 def _compute_shear_per_jksample(res_jk, res, ith_tilename, tilenames, binnum):
@@ -419,30 +378,6 @@ def bin_statistics_from_master(d, nperbin, x):
     plt.tight_layout()
     plt.savefig('mdet_psf_vs_shear_fit_v2_SNR_1000.pdf', bbox_inches='tight')
 
-def statistics_per_tile_without_bins(fs):
-
-    filenames = [fname.split('/')[-1] for fname in fs]
-    binnum = 1
-    res = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
-           '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
-           '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
-           '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
-           '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-    for fname in tqdm(filenames):
-        fp = os.path.join(work_mdet_cuts, fname)
-        if os.path.exists(fp):
-            d = fio.read(fp)
-        else:
-            continue
-        res = _accum_shear_per_tile_without_bin(res, d['mdet_step'], d['mdet_g_1'], d['mdet_g_2'], 0)
-    R11, R22 = _compute_g1_g2(res, binnum, method='just_response')
-    f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt', 'w')
-    f_response.write(str(R11))
-    f_response.write('\n')
-    f_response.write(str(R22))
-    
-    return R11, R22
-
 def bin_statistics_per_tile(fs, predef_bin, qa, plt_label, plt_fname):
     
     res = {} # dictionary to accumulate raw sums. 
@@ -534,9 +469,6 @@ def main(argv):
     plot_fname = sys.argv[4]
 
     bin_statistics_per_tile(fs, predef_bin, column_name, xlabel, plot_fname)
-
-    # Function to produce shear response over all the tiles.
-    # statistics_per_tile_without_bins(fs)
 
 if __name__ == "__main__":
     main(sys.argv)
