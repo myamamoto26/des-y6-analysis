@@ -62,7 +62,7 @@ def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths,
     
     mdet_tilename_filepath = sys.argv[1]
     mdet_input_filepaths = sys.argv[2]
-    response_output_filepaths = sys.argv[3]
+    response_output_filepath = sys.argv[3]
 
     f = open(mdet_tilename_filepath, 'r')
     fs = f.read().split('\n')[:-1]
