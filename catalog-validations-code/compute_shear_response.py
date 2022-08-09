@@ -42,20 +42,20 @@ def _accum_shear_per_tile(res, mdet_step, g1, g2):
     return res
 
 
-def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths, response_output_filepaths):
+def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths, response_output_filepath):
 
     """
     Returns the diagonal part of the shear response R11, R22 from the metadetection catalogs over all the tiles.
 
     Parameters
     ----------
-    mdet_tilename_filepath: 
+    mdet_tilename_filepath: Text file of the list of filenames of the metadetection catalogs
     Example) /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt
 
-    mdet_input_filepaths: 
+    mdet_input_filepaths: The file path to the directory in which the input metadetection catalogs exist
     Example) /global/cscratch1/sd/myamamot/metadetect/cuts_v3
 
-    response_output_filepaths: 
+    response_output_filepath: The file path where the output text file is written
     Example) /global/cscratch1/sd/myamamot/metadetect/shear_response_v3.txt
 
     """
@@ -92,7 +92,7 @@ def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths,
     g2m = res['2m'][0][1] / res['num_2m'][0][1]
     R22 = (g2p - g2m) / 2 / 0.01
 
-    f_response = open(response_output_filepaths, 'w')
+    f_response = open(response_output_filepath, 'w')
     f_response.write(str(R11))
     f_response.write('\n')
     f_response.write(str(R22))
@@ -103,9 +103,9 @@ def main(argv):
     
     mdet_tilename_filepath = sys.argv[1]
     mdet_input_filepaths = sys.argv[2]
-    response_output_filepaths = sys.argv[3]
+    response_output_filepath = sys.argv[3]
 
-    compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths, response_output_filepaths)
+    compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths, response_output_filepath)
 
 if __name__ == "__main__":
     main(sys.argv)
