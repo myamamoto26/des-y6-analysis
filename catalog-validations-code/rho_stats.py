@@ -235,7 +235,7 @@ def write_stats_tau(stat_file, tau0, tau2, tau5):
         json.dump([stats], fp)
     print('Done writing ',stat_file)
 
-def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
+def measure_tau(piff_data, max_sep, max_mag, response_filepath, mdet_input_filepaths, stats_out_dir, tag=None, use_xy=False, prefix='piff',
                 alt_tt=False, opt=None, subtract_mean=False):
     """Compute the tau statistics
     """
@@ -339,9 +339,9 @@ def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='pif
         bin_config['max_sep'] = 2000.
         bin_config['bin_size'] = 0.01
 
-    f_response = open('/global/cscratch1/sd/myamamot/metadetect/shear_response_v3.txt', 'r')
+    f_response = open(response_filepath, 'r')
     R11, R22 = f_response.read().split('\n')
-    cat2_files = glob.glob('/global/cscratch1/sd/myamamot/metadetect/cuts_v3/*_metadetect-v5_mdetcat_part0000.fits')
+    cat2_files = glob.glob(mdet_input_filepaths)
     results = []
     for cat1 in [ecat, qcat, wcat]:
         print('Doing correlation of %s vs %s'%(cat1.name, 'shear'))
@@ -359,7 +359,7 @@ def measure_tau(piff_data, max_sep, max_mag, tag=None, use_xy=False, prefix='pif
         # np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/'+cat1.name+'_shear_cov.npy', gg.cov)
     cov = treecorr.estimate_multi_cov([results[0], results[1], results[2]], 'jackknife')
     print(cov)
-    np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/tau_multi_cov.npy',cov)
+    np.save(os.path.join(stats_out_dir, 'tau_multi_cov.npy'),cov)
 
     if alt_tt:
         print('Doing alt correlation of %s vs %s'%(dtcat.name, dtcat.name))
