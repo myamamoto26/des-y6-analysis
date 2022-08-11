@@ -69,7 +69,7 @@ def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath,
     Example) /global/cscratch1/sd/myamamot/sample_variance/data_catalogs_weighted_v3.pkl
 
     out_path: the output file path
-    Example) /global/project/projectdirs/des/myamamot/2pt_corr/
+    Example) /global/project/projectdirs/des/myamamot/2pt_corr
 
     corr_out_fits_filepath: the output fits file path of the computed 2pt function
     Example) /global/project/projectdirs/des/myamamot/2pt_corr/y6_shear2pt_nontomo_v3.fits
@@ -114,13 +114,13 @@ def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath,
     if rank == 0:
         if not os.path.exists(out_path+'patch_centers.txt'):
             cat_patch = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=100)
-            cat_patch.write_patch_centers(out_path+'patch_centers.txt')
+            cat_patch.write_patch_centers(os.path.join(out_path, 'patch_centers.txt'))
             print('patch center done')
             del cat_patch
     comm.Barrier()
 
 
-    cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, patch_centers=out_path+'patch_centers.txt')
+    cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, patch_centers=os.path.join(out_path,'patch_centers.txt'))
     print('catalog done', rank)
     gg = treecorr.GGCorrelation(bin_config, verbose=2)
     gg.process(cat, comm=comm)
@@ -132,10 +132,12 @@ def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath,
             pickle.dump(gg, f)
 
         cov_jk = gg.estimate_cov('jackknife')
-        np.save(out_path+'y6_shear2pt_nontomo_JKcov.npy', cov_jk)
+        np.save(os.path.join(out_path,'y6_shear2pt_nontomo_JKcov.npy'), cov_jk)
     comm.Barrier()
 
     if bmode: 
+        if len(glob.glob(os.path.join(out_path,'geb_Y6_*.pkl'))) == 0:
+            _build_Bmode_estimator(corr_out_fits_filepath, out_path)
         if rank == 0:
             if os.path.exists(corr_out_pickle_filepath):
                 with open(corr_out_pickle_filepath, 'rb') as f:
@@ -143,7 +145,7 @@ def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath,
 
                 # covariance for B-mode stats
                 print('computing B-mode stats')
-                corr_fs = sorted(glob.glob(out_path+'geb_Y6_*.pkl')) # B-mode estimator (each bandpower)
+                corr_fs = sorted(glob.glob(os.path.join(out_path,'geb_Y6_*.pkl'))) # B-mode estimator (each bandpower)
                 allfp = []
                 allfm = []
                 for fname in corr_fs:
@@ -160,9 +162,22 @@ def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath,
                                             )
                 XpXm = func(gg)
                 cov_XpXm = gg.estimate_cov(method=cov_method, func=func) 
-                np.save(out_path+'XpXm_BS.npy', XpXm)
-                np.save(out_path+'XpXm_BScov.npy', cov_XpXm)
+                np.save(os.path.join(out_path,'XpXm_BS.npy'), XpXm)
+                np.save(os.path.join(out_path,'XpXm_BScov.npy'), cov_XpXm)
                 print('done')
             else:
                 print('please compute correlation function first')
 
+def main(argv):
+
+    mdet_input_flatfile = sys.argv[1]
+    out_path = sys.argv[2]
+    corr_out_fits_filepath = sys.argv[3]
+    corr_out_pickle_filepath = sys.argv[4]
+    bmode = sys.argv[5]
+    cov_method = sys.argv[6]
+
+    _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath, corr_out_pickle_filepath, bmode, cov_method)
+
+if __name__ == "__main__":
+    main(sys.argv)
