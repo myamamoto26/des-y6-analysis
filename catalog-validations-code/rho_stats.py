@@ -4,6 +4,7 @@ import os
 from matplotlib import pyplot as plt
 import fitsio as fio
 import glob
+import pickle
 
 def flux2mag(flux, zero_pt=30):
     return zero_pt - 2.5 * np.log10(flux)
@@ -235,7 +236,7 @@ def write_stats_tau(stat_file, tau0, tau2, tau5):
         json.dump([stats], fp)
     print('Done writing ',stat_file)
 
-def measure_tau(piff_data, max_sep, max_mag, response_filepath, mdet_input_filepaths, stats_out_dir, tag=None, use_xy=False, prefix='piff',
+def measure_tau(piff_data, max_sep, max_mag, mdet_input_flat, stats_out_dir, tag=None, use_xy=False, prefix='piff',
                 alt_tt=False, opt=None, subtract_mean=False):
     """Compute the tau statistics
     """
@@ -339,22 +340,15 @@ def measure_tau(piff_data, max_sep, max_mag, response_filepath, mdet_input_filep
         bin_config['max_sep'] = 2000.
         bin_config['bin_size'] = 0.01
 
-    f_response = open(response_filepath, 'r')
-    R11, R22 = f_response.read().split('\n')
-    cat2_files = glob.glob(mdet_input_filepaths)
+    with open(mdet_input_flat, 'rb') as f2:
+        cat2_d = pickle.load(mdet_input_flat)
     results = []
     for cat1 in [ecat, qcat, wcat]:
         print('Doing correlation of %s vs %s'%(cat1.name, 'shear'))
         gg = treecorr.GGCorrelation(bin_config, verbose=2)
-        for i,cat2_f in enumerate(cat2_files):
-            d = fio.read(cat2_f)
-            mask_noshear = (d['mdet_step'] == 'noshear')
-            g1 = d[mask_noshear]['mdet_g_1']/np.float64(R11)
-            g2 = d[mask_noshear]['mdet_g_2']/np.float64(R22)
-            cat2 = treecorr.Catalog(ra=d[mask_noshear]['ra'], dec=d[mask_noshear]['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=ecat.patch_centers)
-        
-            gg.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
-            cat2.unload()
+        cat2 = treecorr.Catalog(ra=cat2_d[0]['ra'], dec=cat2_d[0]['ra'], ra_units='deg', dec_units='deg', g1=cat2_d[0]['e1'], g2=cat2_d[0]['e2'], w=cat2_d[0]['w'], patch_centers=ecat.patch_centers)
+        gg.process(cat1, cat2)
+        cat2.unload()
         results.append(gg)
         # np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/'+cat1.name+'_shear_cov.npy', gg.cov)
     cov = treecorr.estimate_multi_cov([results[0], results[1], results[2]], 'jackknife')
