@@ -42,7 +42,7 @@ def _accum_shear_per_tile(res, mdet_step, g1, g2):
     return res
 
 
-def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths, response_output_filepath):
+def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths, response_output_filepath, mdet_mom):
 
     """
     Returns the diagonal part of the shear response R11, R22 from the metadetection catalogs over all the tiles.
@@ -58,11 +58,10 @@ def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths,
     response_output_filepath: The file path where the output text file is written
     Example) /global/cscratch1/sd/myamamot/metadetect/shear_response_v3.txt
 
+    mdet_mom: which measurement do we want to make cuts on
+    Example) wmom
+
     """
-    
-    mdet_tilename_filepath = sys.argv[1]
-    mdet_input_filepaths = sys.argv[2]
-    response_output_filepath = sys.argv[3]
 
     f = open(mdet_tilename_filepath, 'r')
     fs = f.read().split('\n')[:-1]
@@ -80,7 +79,7 @@ def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths,
             d = fio.read(fp)
         else:
             continue
-        res = _accum_shear_per_tile(res, d['mdet_step'], d['mdet_g_1'], d['mdet_g_2'])
+        res = _accum_shear_per_tile(res, d['mdet_step'], d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'])
     
     g1 = res['noshear'][0][0] / res['num_noshear'][0][0]
     g1p = res['1p'][0][0] / res['num_1p'][0][0]
@@ -104,8 +103,9 @@ def main(argv):
     mdet_tilename_filepath = sys.argv[1]
     mdet_input_filepaths = sys.argv[2]
     response_output_filepath = sys.argv[3]
+    mdet_mom = sys.argv[4]
 
-    compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths, response_output_filepath)
+    compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths, response_output_filepath, mdet_mom)
 
 if __name__ == "__main__":
     main(sys.argv)
