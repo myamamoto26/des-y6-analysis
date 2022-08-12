@@ -82,7 +82,7 @@ def shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, mde
 
 
 # Figure 14; Tangential shear around field center
-def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map):
+def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, coadd_tag):
 
     """
     Creates a fits file that contains the exposure number and field centers (RA, DEC) from desoper. 
@@ -105,17 +105,21 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
 
     random_point_map: Random point map created from the healsparse mask map. y6shear_figures.ipynb has the code. 
     Example) /global/homes/m/myamamot/DES/des-y6-analysis/y6-combined-hsmap_random.fits
+
+    coadd_tag: The file that is tagged in desoper database. 
+    Example) Y6A2_PIZACUTTER
     """
+
     from matplotlib import pyplot as plt
     import tqdm
     from tqdm import tqdm
     from compute_shear_response import compute_response_over_catalogs
     sys.path.append('./download-query-concatenation-code')
-    from query_examples import query_field_centers
+    from query_examples import query_field_centers, query_coadd_info
     import treecorr
     import glob
              
-    def find_exposure_numbers(mdet_fs):
+    def find_exposure_numbers(mdet_fs, tag):
 
         """
         Finds the list of exposure numbers (ID) from pizza-cutter files.
@@ -124,7 +128,10 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
         mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
         tilenames = [d.split('_')[0] for d in mdet_filenames]
 
-        coadd_info = fio.read('/global/project/projectdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info.fits')
+        if not os.path.exists('/global/project/projectdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info'+tag+'.fits'):
+            out_fname = '/global/project/projectdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info'+tag+'.fits'
+            query_coadd_info(out_fname, coadd_tag)
+        coadd_info = fio.read('/global/project/projectdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info'+tag+'.fits')
         coadd_files = {t: [] for t in tilenames}
         coadd_paths = {t: [] for t in tilenames}
         bands = {t: [] for t in tilenames}
@@ -186,7 +193,7 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
 
     # Create ccdnum and expnum text file if it has not been created yet, and query from DESDM table. Should only be done once. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
-        find_exposure_numbers(fs)
+        find_exposure_numbers(fs, coadd_tag)
         query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 150)
     
     expnum_field_centers = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits')
