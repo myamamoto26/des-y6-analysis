@@ -40,6 +40,23 @@ def get_coaddtile_geom(section, query, out_fname):
     curs = conn.cursor()
     conn.query_and_save(query, out_fname)
 
+def query_coadd_info(out_fname, tag):
+    
+    out_fname = '/global/cscratch1/sd/myamamot/pizza-slice/pizza-cutter-coadds-info_'+tag+'.fits'
+
+    query = """
+    select fai.path,d.filename,d.compression 
+    from proctag t, desfile d, file_archive_info fai 
+    where t.tag=%s 
+        and t.pfw_attempt_id=d.pfw_attempt_id 
+        and d.filetype='coadd_pizza_cutter' 
+        and d.id=fai.desfile_id;
+    """ % (tag, )
+
+    get_coaddtile_geom('desoper', query, out_fname)
+    print('querying pizza-cutter info done')
+
+
 def query_field_centers(fname, split_number):
 
     f = open(fname, 'r')
