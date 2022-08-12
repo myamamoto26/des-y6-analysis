@@ -247,7 +247,7 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
     ng_final['raw_xi'] = ng.raw_xi
     ng_final['raw_varxi'] = ng.raw_varxi
     
-    fio.write(os.path.join(random_point_map, mdet_mom+'_field_centers_cross_correlation_final_output.fits'), ng_final)
+    fio.write(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output.fits'), ng_final)
 
 def mean_shear_tomoz(gold_f, fs):
 
@@ -372,9 +372,10 @@ def main(argv):
     mdet_mom = sys.argv[3]
     out_path = sys.argv[4]
     random_point_map = sys.argv[5]
+    coadd_tag = sys.argv[6]
     
     shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path)
-    tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map)
+    tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, coadd_tag)
     # mean_shear_tomoz(gold_f, fs)
 
 if __name__ == "__main__":
