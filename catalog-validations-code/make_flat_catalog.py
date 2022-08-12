@@ -11,7 +11,7 @@ def _make_nz_for_sample_variance():
 
     return None
 
-def _make_flat_catalog_with_wgt(shear_wgt_input_filepath, response_input_filepath, mdet_input_filepaths, mdet_flat_output_filepath, mdet_mom):
+def _make_flat_catalog_with_wgt(shear_wgt_input_filepath, response_input_filepath, mdet_input_filepaths, mdet_flat_pickle_output_filepath, mdet_flat_fits_output_filepath, mdet_mom):
 
     """
     Compute the flat shear catalog with the inverse variance shear weight and saves it as a pickle file. 
@@ -27,8 +27,11 @@ def _make_flat_catalog_with_wgt(shear_wgt_input_filepath, response_input_filepat
     mdet_input_filepaths: The file paths where the input metadetection catalogs exist
     Example) /global/cscratch1/sd/myamamot/metadetect/cuts_v3/*_metadetect-v5_mdetcat_part0000.fits
 
-    mdet_flat_output_filepath: The file path where the output flat catalog is written
+    mdet_flat_pickle_output_filepath: The file path where the pickle output flat catalog is written
     Example) /global/cscratch1/sd/myamamot/sample_variance/data_catalogs_weighted_v3_snmax1000.pkl
+
+    mdet_flat_fits_output_filepath: The file path where the fits output flat catalog is written
+    Example) /global/cscratch1/sd/myamamot/sample_variance/data_catalogs_weighted_v3_snmax1000.fits
 
     mdet_mom: which measurement do we want to make cuts on
     """
@@ -45,6 +48,7 @@ def _make_flat_catalog_with_wgt(shear_wgt_input_filepath, response_input_filepat
     Tratio = res['yedges']
     shear_weight = res['weight']
     shear_response = res['response']
+    count = np.sum(res['count'])
 
     mdet_f = glob.glob(mdet_input_filepaths)
 
@@ -73,51 +77,69 @@ def _make_flat_catalog_with_wgt(shear_wgt_input_filepath, response_input_filepat
         
         return np.array(weight), np.array(response)
 
-    mdet_dict = {0: {}}
     snmin=np.min(s2n)
     snmax=np.max(s2n)
     sizemin=np.min(Tratio)
     sizemax=np.max(Tratio)
     steps=20
-    for i, fname in tqdm(enumerate(mdet_f)):
+
+    res = np.zeros(count, dtype=[('ra', float), ('dec', float), ('e1', float), ('e2', float), ('w', float), ('g_cov_1_1', float), ('g_cov_2_2', float), ('g_flux', float), ('r_flux', float), ('i_flux', float), ('z_flux', float), ('g_fluxerr', float), ('r_fluxerr', float), ('i_fluxerr', float), ('z_fluxerr', float)])
+    print('number of objects', count)
+    start = 0
+    end = 0
+    for fname in tqdm(mdet_f):
         
         d = fio.read(fname)
-        msk_noshear = (d['mdet_step'] == 'noshear')
+        additional_msk = ((d[mdet_mom+'_s2n'] < snmax) & (d[mdet_mom+'_T_ratio'] < sizemax))
+        msk_noshear = (d['mdet_step'] == 'noshear') & additional_msk
         
         w_shear, r_shear = _find_shear_weight(d, snmin, snmax, sizemin, sizemax, steps)
         g1 = d[msk_noshear][mdet_mom+'_g_1']/float(R11) # r_shear[msk_noshear]
         g2 = d[msk_noshear][mdet_mom+'_g_2']/float(R22) # r_shear[msk_noshear]
+        end += len(g1)
 
-        if i == 0:
-            mdet_dict[0]['ra'] = d[msk_noshear]['ra']
-            mdet_dict[0]['dec'] = d[msk_noshear]['dec']
-            mdet_dict[0]['e1'] = g1
-            mdet_dict[0]['e2'] = g2
-            mdet_dict[0]['w'] = w_shear[msk_noshear]
-            mdet_dict[0][mdet_mom+'_band_flux_g'] = d[msk_noshear][mdet_mom+'_band_flux_g']
-            mdet_dict[0][mdet_mom+'_band_flux_r'] = d[msk_noshear][mdet_mom+'_band_flux_r']
-            mdet_dict[0][mdet_mom+'_band_flux_i'] = d[msk_noshear][mdet_mom+'_band_flux_i']
-            mdet_dict[0][mdet_mom+'_band_flux_z'] = d[msk_noshear][mdet_mom+'_band_flux_z']
-            mdet_dict[0][mdet_mom+'_band_flux_err_g'] = d[msk_noshear][mdet_mom+'_band_flux_err_g']
-            mdet_dict[0][mdet_mom+'_band_flux_err_r'] = d[msk_noshear][mdet_mom+'_band_flux_err_r']
-            mdet_dict[0][mdet_mom+'_band_flux_err_i'] = d[msk_noshear][mdet_mom+'_band_flux_err_i']
-            mdet_dict[0][mdet_mom+'_band_flux_err_z'] = d[msk_noshear][mdet_mom+'_band_flux_err_z']
-        else:
-            mdet_dict[0]['ra'] = np.append(mdet_dict[0]['ra'], d[msk_noshear]['ra'])
-            mdet_dict[0]['dec'] = np.append(mdet_dict[0]['dec'], d[msk_noshear]['dec'])
-            mdet_dict[0]['e1'] = np.append(mdet_dict[0]['e1'], g1)
-            mdet_dict[0]['e2'] = np.append(mdet_dict[0]['e2'], g2)
-            mdet_dict[0]['w'] = np.append(mdet_dict[0]['w'], w_shear[msk_noshear])
-            mdet_dict[0][mdet_mom+'_band_flux_g'] = np.append(mdet_dict[0][mdet_mom+'_band_flux_g'], d[msk_noshear][mdet_mom+'_band_flux_g'])
-            mdet_dict[0][mdet_mom+'_band_flux_r'] = np.append(mdet_dict[0][mdet_mom+'_band_flux_r'], d[msk_noshear][mdet_mom+'_band_flux_r'])
-            mdet_dict[0][mdet_mom+'_band_flux_i'] = np.append(mdet_dict[0][mdet_mom+'_band_flux_i'], d[msk_noshear][mdet_mom+'_band_flux_i'])
-            mdet_dict[0][mdet_mom+'_band_flux_z'] = np.append(mdet_dict[0][mdet_mom+'_band_flux_z'], d[msk_noshear][mdet_mom+'_band_flux_z'])
-            mdet_dict[0][mdet_mom+'_band_flux_err_g'] = np.append(mdet_dict[0][mdet_mom+'_band_flux_err_g'], d[msk_noshear][mdet_mom+'_band_flux_err_g'])
-            mdet_dict[0][mdet_mom+'_band_flux_err_r'] = np.append(mdet_dict[0][mdet_mom+'_band_flux_err_r'], d[msk_noshear][mdet_mom+'_band_flux_err_r'])
-            mdet_dict[0][mdet_mom+'_band_flux_err_i'] = np.append(mdet_dict[0][mdet_mom+'_band_flux_err_i'], d[msk_noshear][mdet_mom+'_band_flux_err_i'])
-            mdet_dict[0][mdet_mom+'_band_flux_err_z'] = np.append(mdet_dict[0][mdet_mom+'_band_flux_err_z'], d[msk_noshear][mdet_mom+'_band_flux_err_z'])
-    
-    with open(mdet_flat_output_filepath, 'wb') as handle:
+        res['ra'][start:end] = d[msk_noshear]['ra']
+        res['dec'][start:end] = d[msk_noshear]['dec']
+        res['e1'][start:end] = g1
+        res['e2'][start:end] = g2
+        res['w'][start:end] = w_shear[msk_noshear]
+        res['g_cov_1_1'] = d[msk_noshear][mdet_mom+'_g_cov_1_1']
+        res['g_cov_2_2'] = d[msk_noshear][mdet_mom+'_g_cov_2_2']
+        res['g_flux'] = d[msk_noshear][mdet_mom+'_band_flux_g']
+        res['r_flux'] = d[msk_noshear][mdet_mom+'_band_flux_r']
+        res['i_flux'] = d[msk_noshear][mdet_mom+'_band_flux_i']
+        res['z_flux'] = d[msk_noshear][mdet_mom+'_band_flux_z']
+        res['g_fluxerr'] = d[msk_noshear][mdet_mom+'_band_flux_err_g']
+        res['r_fluxerr'] = d[msk_noshear][mdet_mom+'_band_flux_err_r']
+        res['i_fluxerr'] = d[msk_noshear][mdet_mom+'_band_flux_err_i']
+        res['z_fluxerr'] = d[msk_noshear][mdet_mom+'_band_flux_err_z']
+
+        start += len(g1)    
+    print('number of final objects', end)
+
+    # cut down zero elements and save to fits file. 
+    res = res[res['ra'] != 0]
+    fio.write(mdet_flat_fits_output_filepath, res)
+
+    # make res a dict object and save pickle file.
+    mdet_dict = {0: {}}
+    mdet_dict[0]['ra'] = res['ra']
+    mdet_dict[0]['dec'] =res['dec']
+    mdet_dict[0]['e1'] = res['e1']
+    mdet_dict[0]['e2'] = res['e2']
+    mdet_dict[0]['w'] = res['w']
+    mdet_dict[0]['g_cov_1_1'] = res['g_cov_1_1']
+    mdet_dict[0]['g_cov_2_2'] = res['g_cov_2_2']
+    mdet_dict[0]['g_flux'] = res['g_flux']
+    mdet_dict[0]['r_flux'] = res['r_flux']
+    mdet_dict[0]['i_flux'] = res['i_flux']
+    mdet_dict[0]['z_flux'] = res['z_flux']
+    mdet_dict[0]['g_fluxerr'] = res['g_fluxerr']
+    mdet_dict[0]['r_fluxerr'] = res['r_fluxerr']
+    mdet_dict[0]['i_fluxerr'] = res['i_fluxerr']
+    mdet_dict[0]['z_fluxerr'] = res['z_fluxerr']
+
+    with open(mdet_flat_pickle_output_filepath, 'wb') as handle:
         pickle.dump(mdet_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 def main(argv):
@@ -125,10 +147,11 @@ def main(argv):
     shear_wgt_input_filepath = sys.argv[1]
     response_input_filepath = sys.argv[2]
     mdet_input_filepaths = sys.argv[3]
-    mdet_flat_output_filepath = sys.argv[4]
-    mdet_mom = sys.argv[5]
+    mdet_flat_pickle_output_filepath = sys.argv[4]
+    mdet_flat_fits_output_filepath = sys.argv[5]
+    mdet_mom = sys.argv[6]
 
-    _make_flat_catalog_with_wgt(shear_wgt_input_filepath, response_input_filepath, mdet_input_filepaths, mdet_flat_output_filepath, mdet_mom)
+    _make_flat_catalog_with_wgt(shear_wgt_input_filepath, response_input_filepath, mdet_input_filepaths, mdet_flat_pickle_output_filepath, mdet_flat_fits_output_filepath, mdet_mom)
 
 if __name__ == "__main__":
     main(sys.argv)
