@@ -77,9 +77,9 @@ If one wants to compute the cross-correlation function of shear with bright/fain
 ## mean_shear_spatial_variations.py
 If one wants to compute the mean shear variations across focal planes (CCDs) to check for charge transfer inefficiency (CTI) effect, 
 
-```python mean_shear_spatial_variations.py /global/cscratch1/sd/myamamot/metadetect/cuts_v2 /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt /global/cscratch1/sd/myamamot/pizza-slice/pizza-cutter-coadds-info.fits /global/cscratch1/sd/myamamot/metadetect/shear_variations True True```
+```python mean_shear_spatial_variations.py /global/cscratch1/sd/myamamot/metadetect/cuts_v2 /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt /global/cscratch1/sd/myamamot/pizza-slice/pizza-cutter-coadds-info.fits /global/cscratch1/sd/myamamot/metadetect/shear_variations wmom True True```
 
 
 ## survey_property_systematics.py
 If one wants to compute the survey map systematics (mean shear vs survey property like airmass) based on the survey property maps and the sample variance sims, 
-```python survey_property_systematics.py airmass g /global/cscratch1/sd/myamamot/metadetect/cuts_v3 /global/cscratch1/sd/myamamot/sample_variance /global/cscratch1/sd/myamamot/survey_property_maps/airmass```
+```python survey_property_systematics.py airmass g /global/cscratch1/sd/myamamot/metadetect/cuts_v3 /global/cscratch1/sd/myamamot/sample_variance /global/cscratch1/sd/myamamot/survey_property_maps/airmass wmom```
