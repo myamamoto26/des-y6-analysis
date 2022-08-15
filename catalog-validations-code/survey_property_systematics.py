@@ -8,7 +8,7 @@ import matplotlib as mpl
 import glob
 import pickle
 
-def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, survey_property, method, num_sim, outpath, prop, band):
+def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, survey_property, method, num_sim, outpath, prop, band, mdet_mom):
 
     """
     
@@ -24,11 +24,12 @@ def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, 
     survey_property: a list of files that contain the values for survey properties in healpix map
     method: a method of how to compute the survey systematics ('bin' computes the shear response in each bin. 'pixel' copmutes the shear response in each healpixel. This option is very expensive.)
     num_sim: the number of PKDGRAV simulations
-    prop: the systematic map property
-    band: the band for which survey systematic is measured
-
     outpath: 
     Example) /global/cscratch1/sd/myamamot/survey_property_maps/airmass
+
+    prop: the systematic map property
+    band: the band for which survey systematic is measured
+    mdet_mom: which estimator to use
     """
 
     import healpy as hp
@@ -91,15 +92,15 @@ def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, 
 
         return total_shear_output, total_number_output
 
-    def _accum_shear_bin(d, d_bin_signal, bin_edges, total_shear_output, total_number_output):
+    def _accum_shear_bin(d, d_bin_signal, bin_edges, total_shear_output, total_number_output, mdet_mom):
    
         for i, step in enumerate(['noshear', '1p', '1m', '2p', '2m']):
             msk_s = np.where(d['mdet_step'] == step)[0]
             bin_index = np.digitize(d_bin_signal[msk_s], bin_edges) - 1
 
             t0 = time.time()
-            np.add.at(total_shear_output[i], (bin_index, 0), d[msk_s]['mdet_g_1']) 
-            np.add.at(total_shear_output[i], (bin_index, 1), d[msk_s]['mdet_g_2']) 
+            np.add.at(total_shear_output[i], (bin_index, 0), d[msk_s][mdet_mom+'_g_1']) 
+            np.add.at(total_shear_output[i], (bin_index, 1), d[msk_s][mdet_mom+'_g_2']) 
             np.add.at(total_number_output[i], (bin_index, 0), 1)
             np.add.at(total_number_output[i], (bin_index, 1), 1)
             # print('accumulate', time.time()-t0)
@@ -143,7 +144,7 @@ def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, 
             group_shear_output, group_number_output = _accum_shear_pixel(d, d_pix, group_shear_output, group_number_output)
         elif method=='bin':
             d_bin_signal = np.array([pix_signal[pix] for pix in d_pix])
-            _accum_shear_bin(d, d_bin_signal, bin_edges, group_shear_output, group_number_output)
+            _accum_shear_bin(d, d_bin_signal, bin_edges, group_shear_output, group_number_output, mdet_mom)
 
     if method == 'pixel':
         mean_shear_output = np.zeros(healpix, dtype=[('pixel', 'i4'), ('signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
@@ -206,7 +207,8 @@ def main(argv):
     mdet_input_filepaths = sys.argv[3]
     sample_variance_filepaths = sys.argv[4]
     outpath = sys.argv[5]
-    survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, survey_property, method, num_sim, outpath, prop, band)
+    mdet_mom = sys.argv[6]
+    survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, survey_property, method, num_sim, outpath, prop, band, mdet_mom)
 
 if __name__ == "__main__":
     main(sys.argv)
