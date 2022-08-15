@@ -26,6 +26,8 @@ Otherwise, if one would like to make selection cuts and save catalogs,
 
 ```python cuts_and_save_catalogs.py /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt /global/project/projectdirs/des/myamamot/metadetect/v3 /global/cscratch1/sd/myamamot/metadetect/cuts_v3 /global/project/projectdirs/des/myamamot/metadetect/y6-combined-hsmap16384-nomdet.fits wmom```
 
+### Required items: raw metadetection catalogs, the file which contains metadetection file names, the survey mask map
+
 
 ## compute_shear_response.py
 If one wants to compute the shear response over all the catalogs, 
