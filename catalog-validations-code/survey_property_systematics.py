@@ -6,12 +6,30 @@ import numpy as np
 import fitsio as fio
 import matplotlib as mpl
 import glob
+import pickle
 
-work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
-# work_mdet_cuts = '/global/project/projectdirs/des/myamamot/metadetect/cuts_v2'
-work_mdet_cuts = '/global/cscratch1/sd/myamamot/metadetect/cuts_v3'
+def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, survey_property, method, num_sim, outpath, prop, band):
 
-def survey_systematic_maps(fs, survey_property, method, num_sim, outpath, prop, band):
+    """
+    
+    Parameters
+    ----------
+    fs: The input file for the tilenames
+    mdet_input_filepaths: The input filepath for the metadetection catalogs
+    Example) /global/cscratch1/sd/myamamot/metadetect/cuts_v3
+
+    sample_variance_filepaths: The input filepath for the simulated (PKDGRAV) sample variance catalogs
+    Example) /global/cscratch1/sd/myamamot/sample_variance
+
+    survey_property: a list of files that contain the values for survey properties in healpix map
+    method: a method of how to compute the survey systematics ('bin' computes the shear response in each bin. 'pixel' copmutes the shear response in each healpixel. This option is very expensive.)
+    num_sim: the number of PKDGRAV simulations
+    prop: the systematic map property
+    band: the band for which survey systematic is measured
+
+    outpath: 
+    Example) /global/cscratch1/sd/myamamot/survey_property_maps/airmass
+    """
 
     import healpy as hp
     import time
@@ -112,8 +130,9 @@ def survey_systematic_maps(fs, survey_property, method, num_sim, outpath, prop, 
         group_number_output = [np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2)), np.zeros((binnum, 2))]
 
     print('computing survey systematics')
+    # accumulate shear in each bin. 
     for i, fname in tqdm(enumerate(fs)):
-        fp = os.path.join(work_mdet_cuts, fname)
+        fp = os.path.join(mdet_input_filepaths, fname)
         if os.path.exists(fp):
             d = fio.read(fp)
         else:
@@ -145,16 +164,14 @@ def survey_systematic_maps(fs, survey_property, method, num_sim, outpath, prop, 
         mean_shear_output = np.zeros(binnum, dtype=[('mean_signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
         mean_shear_output = _compute_shear(mean_shear_output, group_shear_output, group_number_output, binnum)
 
-    fio.write(outpath+prop+'_'+band+'_systematics.fits', mean_shear_output)
+    fio.write(os.path.join(outpath, prop+'_'+band+'_systematics.fits'), mean_shear_output)
 
-    pkdgrav_sim = len(glob.glob(outpath+'seed__fid_*_'+band+'.fits'))
+    pkdgrav_sim = len(glob.glob(os.path.join(outpath, 'seed__fid_*_'+band+'.fits')))
     if pkdgrav_sim != num_sim:
-        print('computing the variance from the pkdgrav sims.')
-        import pickle
+        print('computing the variance from the pkdgrav sims')
 
-        nsim = 200
-        for n in tqdm(range(nsim)):
-            with open('/global/cscratch1/sd/myamamot/sample_variance/seed__fid_'+str(n+1)+'.pkl', 'rb') as handle:
+        for n in tqdm(range(num_sim)):
+            with open(os.path.join(sample_variance_filepaths, 'seed__fid_'+str(n+1)+'.pkl'), 'rb') as handle:
                 res = pickle.load(handle)
                 handle.close()
             d = res['sources'][0]
@@ -165,7 +182,7 @@ def survey_systematic_maps(fs, survey_property, method, num_sim, outpath, prop, 
             mean_shear_output = np.zeros(binnum, dtype=[('mean_signal', 'f8'), ('g1', 'f8'), ('g2', 'f8')])
             mean_shear_output = _compute_shear(mean_shear_output, group_shear_output, group_number_output, binnum, pkdgrav=True)
             
-            fio.write(outpath+'seed__fid_'+str(n+1)+'_'+band+'.fits', mean_shear_output)
+            fio.write(os.path.join(outpath, 'seed__fid_'+str(n+1)+'_'+band+'.fits'), mean_shear_output)
         return None
     else:
         return None
@@ -185,8 +202,11 @@ def main(argv):
 
     num_sim = 200
     method = 'bin'
-    outpath = '/global/cscratch1/sd/myamamot/survey_property_maps/'+prop+'/'
-    survey_systematic_maps(fs, survey_property, method, num_sim, outpath, prop, band)
+
+    mdet_input_filepaths = sys.argv[3]
+    sample_variance_filepaths = sys.argv[4]
+    outpath = sys.argv[5]
+    survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, survey_property, method, num_sim, outpath, prop, band)
 
 if __name__ == "__main__":
     main(sys.argv)
