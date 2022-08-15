@@ -213,7 +213,7 @@ def _categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_o
 
     return xind, yind, msk_obj
 
-def find_objects_in_ccd_and_sum_shears(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, bands):
+def find_objects_in_ccd_and_sum_shears(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, bands, mdet_mom):
 
     """
     Computes x,y coordinates in single-epoch image frame from RA,DEC in metadetection catalogs, and sums up the raw shear in each cell for each CCD. 
@@ -229,6 +229,7 @@ def find_objects_in_ccd_and_sum_shears(ccdres, mdet_obj, coadd_files, ccd_x_min,
     y_side: the number of cells in a column
     piece_side: the size of each cell
     bands: a list of bandnames of pizza-cutter meds files
+    mdet_mom: which estimator to use
     """
 
     # How this function works: Collect info (id, ra, dec, CCD coord, mean property values), save it, and plot later. 
@@ -286,12 +287,12 @@ def find_objects_in_ccd_and_sum_shears(ccdres, mdet_obj, coadd_files, ccd_x_min,
             xind = xind[msk_obj]
             yind = yind[msk_obj]
         
-            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g_1"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g_2"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj["mdet_g_1"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj["mdet_g_1"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj["mdet_g_2"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj["mdet_g_2"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], x_side, y_side)
 
     return ccdres
 
@@ -372,7 +373,7 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, out_path, stack_north_south
             mean_g2 = np.rot90(g2, 3)
             print(mean_g1, mean_g2)
 
-def compute_mean_shear_variations(mdet_input_filepaths,mdet_tilename_filepath, pizza_coadd_info, shear_variations_path, individual_tiles = False, make_per_ccd_files = False):
+def compute_mean_shear_variations(mdet_input_filepaths,mdet_tilename_filepath, pizza_coadd_info, shear_variations_path, mdet_mom, individual_tiles = False, make_per_ccd_files = False):
 
     """
     
@@ -388,7 +389,9 @@ def compute_mean_shear_variations(mdet_input_filepaths,mdet_tilename_filepath, p
     Example) /global/cscratch1/sd/myamamot/pizza-slice/pizza-cutter-coadds-info.fits
 
     shear_variations_path: The folder where shear variations files are stored. 
-    Example) /global/cscratch1/sd/myamamot/metadetect/shear_variations
+    Example) /global/cscratch1/sd/myamamot/metadetect/shear_variations/wmom
+
+    mdet_mom: which estimator to use
 
     individual_tiles: the argument whether you want to create pickle files that contain raw sums of shear in each CCD for each coadd tile. This will make # of tiles worth of files (Boolean)
     make_per_ccd_tiles: the argument whether you want to create pickle files per CCD. This will make # of CCDs worth of files and the tile information is contained in each file. This is necessary for computing jackknife errors. (Boolean)
@@ -437,7 +440,7 @@ def compute_mean_shear_variations(mdet_input_filepaths,mdet_tilename_filepath, p
             if not os.path.exists(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle')):
                 d = fio.read(os.path.join(mdet_input_filepaths, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
                 # msk = if additional cuts are necessary. 
-                ccdres = find_objects_in_ccd_and_sum_shears(ccdres, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, bands[t])
+                ccdres = find_objects_in_ccd_and_sum_shears(ccdres, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, bands[t], mdet_mom)
                 for c in list(ccdres.keys()):
                     obj_num += np.sum(ccdres[c]['num_g1'])
                 print('number of objects in this tile, ', obj_num)
@@ -543,8 +546,9 @@ def main(argv):
     shear_variations_path = sys.argv[4]
     shear_per_tile = sys.argv[5]
     shear_per_ccd = sys.argv[6]
+    mdet_mom = sys.argv[7]
 
-    compute_mean_shear_variations(mdet_input_filepaths,mdet_tilename_filepath, pizza_coadd_info, shear_variations_path, individual_tiles=shear_per_tile, make_per_ccd_files=shear_per_ccd)
+    compute_mean_shear_variations(mdet_input_filepaths,mdet_tilename_filepath, pizza_coadd_info, shear_variations_path, mdet_mom, individual_tiles=shear_per_tile, make_per_ccd_files=shear_per_ccd)
     
 if __name__ == "__main__":
     main(sys.argv)
