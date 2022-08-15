@@ -1,4 +1,5 @@
 
+from re import M
 from statistics import mean
 import fitsio as fio
 import numpy as np
@@ -42,6 +43,7 @@ def _accum_shear(ccdres, ccdnum, cname, shear, mdet_step, xind, yind, g, x_side,
         )
 
     return ccdres
+
 def _accum_shear_per_ccd(ccdres_all, ccdres, tilename):
 
     # Create ccd number key. 
@@ -191,6 +193,8 @@ def _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, N):
 
 def _categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_obj):
 
+    """Computes which 32x32 cell the objects are in."""
+
     xind = np.floor((x-ccd_x_min + 0.5)/piece_side).astype(int)
     yind = np.floor((y-ccd_y_min + 0.5)/piece_side).astype(int)
 
@@ -209,7 +213,23 @@ def _categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_o
 
     return xind, yind, msk_obj
 
-def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, t, bands):
+def find_objects_in_ccd_and_sum_shears(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, bands):
+
+    """
+    Computes x,y coordinates in single-epoch image frame from RA,DEC in metadetection catalogs, and sums up the raw shear in each cell for each CCD. 
+
+    Parameters
+    ----------
+    ccdres: a dictionary that contains keys for all CCDs and sums of raw shear
+    mdet_obj: a metadetection catalog
+    coadd_files: a list of filenames of pizza-cutter meds files
+    ccd_x_min: minimum x-value for CCD coordinates
+    ccd_y_min: minimum y-value for CCD coordinates
+    x_side: the number of cells in a row
+    y_side: the number of cells in a column
+    piece_side: the size of each cell
+    bands: a list of bandnames of pizza-cutter meds files
+    """
 
     # How this function works: Collect info (id, ra, dec, CCD coord, mean property values), save it, and plot later. 
     for pizza_f,band in zip(coadd_files, bands):
@@ -221,10 +241,12 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
             print('Corrupt file.?', pizza_f)
             raise OSError
 
-        # For each metadetect object, find the slice and single epochs that it is in, 
-        # and get the wcs the object is in, and convert the object's ra/dec into CCD coordinates.
-        # After that, accumulate objects on each CCD, cut the CCD into smaller pieces, 
-        # and compute the response in those pieces. 
+        # For each single-epoch image to create the coadd tile (10,000x10,000), find the WCS that can convert sky coordinates in coadd slices that used the single-epoch image to the image coordinates in single-epoch image, find objects in the slices
+        # image_info['image_id']: single-epoch image ID. 
+        # epochs_info['image_id']: single-epoch image ID. 
+        # epochs_info['id']: coadd slice ID (200x200). 
+        # mdet['slice_id']: coadd slice ID where objects are detected (200x200). 
+
         image_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
         image_id = image_id[image_id != 0]
         for iid in image_id:
@@ -259,7 +281,10 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
                 # print(pos_y[((pos_y<=98) | (pos_y>3998))])
             if ccdnum not in list(ccdres):
                 ccdres[ccdnum] = {}
+
             mdet_step = mdet_obj["mdet_step"][msk_obj]
+            xind = xind[msk_obj]
+            yind = yind[msk_obj]
         
             ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g_1"][msk_obj], x_side, y_side)
             ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj["mdet_g_2"][msk_obj], x_side, y_side)
@@ -270,8 +295,11 @@ def spatial_variations(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_si
 
     return ccdres
 
-def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False, per_ccd=False, block=False):
+def compute_shear_stack_CCDs(ccdres, x_side, y_side, out_path, stack_north_south=False, block=False):
     
+    """
+    Stack sums of raw shears per CCD into the sums of north/south CCDs and the sums of all CCDs.
+    """
     shear = {}
     for direct in ['north', 'south']:
         cnames = ['g1', 'g2', 'g1p', 'g1m', 'g2p', 'g2m']
@@ -298,6 +326,10 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False, pe
             shear['north'] = shear_sum_all
         elif direct == 'south':
             shear['south'] = shear_sum_all
+        
+        if not os.path.exists(os.path.join(out_path, 'mdet_shear_focal_plane_north_south.pickle')):
+            with open(os.path.join(out_path, 'mdet_shear_focal_plane_north_south.pickle'), 'wb') as raw:
+                pickle.dump(shear, raw, protocol=pickle.HIGHEST_PROTOCOL)
 
     if not stack_north_south:
         mean_north_g1, mean_north_g2  = _compute_g1_g2_per_ccd(shear['north'])
@@ -309,7 +341,7 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False, pe
         mean_south_g2 = np.rot90(mean_south_g2, 3)
         mean_g1 = [mean_north_g1, mean_south_g1]
         mean_g2 = [mean_north_g2, mean_south_g2]
-        return mean_g1, mean_g2
+        print(mean_g1, mean_g2)
     else:
         # Stack north and south but be careful of the directions of stacking.
         shear_stack = {}
@@ -326,23 +358,42 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, stack_north_south=False, pe
             np.add.at(shear_stack[cname], (rows, cols), shear_flip[rows, cols])
             np.add.at(shear_stack["num_"+cname], (rows, cols), shear_flip_num[rows, cols])
         
-        if block:
+        if block: # trim cells around edges. 
             for cname in list(shear_stack):
                 shear_stack[cname] = shear_stack[cname][2:-2, 2:-2]
+
+            if not os.path.exists(os.path.join(out_path, 'mdet_shear_focal_plane_stacked.pickle')):
+                with open(os.path.join(out_path, 'mdet_shear_focal_plane_stacked.pickle'), 'wb') as raw:
+                    pickle.dump(shear_stack, raw, protocol=pickle.HIGHEST_PROTOCOL)
             return shear_stack
         else:
             g1, g2  = _compute_g1_g2_per_ccd(shear_stack)
             mean_g1 = np.rot90(g1, 3)
             mean_g2 = np.rot90(g2, 3)
-            return mean_g1, mean_g2
+            print(mean_g1, mean_g2)
 
-def main(argv):
+def compute_mean_shear_variations(mdet_input_filepaths,mdet_tilename_filepath, pizza_coadd_info, shear_variations_path, individual_tiles = False, make_per_ccd_files = False):
 
-    individual_tiles = False
-    make_per_ccd_files = False
-    work_mdet = '/global/project/projectdirs/des/myamamot/metadetect'
-    work_mdet_cuts = '/global/cscratch1/sd/myamamot/metadetect/cuts_v2'
-    work = '/global/cscratch1/sd/myamamot'
+    """
+    
+    Parameters
+    ----------
+    mdet_input_filepaths: The input filepath for the metadetection catalog
+    Example) /global/cscratch1/sd/myamamot/metadetect/cuts_v2
+
+    mdet_tilename_filepath: The input filepath for the metadetection catalog tilenames
+    Example) /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt
+
+    pizza_coadd_info: The input filepath for the pizza-cutter coadd information
+    Example) /global/cscratch1/sd/myamamot/pizza-slice/pizza-cutter-coadds-info.fits
+
+    shear_variations_path: The folder where shear variations files are stored. 
+    Example) /global/cscratch1/sd/myamamot/metadetect/shear_variations
+
+    individual_tiles: the argument whether you want to create pickle files that contain raw sums of shear in each CCD for each coadd tile. This will make # of tiles worth of files (Boolean)
+    make_per_ccd_tiles: the argument whether you want to create pickle files per CCD. This will make # of CCDs worth of files and the tile information is contained in each file. This is necessary for computing jackknife errors. (Boolean)
+    """
+
     ccd_x_min = 48
     ccd_x_max = 2000
     ccd_y_min = 48
@@ -353,21 +404,22 @@ def main(argv):
     num_ccd = 62
 
     # NEED TO WRITE THE CODE TO BE ABLE TO RUN FROM BOTH MASTER FLAT AND INDIVIDUAL FILES. 
-    mdet_f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
+    mdet_f = open(mdet_tilename_filepath, 'r')
     mdet_fs = mdet_f.read().split('\n')[:-1]
     mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
     tilenames = [d.split('_')[0] for d in mdet_filenames]
 
+    # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
+    # When not using MPI, you can use for-loops (for t in tilenames)
     if individual_tiles:
         from mpi4py import MPI
-        import galsim
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
         size = comm.Get_size()
         print('mpi', rank, size)
         
         # Obtain file, tile, band information from information file queried from desoper. 
-        coadd_info = fio.read(os.path.join(work, 'pizza-slice/pizza-cutter-coadds-info.fits'))
+        coadd_info = fio.read(pizza_coadd_info)
         coadd_files = {t: [] for t in tilenames}
         bands = {t: [] for t in tilenames}
         for coadd in coadd_info:
@@ -378,20 +430,18 @@ def main(argv):
                 coadd_files[tname].append(fname)
                 bands[tname].append(bandname)
 
-        # Accumulate raw sums of shear and number of objects in each bin for each tile and save as a pickle file. 
-        # When not using MPI, you can use for-loops (for t in tilenames)
         split_tilenames = np.array_split(tilenames, size)
         for t in tqdm(split_tilenames[rank]):
             ccdres = {}
             obj_num = 0
-            if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle'):
-                d = fio.read(os.path.join(work_mdet_cuts, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
-                # msk = ((d['flags']==0) & (d['mask_flags']==0) & (d['mdet_s2n']>10) & (d['mdet_s2n']<100) & (d['mfrac']<0.02) & (d['mdet_T_ratio']>0.5) & (d['mdet_T']<1.2))
-                ccdres = spatial_variations(ccdres, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, t, bands[t])
+            if not os.path.exists(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle')):
+                d = fio.read(os.path.join(mdet_input_filepaths, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
+                # msk = if additional cuts are necessary. 
+                ccdres = find_objects_in_ccd_and_sum_shears(ccdres, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, bands[t])
                 for c in list(ccdres.keys()):
                     obj_num += np.sum(ccdres[c]['num_g1'])
                 print('number of objects in this tile, ', obj_num)
-                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'wb') as raw:
+                with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle'), 'wb') as raw:
                     pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
             else:
                 print('Already made this tile.', t)
@@ -401,30 +451,30 @@ def main(argv):
             print('Converting tiles to CCDs...')
             ccdres_all_ccd = {}
             for t in tqdm(tilenames):
-                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle'), 'rb') as handle:
                     ccdres = pickle.load(handle)
                 ccdres_all_ccd = _accum_shear_per_ccd(ccdres_all_ccd, ccdres, t)
             for c in list(ccdres_all_ccd):
-                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'wb') as raw:
+                with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_ccd_'+str(c)+'.pickle'), 'wb') as raw:
                     pickle.dump(ccdres_all_ccd[c], raw, protocol=pickle.HIGHEST_PROTOCOL)
 
         # Add raw sums for all the tiles from individual tile file. 
-        if not os.path.exists('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle'):
+        if not os.path.exists(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_all.pickle')):
             ccdres_all = {}
             for t in tqdm(tilenames):
-                with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_'+t+'.pickle', 'rb') as handle:
+                with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle'), 'rb') as handle:
                     ccdres = pickle.load(handle)
                 ccdres_all = _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side)
             print(list(ccdres_all))
-            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'wb') as raw:
+            with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_all.pickle'), 'wb') as raw:
                 pickle.dump(ccdres_all, raw, protocol=pickle.HIGHEST_PROTOCOL)
         else:
-            with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mdet_shear_focal_plane_all.pickle', 'rb') as raw:
+            with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_all.pickle'), 'rb') as raw:
                 ccdres_all = pickle.load(raw) 
         
-        # Compute the mean shear for x-stack and y-stack.
+        # Saves accumulated pickle file for north/south and all, and then compute the mean shear for x-stack and y-stack.
         bin_num = 20
-        d_shear = compute_shear_stack_CCDs(ccdres_all, x_side, y_side, stack_north_south=True, block=True)
+        d_shear = compute_shear_stack_CCDs(ccdres_all, x_side, y_side, shear_variations_path, stack_north_south=True, block=True)
         mean_row_g1, mean_row_g2 = comb_rows(d_shear, bin_num)
         mean_col_g1, mean_col_g2 = comb_cols(d_shear, bin_num)
 
@@ -482,9 +532,19 @@ def main(argv):
         print(mean_row_g1)
         jk_dict = {'x_g1': mean_row_g1, 'y_g1': mean_col_g1, 'x_g2': mean_row_g2, 'y_g2': mean_col_g2, 
                     'jc_x_g1': jc_x_g1, 'jc_y_g1': jc_y_g1, 'jc_x_g2': jc_x_g2, 'jc_y_g2': jc_y_g2}
-        with open('/global/cscratch1/sd/myamamot/metadetect/shear_variations/mean_shear_jk_cov_v2.pickle', 'wb') as handle:
+        with open(os.path.join(shear_variations_path, 'mean_shear_jk_cov.pickle'), 'wb') as handle:
             pickle.dump(jk_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+def main(argv):
+
+    mdet_input_filepaths = sys.argv[1]
+    mdet_tilename_filepath = sys.argv[2]
+    pizza_coadd_info = sys.argv[3]
+    shear_variations_path = sys.argv[4]
+    shear_per_tile = sys.argv[5]
+    shear_per_ccd = sys.argv[6]
+
+    compute_mean_shear_variations(mdet_input_filepaths,mdet_tilename_filepath, pizza_coadd_info, shear_variations_path, individual_tiles=shear_per_tile, make_per_ccd_files=shear_per_ccd)
     
 if __name__ == "__main__":
     main(sys.argv)
