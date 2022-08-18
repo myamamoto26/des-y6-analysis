@@ -94,15 +94,18 @@ def _make_flat_catalog_with_wgt(shear_wgt_input_filepath, response_input_filepat
         msk_noshear = (d['mdet_step'] == 'noshear') & additional_msk
         
         w_shear, r_shear = _find_shear_weight(d, snmin, snmax, sizemin, sizemax, steps)
-        g1 = d[msk_noshear][mdet_mom+'_g_1']/float(R11) # r_shear[msk_noshear]
-        g2 = d[msk_noshear][mdet_mom+'_g_2']/float(R22) # r_shear[msk_noshear]
+        g1 = d[msk_noshear][mdet_mom+'_g_1']
+        g2 = d[msk_noshear][mdet_mom+'_g_2']
         end += len(g1)
 
         res['ra'][start:end] = d[msk_noshear]['ra']
         res['dec'][start:end] = d[msk_noshear]['dec']
-        res['e1'][start:end] = g1
-        res['e2'][start:end] = g2
-        res['w'][start:end] = w_shear[msk_noshear]
+        res['e1'][start:end] = g1 # uncorrected for response
+        res['e2'][start:end] = g2 # uncorrected for response
+        res['R11'][start:end] = float(R11) # global average
+        res['R22'][start:end] = float(R22) # global average
+        res['r'][start:end] = r_shear[msk_noshear] # computed in bins of s/n and T/Tpsf
+        res['w'][start:end] = w_shear[msk_noshear] # computed in bins of s/n and T/Tpsf
         res['g_cov_1_1'] = d[msk_noshear][mdet_mom+'_g_cov_1_1']
         res['g_cov_2_2'] = d[msk_noshear][mdet_mom+'_g_cov_2_2']
         res['g_flux'] = d[msk_noshear][mdet_mom+'_band_flux_g']
@@ -127,6 +130,9 @@ def _make_flat_catalog_with_wgt(shear_wgt_input_filepath, response_input_filepat
     mdet_dict[0]['dec'] =res['dec']
     mdet_dict[0]['e1'] = res['e1']
     mdet_dict[0]['e2'] = res['e2']
+    mdet_dict[0]['R11'] = res['R11'] 
+    mdet_dict[0]['R22'] = res['R22']
+    mdet_dict[0]['r'] = res['r']
     mdet_dict[0]['w'] = res['w']
     mdet_dict[0]['g_cov_1_1'] = res['g_cov_1_1']
     mdet_dict[0]['g_cov_2_2'] = res['g_cov_2_2']
