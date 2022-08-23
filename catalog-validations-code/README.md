@@ -3,14 +3,15 @@
 This directory contains the following python scripts:
 1. cuts_and_save_catalogs.py
 2. compute_shear_response.py
-3. inverse_weight.py
-4. make_flat_catalog.py
-5. mdet_rho_stats.py & rho_stats.py
-6. 2pt_corr.py
-7. compute_shape_noise_neff.py
-8. stars_fieldcenters_cross_correlation.py
-9. mean_shear_spatial_variations.py
-10. survey_property_systematics.py
+3. mean_shear_stats.py
+4. inverse_weight.py
+5. make_flat_catalog.py
+6. mdet_rho_stats.py & rho_stats.py
+7. 2pt_corr.py
+8. compute_shape_noise_neff.py
+9. stars_fieldcenters_cross_correlation.py
+10. mean_shear_spatial_variations.py
+11. survey_property_systematics.py
 
 Files that are not used for Y6 shear catalog paper:
 - piff_diagnostics.py: computes the PSF residuals plots.
@@ -35,6 +36,15 @@ If one wants to compute the shear response over all the catalogs,
 ```python compute_shear_response.py /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt /global/cscratch1/sd/myamamot/metadetect/cuts_v3 /global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt wmom```
 
 ### Required items: selection-cut metadetection catalogs, the file which contains metadetection file names
+
+
+## mean_shear_stats.py
+If one wants to compute the mean shear over properties like PSF shape/size and galaxy size, 
+
+```python mean_shear_stats.py /global/cscratch1/sd/myamamot/metadetect/cuts_v3/*_metadetect-v5_mdetcat_part0000.fits bin_stats.fits bin_hist.pickle wmom /global/homes/m/myamamot/DES/des-y6-analysis/y6_measurement 5000000 mean_shear_stats.pickle```
+
+### Required items: selection-cut metadetection catalogs
+
 
 ## inverse_weight.py
 If one wants to compute galaxy count, RMS of the shear, the shear response, and the inverse variance shear weight as a function of S/N and Tratio (T/Tpsf), 
