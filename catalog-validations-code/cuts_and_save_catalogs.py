@@ -11,9 +11,6 @@ def make_cuts_and_save_catalogs(argv):
 
     Parameters
     ----------
-    mask_map: Fits file of the healsparse map of the catalog masking (including gold, hyperleda, metadetect)
-    Example) /global/project/projectdirs/des/myamamot/metadetect/y6-combined-hsmap16384-nomdet.fits
-
     mdet_files: Text file of the list of filenames of the metadetection catalogs
     Example) /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt
 
@@ -22,6 +19,9 @@ def make_cuts_and_save_catalogs(argv):
     
     mdet_output_filepaths: The file path to the directory in which the output file is written
     Example) /global/cscratch1/sd/myamamot/metadetect/cuts_v3
+
+    mask_map: Fits file of the healsparse map of the catalog masking (including gold, hyperleda, metadetect)
+    Example) /global/project/projectdirs/des/myamamot/metadetect/y6-combined-hsmap16384-nomdet.fits
 
     mdet_mom: which measurement do we want to make cuts on
     Example) wmom
@@ -105,6 +105,7 @@ def make_cuts_and_save_catalogs(argv):
             columns = ['slice_id', 'mdet_step', 'ra', 'dec', 'ra_noshear', 'dec_noshear', 'y_noshear', 'x_noshear', 'y', 'x', 'slice_y', 'slice_x', 'slice_y_noshear', 'slice_x_noshear', 'hpix_16384', 'hpix_16384_noshear', 'filename', 'tilename', 'mask_flags', 'mask_flags_noshear', 'nepoch_g', 'nepoch_r', 'nepoch_i', 'nepoch_z','nepoch_eff_g', 'nepoch_eff_r', 'nepoch_eff_i', 'nepoch_eff_z', 'pgauss_reg0.90_flags', 'pgauss_reg0.90_psf_flags', 'pgauss_reg0.90_psf_g_1', 'pgauss_reg0.90_psf_g_2', 'pgauss_reg0.90_psf_T', 'pgauss_reg0.90_obj_flags', 'pgauss_reg0.90_s2n', 'pgauss_reg0.90_g_1', 'pgauss_reg0.90_g_2', 'pgauss_reg0.90_g_cov_1_1', 'pgauss_reg0.90_g_cov_1_2', 'pgauss_reg0.90_g_cov_2_2', 'pgauss_reg0.90_T', 'pgauss_reg0.90_T_flags', 'pgauss_reg0.90_T_err', 'pgauss_reg0.90_T_ratio', 'pgauss_reg0.90_band_flux_flags_g', 'pgauss_reg0.90_band_flux_flags_r', 'pgauss_reg0.90_band_flux_flags_i', 'pgauss_reg0.90_band_flux_flags_z', 'pgauss_reg0.90_band_flux_g', 'pgauss_reg0.90_band_flux_r', 'pgauss_reg0.90_band_flux_i', 'pgauss_reg0.90_band_flux_z', 'pgauss_reg0.90_band_flux_err_g', 'pgauss_reg0.90_band_flux_err_r', 'pgauss_reg0.90_band_flux_err_i', 'pgauss_reg0.90_band_flux_err_z', 'shear_bands', 'ormask', 'mfrac', 'bmask', 'mfrac_img', 'ormask_noshear', 'mfrac_noshear', 'bmask_noshear', 'psfrec_flags', 'psfrec_g_1', 'psfrec_g_2', 'psfrec_T']
         
         d_out = d_msk[columns]
+        print(d_out.dtype)
         fio.write(os.path.join(mdet_output_filepaths, fname), d_out)
 
 if __name__ == "__main__":
