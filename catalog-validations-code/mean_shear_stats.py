@@ -10,7 +10,7 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file):
     Make a flat catalog that contains information only needed to produce mean shear vs properties plot.
     """
 
-    res = np.zeros(200000000, dtype=[(mdet_mom+'_psf_g_1', float), (mdet_mom+'_psf_g_2', float), (mdet_mom+'_psf_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_g_1', float), (mdet_mom+'_g_2', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float)])
+    res = np.zeros(200000000, dtype=[('ra', float), (mdet_mom+'_psf_g_1', float), (mdet_mom+'_psf_g_2', float), (mdet_mom+'_psf_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_g_1', float), (mdet_mom+'_g_2', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float)])
 
     start = 0
     for f in tqdm(mdet_files):
@@ -18,6 +18,7 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file):
         d = d[d['mdet_step'] == 'noshear']
         end = start+len(d)
 
+        res['ra'][start:end] = d['ra']
         res[mdet_mom+'_psf_g_1'][start:end] = d[mdet_mom+'_psf_g_1']
         res[mdet_mom+'_psf_g_2'][start:end] = d[mdet_mom+'_psf_g_2']
         res[mdet_mom+'_psf_T'][start:end] = d[mdet_mom+'_psf_T']
@@ -30,7 +31,7 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file):
         start = end
 
     # remove zero entry
-    res = res[res['mdet_step'] != 0]
+    res = res[res['ra'] != 0]
     print('number of objects ', len(res))
     fio.write(os.path.join(outpath, stats_file), res)
 
@@ -43,7 +44,7 @@ def _compute_bins(stats_file, outpath, bin_file, nperbin):
 
     bin_dict = {}
     d = fio.read(os.path.join(outpath, stats_file))
-    for col in list(d.dtype.names):
+    for col in list(d.dtype.names)[1:]:
         prop = d[col]
         hist = stat.histogram(prop, nperbin=nperbin, more=True)
         bin_num = len(hist['hist'])
