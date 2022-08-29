@@ -317,3 +317,5 @@ def main(argv):
 
     compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file)
     
+if __name__ == "__main__":
+    main(sys.argv)
