@@ -16,7 +16,7 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file):
     for f in mdet_files:
         d = fio.read(f)
         end = len(d)
-        print(start, end, d)
+        print(f, start, end, len(d['mdet_step']), d['mdet_step'])
         res['mdet_step'][start:end] = d['mdet_step']
         res[mdet_mom+'_psf_g_1'][start:end] = d[mdet_mom+'_psf_g_1']
         res[mdet_mom+'_psf_g_2'][start:end] = d[mdet_mom+'_psf_g_2']
