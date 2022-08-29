@@ -55,6 +55,8 @@ def _compute_bins(stats_file, outpath, bin_file, nperbin):
     with open(os.path.join(outpath, bin_file), 'wb') as handle:
         pickle.dump(bin_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    return bin_dict
+
 def _compute_g1_g2(res, binnum, method='all', tile=None):
 
     # Compute mean shear with response. 
@@ -242,7 +244,7 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
     else:
         if not os.path.exists(os.path.join(outpath, bin_file)):
             print('creating bin file.')
-            _compute_bins(stats_file, outpath, bin_file, nperbin)
+            bin_dict = _compute_bins(stats_file, outpath, bin_file, nperbin)
         else:
             with open(os.path.join(outpath, bin_file), 'rb') as handle:
                 bin_dict = pickle.load(handle)
