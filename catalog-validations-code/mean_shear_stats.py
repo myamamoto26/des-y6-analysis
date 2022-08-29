@@ -30,8 +30,8 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file):
         start = end
 
     # remove zero entry
-    res = res[~np.all(res == 0, axis=1)]
-
+    res = res[res['mdet_step'] != 0]
+    print('number of objects ', len(res))
     fio.write(os.path.join(outpath, stats_file), res)
 
 def _compute_bins(stats_file, outpath, bin_file, nperbin):
