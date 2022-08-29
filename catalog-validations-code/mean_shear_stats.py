@@ -233,11 +233,14 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
     """
 
     mdet_files = glob.glob(mdet_input_filepaths)
+    print('there are ', len(mdet_files), ' to be processed.')
     tilenames = [fname.split('/')[-1].split('_')[0] for fname in mdet_files]
     if not os.path.exists(os.path.join(outpath, stats_file)):
+        print('creating flat file. ')
         _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file)
     else:
         if not os.path.exists(os.path.join(outpath, bin_file)):
+            print('creating bin file.')
             _compute_bins(stats_file, outpath, bin_file, nperbin)
         else:
             with open(os.path.join(outpath, bin_file), 'rb') as handle:
