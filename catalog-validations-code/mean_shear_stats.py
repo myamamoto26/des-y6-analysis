@@ -300,7 +300,7 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
                 res_jk_mean[sample] = jk_sample_mean
             
             # Compute jackknife error estimate.
-            jk_error = _compute_jackknife_error_estimate(res_jk_mean, res_all_mean, binnum, len(tilenames))
+            jk_error = _compute_jackknife_error_estimate(res_jk_mean, binnum, len(tilenames))
             print("jackknife error estimate: ", jk_error)
 
             measurement_result[key] = {'bin_mean': bins['mean'], 'g1': res_all_mean[:,0], 'g2': res_all_mean[:,1], 'g1_cov': jk_error[:,0], 'g2_cov': jk_error[:,1]}
