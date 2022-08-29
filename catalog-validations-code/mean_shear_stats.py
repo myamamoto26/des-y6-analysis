@@ -13,9 +13,10 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file):
     res = np.zeros(2000000, dtype=[('mdet_step', object), (mdet_mom+'_psf_g_1', float), (mdet_mom+'_psf_g_2', float), (mdet_mom+'_psf_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_g_1', float), (mdet_mom+'_g_2', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float), ('shear_bands', object)])
 
     start = 0
-    for f in mdet_files:
+    for f in tqdm(mdet_files):
         d = fio.read(f)
         end = start+len(d)
+        print(f, start, end, len(d))
         res['mdet_step'][start:end] = d['mdet_step']
         res[mdet_mom+'_psf_g_1'][start:end] = d[mdet_mom+'_psf_g_1']
         res[mdet_mom+'_psf_g_2'][start:end] = d[mdet_mom+'_psf_g_2']
