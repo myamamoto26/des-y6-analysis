@@ -10,7 +10,7 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file):
     Make a flat catalog that contains information only needed to produce mean shear vs properties plot.
     """
 
-    res = np.zeros(200000000, dtype=[('ra', float), (mdet_mom+'_psf_g_1', float), (mdet_mom+'_psf_g_2', float), (mdet_mom+'_psf_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float)])
+    res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float)])
 
     start = 0
     for f in tqdm(mdet_files):
@@ -19,9 +19,9 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file):
         end = start+len(d)
 
         res['ra'][start:end] = d['ra']
-        res[mdet_mom+'_psf_g_1'][start:end] = d[mdet_mom+'_psf_g_1']
-        res[mdet_mom+'_psf_g_2'][start:end] = d[mdet_mom+'_psf_g_2']
-        res[mdet_mom+'_psf_T'][start:end] = d[mdet_mom+'_psf_T']
+        res['psfrec_g_1'][start:end] = d['psfrec_g_1']
+        res['psfrec_g_2'][start:end] = d['psfrec_g_2']
+        res['psfrec_T'][start:end] = d['psfrec_T']
         res[mdet_mom+'_s2n'][start:end] = d[mdet_mom+'_s2n']
         res[mdet_mom+'_T'][start:end] = d[mdet_mom+'_T']
         res[mdet_mom+'_T_ratio'][start:end] = d[mdet_mom+'_T_ratio']
