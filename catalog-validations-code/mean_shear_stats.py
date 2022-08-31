@@ -245,6 +245,8 @@ def _find_shear_weight(d, wgt_dict, mdet_mom, snmin, snmax, sizemin, sizemax, st
     prior = ngmix.priors.GPriorBA(0.3, rng=np.random.RandomState())
     pvals = prior.get_prob_array2d(d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'])
     weights *= pvals
+
+    fio.write('/global/homes/m/myamamot/DES/des-y6-analysis/y6_measurement/weighting.fits', weights)
     
     return weights
 
@@ -305,7 +307,7 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
                     shear_wgt = _find_shear_weight(d, wgt_dict, mdet_mom, 10, 1000, 0.5, 3.0, 20)
                 elif mdet_mom == 'wmom':
                     shear_wgt = _find_shear_weight(d, wgt_dict, mdet_mom, 10, 1000, 1.2, 3.5, 20)
-                res = _accum_shear_per_tile(res, tilename, d['mdet_step'], d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'], d[key], bins['low'], bins['high'], binnum)
+                res = _accum_shear_per_tile(res, tilename, d['mdet_step'], d[mdet_mom+'_g_1']*shear_wgt, d[mdet_mom+'_g_2']*shear_wgt, d[key], bins['low'], bins['high'], binnum)
                 tile_mean = _compute_g1_g2(res, binnum, method='tile', tile=tilename)
                 res_tile_mean[tilename] = tile_mean
 
