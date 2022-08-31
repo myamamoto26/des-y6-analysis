@@ -240,8 +240,12 @@ def main(argv):
     steps = 20
     snmin=10
     snmax=1000
-    sizemin=0.5
-    sizemax=3
+    if mdet_mom in ['pgauss', 'pgauss_reg0.90']:
+        sizemin=0.5
+        sizemax=3
+    elif mdet_mom == 'wmom':
+        sizemin=1.2
+        sizemax=3.5
     
     inverse_variance_weight(mdet_tilename_filepath, mdet_input_filepaths, shear_wgt_output_filepath, mdet_mom, steps, snmin, snmax, sizemin, sizemax)
 
