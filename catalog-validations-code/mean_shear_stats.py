@@ -4,6 +4,7 @@ import glob
 import os, sys
 import pickle
 from tqdm import tqdm
+import ngmix
 
 def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file): 
     """
@@ -217,7 +218,35 @@ def _compute_jackknife_error_estimate(res_jk_mean, binnum, N):
 
     return jk_cov
 
-def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file):
+def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
+    from math import log10
+    # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
+
+    logstepx = log10(xmax/xmin)/xsteps
+    logstepy = log10(ymax/ymin)/ysteps
+
+    indexx = (np.log10(x/xmin)/logstepx).astype(int)
+    indexy = (np.log10(y/ymin)/logstepy).astype(int)
+
+    indexx = np.maximum(indexx,0)
+    indexx = np.minimum(indexx, xsteps-1)
+    indexy = np.maximum(indexy,0)
+    indexy = np.minimum(indexy, ysteps-1)
+
+    return indexx,indexy
+
+def _find_shear_weight(d, shear_wgt, mdet_mom, snmin, snmax, sizemin, sizemax, steps):
+    
+    indexx, indexy = assign_loggrid(d[mdet_mom+'_s2n'], d[mdet_mom+'_T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
+    weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
+
+    prior = ngmix.priors.GPriorBA(0.3, rng=np.random.RandomState())
+    pvals = prior.get_prob_array2d(d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'])
+    weights *= pvals
+    
+    return weights
+
+def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=None):
 
     """
     Computes mean shear in the bins of several PSF and galaxy properties.
@@ -231,6 +260,8 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
     outpath: The folder that contains measurement information
     nperbin: The number of objects per bin
     measurement_file: The file that contains information to plot the mean shear vs several properties
+    shear_wgt_file: The file path where the inverse variance shear weight is stored. This is produced in inverse_weight.py.
+    Example) /global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle
     """
 
     mdet_files = glob.glob(mdet_input_filepaths)
@@ -246,6 +277,10 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
         else:
             with open(os.path.join(outpath, bin_file), 'rb') as handle:
                 bin_dict = pickle.load(handle)
+
+        if shear_wgt_file:
+            with open(os.path.join(shear_wgt_file), 'rb') as handle:
+                wgt_dict = pickle.load(handle)
 
         measurement_result = {}
         for key in list(bin_dict.keys()):
@@ -264,6 +299,10 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
                                         '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
                                         '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                                         '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
+                if mdet_mom in ['pgauss', 'pgauss_reg0.90']:
+                    shear_wgt = _find_shear_weight(d, shear_wgt, mdet_mom, 10, 1000, 0.5, 3.0, 20)
+                elif mdet_mom == 'wmom':
+                    shear_wgt = _find_shear_weight(d, shear_wgt, mdet_mom, 10, 1000, 1.2, 3.5, 20)
                 res = _accum_shear_per_tile(res, tilename, d['mdet_step'], d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'], d[key], bins['low'], bins['high'], binnum)
                 tile_mean = _compute_g1_g2(res, binnum, method='tile', tile=tilename)
                 res_tile_mean[tilename] = tile_mean
@@ -281,8 +320,6 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
 
             # Compute the mean g1 and g2 over all the tiles. 
             res_all_mean = _compute_g1_g2(res, binnum)
-            print(res['all'])
-            print("mean shear over all tiles: ", res_all_mean)
 
             # Compute jackknife samples.
             print('computing jackknife errors')
@@ -316,7 +353,7 @@ def main(argv):
     nperbin = int(sys.argv[6])
     measurement_file = sys.argv[7]
 
-    compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file)
+    compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=sys.argv[8])
     
 if __name__ == "__main__":
     main(sys.argv)
