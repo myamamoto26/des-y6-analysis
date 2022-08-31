@@ -41,9 +41,9 @@ If one wants to compute the shear response over all the catalogs,
 ## mean_shear_stats.py
 If one wants to compute the mean shear over properties like PSF shape/size and galaxy size, 
 
-```python mean_shear_stats.py /global/cscratch1/sd/myamamot/metadetect/cuts_v3/*_metadetect-v5_mdetcat_part0000.fits bin_stats.fits bin_hist.pickle wmom /global/homes/m/myamamot/DES/des-y6-analysis/y6_measurement 5000000 mean_shear_stats.pickle```
+```python mean_shear_stats.py /global/cscratch1/sd/myamamot/metadetect/cuts_v3/*_metadetect-v5_mdetcat_part0000.fits bin_stats.fits bin_hist.pickle wmom /global/homes/m/myamamot/DES/des-y6-analysis/y6_measurement 5000000 mean_shear_stats.pickle /global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle```
 
-### Required items: selection-cut metadetection catalogs
+### Required items: selection-cut metadetection catalogs, the file which contains shear response+shear weight in the bins of S/N and T/Tpsf
 
 
 ## inverse_weight.py
