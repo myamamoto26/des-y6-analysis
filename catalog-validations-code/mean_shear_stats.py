@@ -235,8 +235,10 @@ def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
 
     return indexx,indexy
 
-def _find_shear_weight(d, shear_wgt, mdet_mom, snmin, snmax, sizemin, sizemax, steps):
+def _find_shear_weight(d, wgt_dict, mdet_mom, snmin, snmax, sizemin, sizemax, steps):
     
+    shear_wgt = wgt_dict['weight']
+
     indexx, indexy = assign_loggrid(d[mdet_mom+'_s2n'], d[mdet_mom+'_T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
     weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
 
@@ -300,9 +302,9 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
                                         '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                                         '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
                 if mdet_mom in ['pgauss', 'pgauss_reg0.90']:
-                    shear_wgt = _find_shear_weight(d, shear_wgt, mdet_mom, 10, 1000, 0.5, 3.0, 20)
+                    shear_wgt = _find_shear_weight(d, wgt_dict, mdet_mom, 10, 1000, 0.5, 3.0, 20)
                 elif mdet_mom == 'wmom':
-                    shear_wgt = _find_shear_weight(d, shear_wgt, mdet_mom, 10, 1000, 1.2, 3.5, 20)
+                    shear_wgt = _find_shear_weight(d, wgt_dict, mdet_mom, 10, 1000, 1.2, 3.5, 20)
                 res = _accum_shear_per_tile(res, tilename, d['mdet_step'], d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'], d[key], bins['low'], bins['high'], binnum)
                 tile_mean = _compute_g1_g2(res, binnum, method='tile', tile=tilename)
                 res_tile_mean[tilename] = tile_mean
