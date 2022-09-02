@@ -282,8 +282,8 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
     fs = f.read().split('\n')[:-1]
     mdet_files = []
     for fname in fs:
-        fn = fname.split('/')[-1]
-        if os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_final/'+mdet_mom, fn)):
+        fn = os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_final/'+mdet_mom, fname.split('/')[-1])
+        if os.path.exists(fn):
             mdet_files.append(fn)
     print('there are ', len(mdet_files), ' to be processed.')
     tilenames = [fname.split('/')[-1].split('_')[0] for fname in mdet_files]
