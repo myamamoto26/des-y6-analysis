@@ -303,7 +303,7 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
                 wgt_dict = pickle.load(handle)
         else:
             wgt_dict = None
-
+            
         measurement_result = {}
         print('accumulating shapes...')
         for key in list(bin_dict.keys()):
@@ -381,12 +381,15 @@ def main(argv):
     outpath = sys.argv[5]
     nperbin = int(sys.argv[6])
     measurement_file = sys.argv[7]
-    if sys.argv[9] is None:
+    if sys.argv[9] == 'None':
         additional_cuts = None
     else:
         additional_cuts = sys.argv[9].split(',')
 
-    compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=sys.argv[8], additional_cuts=additional_cuts)
+    if sys.argv[8] == 'None':
+        compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=None, additional_cuts=additional_cuts)
+    else:
+        compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=sys.argv[8], additional_cuts=additional_cuts)
     
 if __name__ == "__main__":
     main(sys.argv)
