@@ -305,6 +305,7 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
             wgt_dict = None
 
         measurement_result = {}
+        print('accumulating shapes...')
         for key in list(bin_dict.keys()):
             bins = bin_dict[key]
             res = {} # dictionary to accumulate raw sums. 
