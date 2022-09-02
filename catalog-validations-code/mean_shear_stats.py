@@ -6,7 +6,7 @@ import pickle
 from tqdm import tqdm
 import ngmix
 
-def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file): 
+def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file, add_cuts=None): 
     """
     Make a flat catalog that contains information only needed to produce mean shear vs properties plot.
     """
@@ -17,6 +17,12 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file):
     for f in tqdm(mdet_files):
         d = fio.read(f)
         d = d[d['mdet_step'] == 'noshear']
+        if add_cuts:
+            for cut in add_cuts:
+                if cut == mdet_mom+'_s2n':
+                    d = d[d[cut] < 200]
+                elif cut == mdet_mom+'_T_ratio':
+                    d = d[d[cut] > 1.5]
         end = start+len(d)
 
         res['ra'][start:end] = d['ra']
@@ -240,7 +246,7 @@ def _find_shear_weight(d, wgt_dict, mdet_mom, snmin, snmax, sizemin, sizemax, st
     if wgt_dict is None:
         weights = np.ones(len(d))
         return weights
-        
+
     shear_wgt = wgt_dict['weight']
     indexx, indexy = assign_loggrid(d[mdet_mom+'_s2n'], d[mdet_mom+'_T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
     weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
@@ -251,7 +257,7 @@ def _find_shear_weight(d, wgt_dict, mdet_mom, snmin, snmax, sizemin, sizemax, st
     
     return weights
 
-def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=None):
+def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=None, additional_cuts=None):
 
     """
     Computes mean shear in the bins of several PSF and galaxy properties.
@@ -267,14 +273,23 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
     measurement_file: The file that contains information to plot the mean shear vs several properties
     shear_wgt_file: The file path where the inverse variance shear weight is stored. This is produced in inverse_weight.py.
     Example) /global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle
+    additional_cuts: any additional cuts you want to apply to compute mean shear stats
+    Example) ['pgauss_s2n', 'pgauss_T_ratio']
     """
 
-    mdet_files = glob.glob(mdet_input_filepaths)
+    # mdet_files = glob.glob(mdet_input_filepaths)
+    f = open(mdet_input_filepaths, 'r')
+    fs = f.read().split('\n')[:-1]
+    mdet_files = []
+    for fname in fs:
+        fn = fname.split('/')[-1]
+        if os.path.exists(os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_final/'+mdet_mom, fn)):
+            mdet_files.append(fn)
     print('there are ', len(mdet_files), ' to be processed.')
     tilenames = [fname.split('/')[-1].split('_')[0] for fname in mdet_files]
     if not os.path.exists(os.path.join(outpath, stats_file)):
         print('creating flat file. ')
-        _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file)
+        _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file, add_cuts=additional_cuts)
     else:
         if not os.path.exists(os.path.join(outpath, bin_file)):
             print('creating bin file.')
@@ -299,6 +314,12 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
             # Accumulate raw sums of shear and mean shear corrected with response per tile. 
             for fname in tqdm(mdet_files):
                 d = fio.read(fname)
+                if additional_cuts:
+                    for cut in additional_cuts:
+                        if cut == mdet_mom+'_s2n':
+                            d = d[d[cut] < 200]
+                        elif cut == mdet_mom+'_T_ratio':
+                            d = d[d[cut] > 1.5]
                 num_objects += len(d)
                 tilename = fname.split('/')[-1].split('_')[0]
                 res[tilename] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
@@ -359,8 +380,12 @@ def main(argv):
     outpath = sys.argv[5]
     nperbin = int(sys.argv[6])
     measurement_file = sys.argv[7]
+    if sys.argv[9] is None:
+        additional_cuts = None
+    else:
+        additional_cuts = sys.argv[9].split(',')
 
-    compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=sys.argv[8])
+    compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=sys.argv[8], additional_cuts=additional_cuts)
     
 if __name__ == "__main__":
     main(sys.argv)
