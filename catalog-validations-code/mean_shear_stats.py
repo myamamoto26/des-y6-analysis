@@ -237,16 +237,17 @@ def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
 
 def _find_shear_weight(d, wgt_dict, mdet_mom, snmin, snmax, sizemin, sizemax, steps):
     
+    if wgt_dict is None:
+        weights = np.ones(len(d))
+        return weights
+        
     shear_wgt = wgt_dict['weight']
-
     indexx, indexy = assign_loggrid(d[mdet_mom+'_s2n'], d[mdet_mom+'_T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
     weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
 
-    # prior = ngmix.priors.GPriorBA(0.3, rng=np.random.RandomState())
-    # pvals = prior.get_prob_array2d(d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'])
-    # weights *= pvals
-
-    fio.write('/global/homes/m/myamamot/DES/des-y6-analysis/y6_measurement/weighting.fits', weights)
+    prior = ngmix.priors.GPriorBA(0.3, rng=np.random.RandomState())
+    pvals = prior.get_prob_array2d(d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'])
+    weights *= pvals
     
     return weights
 
@@ -285,6 +286,8 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
         if shear_wgt_file:
             with open(os.path.join(shear_wgt_file), 'rb') as handle:
                 wgt_dict = pickle.load(handle)
+        else:
+            wgt_dict = None
 
         measurement_result = {}
         for key in list(bin_dict.keys()):
