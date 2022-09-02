@@ -27,6 +27,8 @@ def make_cuts_and_save_catalogs(argv):
     mdet_mom: which measurement do we want to make cuts on
     Example) wmom
 
+    shear_bands: which bands do we want to make cuts on
+    Example) 0123
     """
 
     mdet_files = sys.argv[1]
@@ -34,6 +36,7 @@ def make_cuts_and_save_catalogs(argv):
     mdet_output_filepaths = sys.argv[3]
     mask_map = sys.argv[4]
     mdet_mom = sys.argv[5]
+    mdet_bands = sys.argv[6]
 
     # Apply cuts + image masks, and save the catalogs.
     hmap = healsparse.HealSparseMap.read(mask_map)
@@ -65,7 +68,7 @@ def make_cuts_and_save_catalogs(argv):
 
         msk = ((d[mdet_mom+"_flags"] == 0) & 
                 (d["mask_flags"] == 0) & 
-                (d["shear_bands"] == '0123') & 
+                (d["shear_bands"] == mdet_bands) & 
                 (d[mdet_mom+"_band_flux_flags_g"] == 0) & 
                 (d[mdet_mom+"_band_flux_flags_r"] == 0) & 
                 (d[mdet_mom+"_band_flux_flags_i"] == 0) & 
