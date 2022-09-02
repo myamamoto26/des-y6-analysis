@@ -25,7 +25,7 @@ Files that are not used for Y6 shear catalog paper:
 If one wants to run the validation tests with raw data (no selection cuts), go ahead and skip this step. 
 Otherwise, if one would like to make selection cuts and save catalogs, 
 
-```python cuts_and_save_catalogs.py /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt /global/project/projectdirs/des/myamamot/metadetect/v3 /global/cscratch1/sd/myamamot/metadetect/cuts_v3 /global/project/projectdirs/des/myamamot/metadetect/y6-combined-hsmap16384-nomdet.fits wmom```
+```python cuts_and_save_catalogs.py /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt /global/project/projectdirs/des/myamamot/metadetect/v3 /global/cscratch1/sd/myamamot/metadetect/cuts_v3 /global/project/projectdirs/des/myamamot/metadetect/y6-combined-hsmap16384-nomdet.fits wmom 0123```
 
 ### Required items: raw metadetection catalogs, the file which contains metadetection file names, the survey mask map
 
