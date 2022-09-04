@@ -257,7 +257,7 @@ def _find_shear_weight(d, wgt_dict, mdet_mom, snmin, snmax, sizemin, sizemax, st
     
     return weights
 
-def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=None, additional_cuts=None):
+def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, bands, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=None, additional_cuts=None):
 
     """
     Computes mean shear in the bins of several PSF and galaxy properties.
@@ -267,6 +267,7 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
 
     stats_file: The file name that contains the statistics to measure mean shear in bins of the statistics
     bin_file:  The file name that contains the binning information for each statistic
+    bands: shear bands
     mdet_mom: The shape measurement estimator
     outpath: The folder that contains measurement information
     nperbin: The number of objects per bin
@@ -282,7 +283,7 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
     fs = f.read().split('\n')[:-1]
     mdet_files = []
     for fname in fs:
-        fn = os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_final/'+mdet_mom, fname.split('/')[-1])
+        fn = os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_final/'+bands+'/'+mdet_mom, fname.split('/')[-1])
         if os.path.exists(fn):
             mdet_files.append(fn)
     print('there are ', len(mdet_files), ' to be processed.')
@@ -377,17 +378,18 @@ def main(argv):
     mdet_input_filepaths = sys.argv[1]
     stats_file = sys.argv[2]
     bin_file = sys.argv[3]
-    mdet_mom = sys.argv[4]
-    outpath = sys.argv[5]
-    nperbin = int(sys.argv[6])
-    measurement_file = sys.argv[7]
-    if sys.argv[9] == 'None':
+    shear_bands = sys.argv[4]
+    mdet_mom = sys.argv[5]
+    outpath = sys.argv[6]
+    nperbin = int(sys.argv[7])
+    measurement_file = sys.argv[8]
+    if sys.argv[10] == 'None':
         additional_cuts = None
     else:
-        additional_cuts = sys.argv[9].split(',')
+        additional_cuts = sys.argv[10].split(',')
 
-    if sys.argv[8] == 'None':
-        compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=None, additional_cuts=additional_cuts)
+    if sys.argv[9] == 'None':
+        compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, shear_bands, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=None, additional_cuts=additional_cuts)
     else:
         compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=sys.argv[8], additional_cuts=additional_cuts)
     
