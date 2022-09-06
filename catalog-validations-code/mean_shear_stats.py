@@ -11,7 +11,7 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file, add_cuts=N
     Make a flat catalog that contains information only needed to produce mean shear vs properties plot.
     """
 
-    res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float)])
+    res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float), (mdet_mom+'_g_1', float), (mdet_mom+'_g_2', float)])
 
     start = 0
     for f in tqdm(mdet_files):
@@ -32,6 +32,8 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file, add_cuts=N
         res[mdet_mom+'_s2n'][start:end] = d[mdet_mom+'_s2n']
         res[mdet_mom+'_T'][start:end] = d[mdet_mom+'_T']
         res[mdet_mom+'_T_ratio'][start:end] = d[mdet_mom+'_T_ratio']
+        res[mdet_mom+'_g_1'][start:end] = d[mdet_mom+'_g_1']
+        res[mdet_mom+'_g_2'][start:end] = d[mdet_mom+'_g_2']
 
         start = end
 
