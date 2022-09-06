@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 def _save_stats(mdet_files, mdet_mom, outpath, stats_file, add_cuts=None):
 
-    res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float), (mdet_mom+'_g_1', float), (mdet_mom+'_g_2', float), ('dec', float), (mdet_mom+'_g_cov_1_1', float), (mdet_mom+'_g_cov_2_2', float), ('g-r', float), ('r-i', float), ('i-z', float)])
+    res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float), (mdet_mom+'_g_1', float), (mdet_mom+'_g_2', float), ('dec', float), (mdet_mom+'_g_cov_1_1', float), (mdet_mom+'_g_cov_2_2', float), ('g-r', float), ('r-i', float), ('i-z', float), (mdet_mom+'_T_err', float)])
 
     start = 0
     for f in tqdm(mdet_files):
@@ -32,6 +32,7 @@ def _save_stats(mdet_files, mdet_mom, outpath, stats_file, add_cuts=None):
         res['dec'][start:end] = d['dec']
         res[mdet_mom+'_g_cov_1_1'][start:end] = d[mdet_mom+'_g_cov_1_1']
         res[mdet_mom+'_g_cov_2_2'][start:end] = d[mdet_mom+'_g_cov_2_2']
+        res[mdet_mom+'_T_err'][start:end] = d[mdet_mom+'_T_err']
 
         mag_g = 30.0 - 2.5*np.log10(d[mdet_mom+"_band_flux_g"])
         mag_r = 30.0 - 2.5*np.log10(d[mdet_mom+"_band_flux_r"])
