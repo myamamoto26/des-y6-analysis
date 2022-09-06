@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 def _save_stats(mdet_files, mdet_mom, outpath, stats_file, add_cuts=None):
 
-    res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float), (mdet_mom+'_g_1', float), (mdet_mom+'_g_2', float), ('dec', float), (mdet_mom+'_g_cov_1_1'), (mdet_mom+'_g_cov_2_2'), ('g-r', float), ('r-i', float), ('i-z', float)])
+    res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float), (mdet_mom+'_g_1', float), (mdet_mom+'_g_2', float), ('dec', float), (mdet_mom+'_g_cov_1_1', float), (mdet_mom+'_g_cov_2_2', float), ('g-r', float), ('r-i', float), ('i-z', float)])
 
     start = 0
     for f in tqdm(mdet_files):
