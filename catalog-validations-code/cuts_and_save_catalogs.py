@@ -90,7 +90,8 @@ def make_cuts_and_save_catalogs(argv):
             msk_add = ((d[mdet_mom+"_T_ratio"] > 1.2))
             msk = msk & msk_add
         elif mdet_mom == 'pgauss':
-            msk_add = ((d[mdet_mom+"_T_ratio"] > 0.5) & (d[mdet_mom+"_T"] < 1.9 - 2.8*d[mdet_mom+"_T_err"]))
+            # msk_add = ((d[mdet_mom+"_T_ratio"] > 0.5) & (d[mdet_mom+"_T"] < 1.9 - 2.8*d[mdet_mom+"_T_err"]))
+            msk_add = ((d[mdet_mom+"_T_ratio"] > 0.5) & (d[mdet_mom+"_T"] < 1.9 - 2.8*d[mdet_mom+"_T_err"]) & (d[mdet_mom+"_T"] > -4.25 + 27*d[mdet_mom+"_T_err"]))
             msk = msk & msk_add
         elif mdet_mom == 'pgauss_reg0.90':
             msk_add = ((d[mdet_mom+"_T_ratio"] > 0.5) & (d[mdet_mom+"_T"] < 1.9 - 2.8*d[mdet_mom+"_T_err"]))
