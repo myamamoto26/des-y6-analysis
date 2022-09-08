@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 def _save_stats(mdet_files, mdet_mom, outpath, stats_file, add_cuts=None):
 
-    res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float), (mdet_mom+'_g_1', float), (mdet_mom+'_g_2', float), ('dec', float), (mdet_mom+'_g_cov_1_1', float), (mdet_mom+'_g_cov_2_2', float), ('g-r', float), ('r-i', float), ('i-z', float), (mdet_mom+'_T_err', float), (mdet_mom+"_band_flux_g", float), (mdet_mom+"_band_flux_r", float), (mdet_mom+"_band_flux_i", float), (mdet_mom+"_band_flux_z", float)])
+    res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float), (mdet_mom+'_g_1', float), (mdet_mom+'_g_2', float), ('dec', float), (mdet_mom+'_g_cov_1_1', float), (mdet_mom+'_g_cov_2_2', float), ('g-r', float), ('r-i', float), ('i-z', float), (mdet_mom+'_T_err', float), (mdet_mom+"_band_flux_g", float), (mdet_mom+"_band_flux_r", float), (mdet_mom+"_band_flux_i", float), (mdet_mom+"_band_flux_z", float), ('nepoch_eff_g', int), ('nepoch_g', int)])
 
     start = 0
     for f in tqdm(mdet_files):
@@ -37,6 +37,8 @@ def _save_stats(mdet_files, mdet_mom, outpath, stats_file, add_cuts=None):
         res[mdet_mom+'_band_flux_r'][start:end] = d[mdet_mom+'_band_flux_r']
         res[mdet_mom+'_band_flux_i'][start:end] = d[mdet_mom+'_band_flux_i']
         res[mdet_mom+'_band_flux_z'][start:end] = d[mdet_mom+'_band_flux_z']
+        res['nepoch_eff_g'][start:end] = d['nepoch_eff_g']
+        res['nepoch_g'][start:end] = d['nepoch_g']
 
         mag_g = 30.0 - 2.5*np.log10(d[mdet_mom+"_band_flux_g"])
         mag_r = 30.0 - 2.5*np.log10(d[mdet_mom+"_band_flux_r"])
