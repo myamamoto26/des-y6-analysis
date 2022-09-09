@@ -23,6 +23,8 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file, add_cuts=N
                     d = d[d[cut] < 200]
                 elif cut == mdet_mom+'_T_ratio':
                     d = d[d[cut] > 1.5]
+                elif cut == 'nepoch_g':
+                    d = d[d[cut] > 4]
         end = start+len(d)
 
         res['ra'][start:end] = d['ra']
@@ -323,6 +325,8 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, bands, mdet_m
                             d = d[d[cut] < 200]
                         elif cut == mdet_mom+'_T_ratio':
                             d = d[d[cut] > 1.5]
+                        elif cut == 'nepoch_g':
+                            d = d[d[cut] > 4]
                 num_objects += len(d)
                 tilename = fname.split('/')[-1].split('_')[0]
                 res[tilename] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
