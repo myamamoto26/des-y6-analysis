@@ -88,8 +88,13 @@ num_match_g = 0
 num_total_riz = 0
 num_match_riz = 0
 for i, (f_g, f_riz) in tqdm(enumerate(zip(mdet_files_g, mdet_files_riz))):
-    if i%15 == 0:
-        print(i, num_total_g, num_match_g, num_total_riz, num_match_riz)
+    if i%20 == 0:
+        print(i, (num_match_g/num_total_g)*100, (num_match_riz/num_total_riz)*100)
+        fio.write('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/res_g.fits', res_g)
+        fio.write('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/res_g_star.fits', res_g_star)
+        fio.write('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/res_riz.fits', res_riz)
+        fio.write('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/res_riz_star.fits', res_riz_star)
+    
     d_g = fio.read(f_g)
     d_g = d_g[d_g['mdet_step'] == 'noshear']
     num_total_g += len(d_g)
