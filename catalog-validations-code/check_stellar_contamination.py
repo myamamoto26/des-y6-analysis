@@ -87,7 +87,7 @@ num_total_g = 0
 num_match_g = 0
 num_total_riz = 0
 num_match_riz = 0
-for i, f_g, f_riz in tqdm(enumerate(zip(mdet_files_g, mdet_files_riz))):
+for i, (f_g, f_riz) in tqdm(enumerate(zip(mdet_files_g, mdet_files_riz))):
     if i%15 == 0:
         print(i, num_total_g, num_match_g, num_total_riz, num_match_riz)
     d_g = fio.read(f_g)
