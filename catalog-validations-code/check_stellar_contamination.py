@@ -89,6 +89,8 @@ num_total_riz = 0
 num_match_riz = 0
 for i, (f_g, f_riz) in tqdm(enumerate(zip(mdet_files_g, mdet_files_riz))):
     if i%20 == 0:
+        if i==0:
+            continue
         print(i, (num_match_g/num_total_g)*100, (num_match_riz/num_total_riz)*100)
         fio.write('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/res_g.fits', res_g)
         fio.write('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/res_g_star.fits', res_g_star)
