@@ -56,7 +56,7 @@ def _compute_shear_response(res):
     g2m = res['2m'][0][1] / res['num_2m'][0][1]
     R22 = (g2p - g2m) / 2 / 0.01
 
-    return g1/R11, g2/R22, R11, R22
+    return g1, g2, R11, R22
 
 def _msk_it(d, mdet_mom, s2n_cut=None, size_cut=None, shear=''):
     return (
@@ -71,9 +71,10 @@ def _measure_m_c(res_g1p, res_g1m):
     g1_p, g2_p, R11_p, R22_p = _compute_shear_response(res_g1p)
     g1_m, g2_m, R11_m, R22_m = _compute_shear_response(res_g1m) 
 
-    m = (g1_p - g1_m)/0.04/2 - 1.0
-    c = (g2_p + g2_m)/2.0
-    print(g1_p, g1_m)
+    print(R11_p, R22_p, R11_m, R22_m)
+    m = (g1_p - g1_m)/(R11_p + R11_m)/0.02 - 1.0
+    c = (g2_p/R22_p + g2_m/R22_m)/2.0
+
     return m, c
 
 # def _measure_m_c_boot(seed, d_p, d_m):
@@ -101,8 +102,12 @@ res_g1m = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)
 gobs_raw = {'g1p': {'g1': [], 'g2': []}, 'g1m': {'g1': [], 'g2': []}, 'g2p': {'g1': [], 'g2': []}, 'g2m': {'g1': [], 'g2': []}}
 for tilename in tilenames[:-1]:
     print('processing ', tilename)
-    d_p = fio.read(f"""/global/cfs/cdirs/des/y6-image-sims/eastlake/g1002/{tilename}_metadetect-v7_mdetcat_part0000.fits""")
-    d_m = fio.read(f"""/global/cfs/cdirs/des/y6-image-sims/eastlake/g1n002/{tilename}_metadetect-v7_mdetcat_part0000.fits""")
+    if os.path.exits(f"""/global/cfs/cdirs/des/y6-image-sims/eastlake/g1002/{tilename}_metadetect-v7_mdetcat_part0000.fits"""):
+        d_p = fio.read(f"""/global/cfs/cdirs/des/y6-image-sims/eastlake/g1002/{tilename}_metadetect-v7_mdetcat_part0000.fits""")
+        d_m = fio.read(f"""/global/cfs/cdirs/des/y6-image-sims/eastlake/g1n002/{tilename}_metadetect-v7_mdetcat_part0000.fits""")
+    else: 
+        print('missing ', tilename)
+    
 
     d_p = d_p[_msk_it(d_p, mdet_mom)]
     d_m = d_m[_msk_it(d_m, mdet_mom)]
