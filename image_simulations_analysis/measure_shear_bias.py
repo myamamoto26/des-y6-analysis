@@ -67,17 +67,22 @@ def _msk_it(d, mdet_mom, s2n_cut=None, size_cut=None, shear=''):
         (d[mdet_mom+"_flags"] == 0) & 
         (d["mask_flags"] == 0) & 
         (d[mdet_mom+"_s2n"] > 10) & 
-        (d["mfrac"] < 0.1))
+        (d["mfrac"] < 0.1) &
+        (d["shear_bands"] == "012") )
 
 
-def _measure_m_c(res_g1p, res_g1m):
+def _measure_m_c(res_g1p, res_g1m, swap=False):
 
     g1_p, g2_p, R11_p, R22_p = _compute_shear_response(res_g1p)
     g1_m, g2_m, R11_m, R22_m = _compute_shear_response(res_g1m) 
 
     # print(R11_p, R22_p, R11_m, R22_m)
-    m = (g1_p - g1_m)/(R11_p + R11_m)/0.02 - 1.0
-    c = (g2_p/R22_p + g2_m/R22_m)/2.0
+    if swap: # m2, c1
+        m = (g2_p - g2_m)/(R22_p + R22_m)/0.02 - 1.0
+        c = (g1_p/R11_p + g1_m/R11_m)/2.0
+    else: # m1, c2
+        m = (g1_p - g1_m)/(R11_p + R11_m)/0.02 - 1.0
+        c = (g2_p/R22_p + g2_m/R22_m)/2.0
 
     return m, c
 
