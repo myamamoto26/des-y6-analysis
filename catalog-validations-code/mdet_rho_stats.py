@@ -28,7 +28,7 @@ def measure_rho_tau_stats(do_rho, do_tau, max_sep, stats_name, mdet_input_flat, 
     Example) /global/cscratch1/sd/myamamot/metadetect/rho_tau_stats
     """
 
-    good_piffs_table = fio.read('/global/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v2_hsm_allres_collated.fits')
+    good_piffs_table = fio.read('/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v3_allres_v3_collated.fits')
 
     # rho-stats -> Just need to pass the piff catalog.
     if do_rho: 
