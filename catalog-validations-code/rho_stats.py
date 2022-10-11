@@ -345,7 +345,7 @@ def measure_tau(piff_data, max_sep, max_mag, mdet_input_flat, stats_out_dir, tag
     for cat1 in [ecat, qcat, wcat]:
         print('Doing correlation of %s vs %s'%(cat1.name, 'shear'))
         gg = treecorr.GGCorrelation(bin_config, verbose=2)
-        cat2 = treecorr.Catalog(ra=cat2_d[0]['ra'], dec=cat2_d[0]['ra'], ra_units='deg', dec_units='deg', g1=cat2_d[0]['e1'], g2=cat2_d[0]['e2'], w=cat2_d[0]['w'], patch_centers=ecat.patch_centers)
+        cat2 = treecorr.Catalog(ra=cat2_d['ra'], dec=cat2_d['ra'], ra_units='deg', dec_units='deg', g1=cat2_d['g1']/cat2_d['R_all'], g2=cat2_d['g2']/cat2_d['R_all'], w=cat2_d['w'], patch_centers=ecat.patch_centers)
         gg.process(cat1, cat2)
         cat2.unload()
         results.append(gg)
