@@ -340,8 +340,7 @@ def measure_tau(piff_data, max_sep, max_mag, mdet_input_flat, stats_out_dir, tag
         bin_config['max_sep'] = 2000.
         bin_config['bin_size'] = 0.01
 
-    with open(mdet_input_flat, 'rb') as f2:
-        cat2_d = pickle.load(mdet_input_flat)
+    cat2_d = fio.read(mdet_input_flat)
     results = []
     for cat1 in [ecat, qcat, wcat]:
         print('Doing correlation of %s vs %s'%(cat1.name, 'shear'))
