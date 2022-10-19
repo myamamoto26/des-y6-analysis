@@ -157,7 +157,7 @@ def _measure_m_c_boot(seed, dp, dm, swap=False):
 
 # read files and measure shear in patches
 fnames = sys.argv[1:]
-swap = True
+swap = False
 neg = False
 fnames_to_read = []
 for fname in fnames:
@@ -177,7 +177,7 @@ for fname_plus in fnames_to_read:
     #fname_tp = os.path.join(
     #    "/global/cscratch1/sd/myamamot/",
     #    "true_positions/%s-truepositions.fits" % tilename)
-    fname_tp = "/global/cscratch1/sd/myamamot/true_positions/DES0003-3832-truepositions_g1002.fits"
+    fname_tp = "/global/cscratch1/sd/myamamot/imsim/2022_10_03_additive_bias_in_grid/g1002/true_positions/DES0433-2332-truepositions.fits"
     if not (
         os.path.exists(fname_plus)
         and os.path.exists(fname_minus)
