@@ -65,7 +65,8 @@ def _compute_shear_response(res):
 def _msk_it(d, mdet_mom, s2n_cut=None, size_cut=None, shear=''):
     return (
         (d[mdet_mom+"_flags"] == 0) & 
-        (d["mask_flags"] == 0) & 
+        ((d["mask_flags"] & (~2**4)) == 0) & 
+        # (d["mask_flags"] == 0) & 
         (d[mdet_mom+"_s2n"] > 10) & 
         (d["mfrac"] < 0.1) &
         (d["shear_bands"] == "012") )
