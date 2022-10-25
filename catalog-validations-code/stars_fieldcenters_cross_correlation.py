@@ -8,10 +8,11 @@ import os, sys
 from tqdm import tqdm
 import numpy as np
 import fitsio as fio
+from astropy.io import fits
 import matplotlib as mpl
+from des_y6utils import mdet
 
-
-def shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path):
+def shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, mdet_cuts):
 
     """
     Copmutes the correlation function between bright/faint stars and shear. 
@@ -38,51 +39,68 @@ def shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, mde
 
     f_response = open(mdet_response_filepath, 'r')
     R11, R22 = f_response.read().split('\n')
+    R = (float(R11) + float(R22))/2
 
     bin_config = dict(
         sep_units = 'arcmin',
         bin_slop = 0.1,
 
         min_sep = 1.0,
-        max_sep = 250,
+        max_sep = 200,
         nbins = 20,
 
-        var_method = 'jackknife'
+        var_method = 'jackknife', 
+        output_dots = False,
     )
 
-    cat1_file = '/global/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v2_hsm_allres_collated.fits'
-    d_piff = fio.read(cat1_file)
-    mask_bright = (flux2mag(d_piff['FLUX']) < 16.5)
-    mask_faint = (flux2mag(d_piff['FLUX']) > 16.5)
-    cat1_bright = treecorr.Catalog(ra=d_piff[mask_bright]['RA'], dec=d_piff[mask_bright]['DEC'], ra_units='deg', dec_units='deg', npatch=100)
-    cat1_faint = treecorr.Catalog(ra=d_piff[mask_faint]['RA'], dec=d_piff[mask_faint]['DEC'], ra_units='deg', dec_units='deg', npatch=100)
+    cat1_file = fits.open('/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v3_allres_v3_collated.fits')
+    f_pc = '/global/cfs/cdirs/des/y6-shear-catalogs/patches-centers-altrem-npatch200-seed9999.fits'
+    d_piff=cat1_file[1].data
+    msk = ((d_piff.field("BAND") == "r")) # | (d_piff.field("BAND") == "i") | (d_piff.field("BAND") == "z"))
+    ra_piff = d_piff.field('RA')[msk]
+    dec_piff = d_piff.field('DEC')[msk]
+    flux_piff = d_piff.field('FLUX')[msk]
     
+    mask_bright = (flux2mag(flux_piff) < 16.5)
+    mask_faint = (flux2mag(flux_piff) > 16.5)
+    cat1_bright = treecorr.Catalog(ra=ra_piff[mask_bright], dec=dec_piff[mask_bright], ra_units='deg', dec_units='deg', patch_centers=f_pc)
+    cat1_faint = treecorr.Catalog(ra=ra_piff[mask_faint], dec=dec_piff[mask_faint], ra_units='deg', dec_units='deg', patch_centers=f_pc)
+
     cat2_files = glob.glob(mdet_input_filepath)
     cat2_bright = []
     cat2_faint = []
     for cat2_file in tqdm(cat2_files):
         d_mdet = fio.read(cat2_file)
-        msk = (d_mdet['mdet_step']=='noshear')
-        g1 = d_mdet[msk][mdet_mom+'_g_1']/float(R11)
-        g2 = d_mdet[msk][mdet_mom+'_g_2']/float(R22)
-        cat_bright = treecorr.Catalog(ra=d_mdet[msk]['ra'], dec=d_mdet[msk]['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=cat1_bright.patch_centers)
-        cat_faint = treecorr.Catalog(ra=d_mdet[msk]['ra'], dec=d_mdet[msk]['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=cat1_faint.patch_centers)
+        msk = mdet.make_mdet_cuts(d_mdet, mdet_cuts) 
+        msk_noshear = (d_mdet['mdet_step']=='noshear')
+
+        d_mdet = d_mdet[msk & msk_noshear]
+        g1 = d_mdet[mdet_mom+'_g_1']/R
+        g2 = d_mdet[mdet_mom+'_g_2']/R
+        cat_bright = treecorr.Catalog(ra=d_mdet['ra'], dec=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=f_pc)
+        cat_faint = treecorr.Catalog(ra=d_mdet['ra'], dec=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=f_pc)
         cat2_bright.append(cat_bright)
         cat2_faint.append(cat_faint)
 
-    cat2 = [cat2_bright, cat2_faint]
+    # random point subtraction. 
+    cat1r_file = random_point_map
+    cat1r = treecorr.Catalog(cat1r_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', patch_centers=f_pc)
+    cat2_both = [cat2_bright, cat2_faint]
     fname = ['bright', 'faint']
     for ii,cat1 in enumerate([cat1_bright, cat1_faint]):
         ng = treecorr.NGCorrelation(bin_config, verbose=2)
-        for i,cat2 in tqdm(enumerate(cat2[ii])):
-            ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2[ii])-1))
+        ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
+        for i,cat2 in tqdm(enumerate(cat2_both[ii])):
+            ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_both[ii])-1))
+            ng_rand.process(cat1r, cat2, initialize=(i==0), finalize=(i==len(cat2_both[ii])-1))
             cat2.unload()
-        np.save(os.path.join(out_path, mdet_mom+'_stars_shear_cross_correlation_cov_'+fname[ii]+'.npy'), ng.cov)
-        ng.write(os.path.join(out_path, mdet_mom+'_stars_shear_cross_correlation_output_'+fname[ii]+'.fits'))
+        # np.save(os.path.join(out_path, mdet_mom+'_stars_shear_cross_correlation_cov_'+fname[ii]+'.npy'), ng.cov)
+        # ng.write(os.path.join(out_path, mdet_mom+'_stars_shear_cross_correlation_output_'+fname[ii]+'.fits'))
 
+        ng.write(os.path.join(out_path, mdet_mom+'_stars_shear_cross_correlation_final_output_'+fname[ii]+'.fits'), rg=ng_rand)
 
 # Figure 14; Tangential shear around field center
-def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, coadd_tag):
+def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, mdet_cuts):
 
     """
     Creates a fits file that contains the exposure number and field centers (RA, DEC) from desoper. 
@@ -119,34 +137,34 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
     import treecorr
     import glob
              
-    def find_exposure_numbers(mdet_fs, tag):
+    def find_exposure_numbers(mdet_fs):
 
         """
         Finds the list of exposure numbers (ID) from pizza-cutter files.
         """
 
+        use_bands = ['r', 'i', 'z']
         mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
         tilenames = [d.split('_')[0] for d in mdet_filenames]
 
-        if not os.path.exists('/global/project/projectdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info'+tag+'.fits'):
-            out_fname = '/global/project/projectdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info'+tag+'.fits'
-            query_coadd_info(out_fname, coadd_tag)
-        coadd_info = fio.read('/global/project/projectdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info'+tag+'.fits')
+        if not os.path.exists('/global/cfs/cdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info.fits'):
+            out_fname = '/global/cfs/cdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info.fits'
+            query_coadd_info(out_fname, 'Y6A2_PIZZACUTTER_V3')
+        coadd_info = fio.read('/global/cfs/cdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info.fits')
         coadd_files = {t: [] for t in tilenames}
         coadd_paths = {t: [] for t in tilenames}
-        bands = {t: [] for t in tilenames}
         for coadd in coadd_info:
             tname = coadd['FILENAME'].split('_')[0]
             fname = coadd['FILENAME'] + coadd['COMPRESSION']
-            fpath = coadd['PATH'] + '/' + coadd['FILENAME'] + coadd['COMPRESSION']
-            bandname = coadd['FILENAME'].split('_')[2]
-            if tname in list(coadd_files.keys()):
-                coadd_files[tname].append(fname)
-                coadd_paths[tname].append(os.path.join('/global/project/projectdirs/des/myamamot/pizza-slice', fpath))
-                bands[tname].append(bandname)
+            if fname.split('_')[2] in use_bands:
+                if tname in list(coadd_files.keys()):
+                    coadd_files[tname].append(fname)
+                    coadd_paths[tname].append(os.path.join('/global/cfs/cdirs/des/myamamot/pizza-slice/data', fname))
+            else:
+                continue
 
         exp_num = []
-        existing_coadd_filepaths = glob.glob('/global/project/projectdirs/des/myamamot/pizza-slice/OPS/multiepoch/Y6A2_PIZZACUTTER/**/*.fits.fz', recursive=True)
+        existing_coadd_filepaths = glob.glob('/global/cfs/cdirs/des/myamamot/pizza-slice/data/*.fits.fz', recursive=True)
         for t in tqdm(tilenames):
             for pizza_f in coadd_paths[t]:
                 if pizza_f not in existing_coadd_filepaths:
@@ -190,11 +208,14 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
     tilenames = [d.split('_')[0] for d in mdet_filenames]
     f_response = open(mdet_response_filepath, 'r')
     R11, R22 = f_response.read().split('\n')
+    R = (np.float64(R11) + np.float64(R22))/2
+    f_pc = '/global/cfs/cdirs/des/y6-shear-catalogs/patches-centers-altrem-npatch200-seed9999.fits'
 
     # Create ccdnum and expnum text file if it has not been created yet, and query from DESDM table. Should only be done once. 
     if not os.path.exists('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt'):
-        find_exposure_numbers(fs, coadd_tag)
-        query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 150)
+        find_exposure_numbers(fs)
+        query_field_centers('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 300)
+        print('done making ccd num file')
     
     expnum_field_centers = fio.read('/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits')
     print('number of field centers', len(expnum_field_centers))
@@ -212,42 +233,34 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
                 )
 
     cat1_file = '/global/cscratch1/sd/myamamot/pizza-slice/exposure_field_centers.fits'
-    cat1 = treecorr.Catalog(cat1_file, ra_col='RA_CENT', dec_col='DEC_CENT', ra_units='deg', dec_units='deg', npatch=100)
-    cat2_files = glob.glob(mdet_input_filepath)
-    ng = treecorr.NGCorrelation(bin_config, verbose=2)
-    for i,cat2_f in enumerate(cat2_files):
-        d = fio.read(cat2_f)
-        mask_noshear = (d['mdet_step'] == 'noshear')
-        g1 = d[mask_noshear][mdet_mom+'_g_1']/np.float64(R11)
-        g2 = d[mask_noshear][mdet_mom+'_g_2']/np.float64(R22)
-        cat2 = treecorr.Catalog(ra=d[mask_noshear]['ra'], dec=d[mask_noshear]['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=cat1.patch_centers)
-    
-        ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
-        cat2.unload()
-
+    cat1 = treecorr.Catalog(cat1_file, ra_col='RA_CENT', dec_col='DEC_CENT', ra_units='deg', dec_units='deg', patch_centers=f_pc)
     # random point subtraction. 
     cat1r_file = random_point_map
-    cat1r = treecorr.Catalog(cat1r_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', patch_centers=cat1.patch_centers)
+    cat1r = treecorr.Catalog(cat1r_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', patch_centers=f_pc)
     ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
-    for i,cat2_f in enumerate(cat2_files):
-        d = fio.read(cat2_f)
-        mask_noshear = (d['mdet_step'] == 'noshear')
-        g1 = d[mask_noshear]['mdet_g_1']/np.float64(R11)
-        g2 = d[mask_noshear]['mdet_g_2']/np.float64(R22)
-        cat2 = treecorr.Catalog(ra=d[mask_noshear]['ra'], dec=d[mask_noshear]['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=cat1.patch_centers)
+    cat2_files = glob.glob(mdet_input_filepath)
+    ng = treecorr.NGCorrelation(bin_config, verbose=2)
+    for i,cat2_f in tqdm(enumerate(cat2_files)):
+        d_mdet = fio.read(cat2_f)
+        msk = mdet.make_mdet_cuts(d_mdet, mdet_cuts) 
+        msk_noshear = (d_mdet['mdet_step']=='noshear')
+        d_mdet = d_mdet[msk & msk_noshear]
+
+        g1 = d_mdet[mdet_mom+'_g_1']/R
+        g2 = d_mdet[mdet_mom+'_g_2']/R
+        cat2 = treecorr.Catalog(ra=d_mdet['ra'], dec=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=f_pc)
     
+        ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
         ng_rand.process(cat1r, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
         cat2.unload()
     
-    final_xi = ng.calculateXi(rg=ng_rand)
-    ng_final = np.zeros(20, dtype=[('meanr', float), ('xi', float), ('varxi', float), ('raw_xi', float), ('raw_varxi', float)])
-    ng_final['meanr'] = ng.meanr
-    ng_final['xi'] = final_xi[0]
-    ng_final['varxi'] = final_xi[2]
-    ng_final['raw_xi'] = ng.raw_xi
-    ng_final['raw_varxi'] = ng.raw_varxi
+    nn_rand = treecorr.NNCorrelation(bin_config, verbose=2)
+    nn_rand.process(cat1r)
+    ng_final = ng.calculateXi(nn_rand, dr=ng_rand)
+    ng_cov = ng_final.cov
     
-    fio.write(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output.fits'), ng_final)
+    np.save(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output_cov.npy'), ng_cov)
+    ng.write(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output.fits'), rg=ng_rand)
 
 def mean_shear_tomoz(gold_f, fs):
 
@@ -364,7 +377,7 @@ def mean_shear_tomoz(gold_f, fs):
 def main(argv):
 
     # gold_f = '/global/project/projectdirs/des/myamamot/y6_gold_dnf_z.fits'
-    f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
+    f = open('/global/cfs/cdirs/des/y6-shear-catalogs/metadetection/mdet_files.txt', 'r')
     fs = f.read().split('\n')[:-1]
     
     mdet_response_filepath = sys.argv[1]
@@ -372,10 +385,10 @@ def main(argv):
     mdet_mom = sys.argv[3]
     out_path = sys.argv[4]
     random_point_map = sys.argv[5]
-    coadd_tag = sys.argv[6]
+    mdet_cuts = int(sys.argv[6])
     
-    shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path)
-    tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, coadd_tag)
+    # shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, mdet_cuts)
+    tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, mdet_cuts)
     # mean_shear_tomoz(gold_f, fs)
 
 if __name__ == "__main__":
