@@ -2,8 +2,10 @@ import fitsio as fio
 import numpy as np
 import os, sys
 from tqdm import tqdm
+import glob
+from des_y6utils import mdet
 
-def _accum_shear_per_tile(res, mdet_step, g1, g2):
+def _accum_shear_per_tile(res, mdet_step, g1, g2, weight):
 
     """
     Returns the dictionary of the accumulated shear (sum of individual shear).
@@ -14,7 +16,7 @@ def _accum_shear_per_tile(res, mdet_step, g1, g2):
     mdet_step: An array of metadetection steps (noshear, 1p, 1m, 2p, 2m) for each object in metadetection catalog
     g1: An array of the measured shapes (e1) for each object in metadetection catalog
     g2: An array of the measured shapes (e2) for each object in metadetection catalog
-
+    weight: Weight on each galaxy. 
     """
     for step in ['noshear', '1p', '1m', '2p', '2m']:
         msk_s = np.where(mdet_step == step)[0]
@@ -22,36 +24,33 @@ def _accum_shear_per_tile(res, mdet_step, g1, g2):
         np.add.at(
             res[step], 
             (0, 0), 
-            np.sum(g1[msk_s]),
+            np.sum(weight[msk_s] * g1[msk_s]),
         )
         np.add.at(
             res[step], 
             (0, 1), 
-            np.sum(g2[msk_s]),
+            np.sum(weight[msk_s] * g2[msk_s]),
         )
         np.add.at(
             res["num_" + step], 
             (0, 0), 
-            len(g1[msk_s]),
+            np.sum(weight[msk_s]),
         )
         np.add.at(
             res["num_" + step], 
             (0, 1), 
-            len(g2[msk_s]),
+            np.sum(weight[msk_s]),
         )
     return res
 
 
-def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths, response_output_filepath, mdet_mom):
+def compute_response_over_catalogs(mdet_input_filepaths, response_output_filepath, mdet_mom, mdet_cuts):
 
     """
     Returns the diagonal part of the shear response R11, R22 from the metadetection catalogs over all the tiles.
 
     Parameters
     ----------
-    mdet_tilename_filepath: Text file of the list of filenames of the metadetection catalogs
-    Example) /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt
-
     mdet_input_filepaths: The file path to the directory in which the input metadetection catalogs exist
     Example) /global/cscratch1/sd/myamamot/metadetect/cuts_v3
 
@@ -61,11 +60,13 @@ def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths,
     mdet_mom: which measurement do we want to make cuts on
     Example) wmom
 
+    mdet_cuts: which version of the cuts
     """
 
-    f = open(mdet_tilename_filepath, 'r')
-    fs = f.read().split('\n')[:-1]
-    filenames = [fname.split('/')[-1] for fname in fs]
+    # f = open(mdet_tilename_filepath, 'r')
+    # fs = f.read().split('\n')[:-1]
+    # filenames = [fname.split('/')[-1] for fname in fs]
+    filenames = sorted(glob.glob(mdet_input_filepaths))
     binnum = 1
     res = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
            '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
@@ -77,9 +78,13 @@ def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths,
         fp = os.path.join(mdet_input_filepaths, fname)
         if os.path.exists(fp):
             d = fio.read(fp)
+            msk = mdet.make_mdet_cuts(d, mdet_cuts) 
+            d = d[msk]
         else:
             continue
-        res = _accum_shear_per_tile(res, d['mdet_step'], d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'])
+        # weight = np.ones(len(d['mdet_step']))
+        weight = 1/(0.07**2 + 0.5 * (d[mdet_mom+'_g_cov_1_1'] + d[mdet_mom+'_g_cov_2_2']))
+        res = _accum_shear_per_tile(res, d['mdet_step'], d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'], weight)
     
     g1 = res['noshear'][0][0] / res['num_noshear'][0][0]
     g1p = res['1p'][0][0] / res['num_1p'][0][0]
@@ -100,12 +105,12 @@ def compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths,
 
 def main(argv):
     
-    mdet_tilename_filepath = sys.argv[1]
-    mdet_input_filepaths = sys.argv[2]
-    response_output_filepath = sys.argv[3]
-    mdet_mom = sys.argv[4]
+    mdet_input_filepaths = sys.argv[1]
+    response_output_filepath = sys.argv[2]
+    mdet_mom = sys.argv[3]
+    mdet_cuts = int(sys.argv[4])
 
-    compute_response_over_catalogs(mdet_tilename_filepath, mdet_input_filepaths, response_output_filepath, mdet_mom)
+    compute_response_over_catalogs(mdet_input_filepaths, response_output_filepath, mdet_mom, mdet_cuts)
 
 if __name__ == "__main__":
     main(sys.argv)
