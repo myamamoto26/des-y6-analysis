@@ -38,18 +38,18 @@ If one wants to compute the shear response over all the catalogs,
 ### Required items: selection-cut metadetection catalogs, the file which contains metadetection file names
 
 
-## mean_shear_stats.py
+## mean_shear_stats.py (updated 10/05/22)
 If one wants to compute the mean shear over properties like PSF shape/size and galaxy size, 
 
-```python mean_shear_stats.py /global/cscratch1/sd/myamamot/metadetect/cuts_v3/*_metadetect-v5_mdetcat_part0000.fits bin_stats.fits bin_hist.pickle wmom /global/homes/m/myamamot/DES/des-y6-analysis/y6_measurement 5000000 mean_shear_stats.pickle /global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle```
+```python mean_shear_stats.py /global/cfs/cdirs/des/y6-shear-catalogs/metadetection_patches/patch-*.fits bin_stats.fits bin_hist.pickle wmom /global/cscratch1/sd/myamamoto/des-y6-analysis/y6_measurement 5000000 mean_shear_stats.pickle /global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle None```
 
 ### Required items: selection-cut metadetection catalogs, the file which contains shear response+shear weight in the bins of S/N and T/Tpsf
 
 
-## inverse_weight.py
+## inverse_weight.py (updated 10/05/22)
 If one wants to compute galaxy count, RMS of the shear, the shear response, and the inverse variance shear weight as a function of S/N and Tratio (T/Tpsf), 
 
-```python inverse_weight.py /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt /global/cscratch1/sd/myamamot/metadetect/cuts_v3 /global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle wmom```
+```python inverse_weight.py /global/cfs/cdirs/des/y6-shear-catalogs/metadetection_patches/patch-*.fits /global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle wmom```
 
 ### Required items: selection-cut metadetection catalogs, the file which contains metadetection file names
 
@@ -74,7 +74,7 @@ Note that the computation of the correlation function with treecorr happens in r
 ## 2pt_corr.py
 If one wants to compute 2pt correlation function in a very fine bin (~1000 bins) for the use of B-mode estimation and do the B-mode estimation, 
 
-```python 2pt_corr.py /global/cscratch1/sd/myamamot/sample_variance/data_catalogs_weighted_v3.pkl /global/project/projectdirs/des/myamamot/2pt_corr /global/project/projectdirs/des/myamamot/2pt_corr/y6_shear2pt_nontomo_v3.fits /global/project/projectdirs/des/myamamot/2pt_corr/y6_shear2pt_nontomo_v3.pkl True jackknife```
+```python 2pt_corr.py /global/cscratch/sd/myamamot/des-y6-analysis/y6_measurement/metadetection_v2.fits /global/project/projectdirs/des/myamamot/2pt_corr /global/project/projectdirs/des/myamamot/2pt_corr/y6_shear2pt_nontomo_v3.fits /global/project/projectdirs/des/myamamot/2pt_corr/y6_shear2pt_nontomo_v3.pkl True jackknife```
 
 ### Required items:  selection-cut metadetection flat catalog
 Note that this script includes building the B-mode estimator with hybrideb. 
@@ -99,7 +99,7 @@ If one wants to compute the cross-correlation function of shear with bright/fain
 ## mean_shear_spatial_variations.py
 If one wants to compute the mean shear variations across focal planes (CCDs) to check for charge transfer inefficiency (CTI) effect, 
 
-```python mean_shear_spatial_variations.py /global/cscratch1/sd/myamamot/metadetect/cuts_v2 /global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt /global/cscratch1/sd/myamamot/pizza-slice/pizza-cutter-coadds-info.fits /global/cscratch1/sd/myamamot/metadetect/shear_variations wmom True True```
+```python /global/homes/m/myamamot/DES/des-y6-analysis/catalog-validations-code/mean_shear_spatial_variations.py /global/cfs/cdirs/des/y6-shear-catalogs/metadetection /global/cfs/cdirs/des/y6-shear-catalogs/metadetection/mdet_files.txt /global/cfs/cdirs/des/myamamot/pizza-slice/pizza-cutter-coadds-info.fits /global/cscratch/sd/myamamot/des-y6-analysis/y6_measurement/shear_variations True True wmom 2```
 
 ### Required items:  selection-cut metadetection catalogs, the file which contains metadetection file names, the file which contains the filenames of pizza-cutter meds files
 
