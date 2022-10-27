@@ -5,17 +5,20 @@ import os, sys
 import pickle
 from tqdm import tqdm
 import ngmix
+from des_y6utils import mdet
 
-def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file, add_cuts=None): 
+def _save_measurement_info(mdet_files, outpath, stats_file, mdet_cuts, add_cuts=None): 
     """
     Make a flat catalog that contains information only needed to produce mean shear vs properties plot.
     """
-
-    res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), (mdet_mom+'_s2n', float), (mdet_mom+'_T', float), (mdet_mom+'_T_ratio', float)])
+    res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), ('wmom_s2n', float), ('pgauss_T', float), ('wmom_T_ratio', float)])
 
     start = 0
     for f in tqdm(mdet_files):
         d = fio.read(f)
+        msk = mdet.make_mdet_cuts(d, mdet_cuts) 
+        d = d[msk]
+
         d = d[d['mdet_step'] == 'noshear']
         if add_cuts:
             for cut in add_cuts:
@@ -31,9 +34,9 @@ def _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file, add_cuts=N
         res['psfrec_g_1'][start:end] = d['psfrec_g_1']
         res['psfrec_g_2'][start:end] = d['psfrec_g_2']
         res['psfrec_T'][start:end] = d['psfrec_T']
-        res[mdet_mom+'_s2n'][start:end] = d[mdet_mom+'_s2n']
-        res[mdet_mom+'_T'][start:end] = d[mdet_mom+'_T']
-        res[mdet_mom+'_T_ratio'][start:end] = d[mdet_mom+'_T_ratio']
+        res['wmom_s2n'][start:end] = d['wmom_s2n']
+        res['pgauss_T'][start:end] = d['pgauss_T']
+        res['wmom_T_ratio'][start:end] = d['wmom_T_ratio']
 
         start = end
 
@@ -243,23 +246,23 @@ def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
 
     return indexx,indexy
 
-def _find_shear_weight(d, wgt_dict, mdet_mom, snmin, snmax, sizemin, sizemax, steps):
+def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps):
     
     if wgt_dict is None:
         weights = np.ones(len(d))
         return weights
 
     shear_wgt = wgt_dict['weight']
-    indexx, indexy = assign_loggrid(d[mdet_mom+'_s2n'], d[mdet_mom+'_T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
+    indexx, indexy = assign_loggrid(d['wmom_s2n'], d['wmom_T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
     weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
 
-    prior = ngmix.priors.GPriorBA(0.3, rng=np.random.RandomState())
-    pvals = prior.get_prob_array2d(d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'])
-    weights *= pvals
+    # prior = ngmix.priors.GPriorBA(0.3, rng=np.random.RandomState())
+    # pvals = prior.get_prob_array2d(d['wmom_g_1'], d['wmom_g_2'])
+    # weights *= pvals
     
     return weights
 
-def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, bands, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=None, additional_cuts=None):
+def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, mdet_cuts, shear_wgt_file=None, additional_cuts=None):
 
     """
     Computes mean shear in the bins of several PSF and galaxy properties.
@@ -280,20 +283,24 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, bands, mdet_m
     Example) ['pgauss_s2n', 'pgauss_T_ratio']
     """
 
-    # mdet_files = glob.glob(mdet_input_filepaths)
-    f = open(mdet_input_filepaths, 'r')
-    fs = f.read().split('\n')[:-1]
-    mdet_files = []
-    for fname in fs:
-        # fn = os.path.join('/global/cscratch1/sd/myamamot/metadetect/new_cut_test/'+bands+'/'+mdet_mom, fname.split('/')[-1])
-        fn = os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_final/'+bands+'/'+mdet_mom, fname.split('/')[-1])
-        if os.path.exists(fn):
-            mdet_files.append(fn)
-    print('there are ', len(mdet_files), ' to be processed.')
-    tilenames = [fname.split('/')[-1].split('_')[0] for fname in mdet_files]
+    # if you're working with raw catalogs, 
+    # f = open(mdet_input_filepaths, 'r')
+    # fs = f.read().split('\n')[:-1]
+    # mdet_files = []
+    # for fname in fs:
+    #     # fn = os.path.join('/global/cscratch1/sd/myamamot/metadetect/new_cut_test/'+bands+'/'+mdet_mom, fname.split('/')[-1])
+    #     fn = os.path.join('/global/cscratch1/sd/myamamot/metadetect/cuts_final/'+bands+'/'+mdet_mom, fname.split('/')[-1])
+    #     if os.path.exists(fn):
+    #         mdet_files.append(fn)
+    # print('there are ', len(mdet_files), ' to be processed.')
+    # tilenames = [fname.split('/')[-1].split('_')[0] for fname in mdet_files]
+
+    # otherwise
+    mdet_files = glob.glob(mdet_input_filepaths)
+    patch_names = [str(num).zfill(4) for num in range(200)]
     if not os.path.exists(os.path.join(outpath, stats_file)):
         print('creating flat file. ')
-        _save_measurement_info(mdet_files, mdet_mom, outpath, stats_file, add_cuts=additional_cuts)
+        _save_measurement_info(mdet_files, outpath, stats_file, mdet_cuts, add_cuts=additional_cuts) # make cuts in this function. 
     else:
         if not os.path.exists(os.path.join(outpath, bin_file)):
             print('creating bin file.')
@@ -313,12 +320,14 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, bands, mdet_m
         for key in list(bin_dict.keys()):
             bins = bin_dict[key]
             res = {} # dictionary to accumulate raw sums. 
-            res_tile_mean = {} # dictionary to accumulate mean shear for each tile. 
+            # res_tile_mean = {} # dictionary to accumulate mean shear for each tile. 
             num_objects = 0
             binnum = len(bins['hist'])
             # Accumulate raw sums of shear and mean shear corrected with response per tile. 
             for fname in tqdm(mdet_files):
                 d = fio.read(fname)
+                msk = mdet.make_mdet_cuts(d, mdet_cuts)
+                d = d[msk]
                 if additional_cuts:
                     for cut in additional_cuts:
                         if cut == mdet_mom+'_s2n':
@@ -328,19 +337,19 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, bands, mdet_m
                         elif cut == 'nepoch_g':
                             d = d[d[cut] > 4]
                 num_objects += len(d)
-                tilename = fname.split('/')[-1].split('_')[0]
-                res[tilename] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
+                patch_name = fname.split('/')[-1][6:10]
+                res[patch_name] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                                         '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
                                         '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
                                         '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                                         '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
                 if mdet_mom in ['pgauss', 'pgauss_reg0.90']:
-                    shear_wgt = _find_shear_weight(d, wgt_dict, mdet_mom, 10, 1000, 0.5, 3.0, 20)
+                    shear_wgt = _find_shear_weight(d, wgt_dict, 10, 1000, 0.5, 3.0, 20)
                 elif mdet_mom == 'wmom':
-                    shear_wgt = _find_shear_weight(d, wgt_dict, mdet_mom, 10, 1000, 1.2, 3.5, 20)
-                res = _accum_shear_per_tile(res, tilename, d['mdet_step'], d[mdet_mom+'_g_1']*shear_wgt, d[mdet_mom+'_g_2']*shear_wgt, d[key], bins['low'], bins['high'], binnum)
-                tile_mean = _compute_g1_g2(res, binnum, method='tile', tile=tilename)
-                res_tile_mean[tilename] = tile_mean
+                    shear_wgt = _find_shear_weight(d, wgt_dict, 10, 1000, 1.2, 3.5, 20)
+                res = _accum_shear_per_tile(res, patch_name, d['mdet_step'], d['wmom_g_1']*shear_wgt, d['wmom_g_2']*shear_wgt, d[key], bins['low'], bins['high'], binnum)
+                # tile_mean = _compute_g1_g2(res, binnum, method='tile', tile=tilename)
+                # res_tile_mean[tilename] = tile_mean
 
             # Accumulate all the tiles shears. 
             res['all'] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
@@ -349,8 +358,8 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, bands, mdet_m
                         '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                         '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
             for fname in tqdm(mdet_files):
-                tilename = fname.split('/')[-1].split('_')[0]
-                res = _accum_shear_all(res, tilename, binnum)
+                patch_name = fname.split('/')[-1][6:10]
+                res = _accum_shear_all(res, patch_name, binnum)
             print(num_objects)
 
             # Compute the mean g1 and g2 over all the tiles. 
@@ -365,12 +374,12 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, bands, mdet_m
                         '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
                         '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
                         '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-                tilename = fname.split('/')[-1].split('_')[0]
-                jk_sample_mean = _compute_shear_per_jksample(res_jk, res, tilename, tilenames, binnum)
+                patch_name = fname.split('/')[-1][6:10]
+                jk_sample_mean = _compute_shear_per_jksample(res_jk, res, patch_name, patch_names, binnum)
                 res_jk_mean[sample] = jk_sample_mean
             
             # Compute jackknife error estimate.
-            jk_error = _compute_jackknife_error_estimate(res_jk_mean, binnum, len(tilenames))
+            jk_error = _compute_jackknife_error_estimate(res_jk_mean, binnum, len(patch_names))
             print("jackknife error estimate: ", jk_error)
 
             measurement_result[key] = {'bin_mean': bins['mean'], 'g1': res_all_mean[:,0], 'g2': res_all_mean[:,1], 'g1_cov': jk_error[:,0], 'g2_cov': jk_error[:,1]}
@@ -383,20 +392,20 @@ def main(argv):
     mdet_input_filepaths = sys.argv[1]
     stats_file = sys.argv[2]
     bin_file = sys.argv[3]
-    shear_bands = sys.argv[4]
-    mdet_mom = sys.argv[5]
-    outpath = sys.argv[6]
-    nperbin = int(sys.argv[7])
-    measurement_file = sys.argv[8]
-    if sys.argv[10] == 'None':
+    mdet_mom = sys.argv[4]
+    outpath = sys.argv[5]
+    nperbin = int(sys.argv[6])
+    measurement_file = sys.argv[7]
+    mdet_cuts = int(sys.argv[10])
+    if sys.argv[9] == 'None':
         additional_cuts = None
     else:
-        additional_cuts = sys.argv[10].split(',')
+        additional_cuts = sys.argv[9].split(',')
 
-    if sys.argv[9] == 'None':
-        compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, shear_bands, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=None, additional_cuts=additional_cuts)
+    if sys.argv[8] == 'None':
+        compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, mdet_cuts, shear_wgt_file=None, additional_cuts=additional_cuts)
     else:
-        compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, shear_wgt_file=sys.argv[8], additional_cuts=additional_cuts)
+        compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, mdet_cuts, shear_wgt_file=sys.argv[8], additional_cuts=additional_cuts)
     
 if __name__ == "__main__":
     main(sys.argv)
