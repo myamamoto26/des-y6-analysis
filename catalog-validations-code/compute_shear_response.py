@@ -63,9 +63,6 @@ def compute_response_over_catalogs(mdet_input_filepaths, response_output_filepat
     mdet_cuts: which version of the cuts
     """
 
-    # f = open(mdet_tilename_filepath, 'r')
-    # fs = f.read().split('\n')[:-1]
-    # filenames = [fname.split('/')[-1] for fname in fs]
     filenames = sorted(glob.glob(mdet_input_filepaths))
     binnum = 1
     res = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
