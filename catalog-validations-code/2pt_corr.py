@@ -85,10 +85,7 @@ def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath,
 
     subtract_mean = True
     # Load Y6 catalogs
-    with open(mdet_input_flatfile, 'rb') as handle:
-        res = pickle.load(handle)
-        handle.close()
-
+    res = fio.read(mdet_input_flatfile)
 
     bin_config = dict(
             sep_units = 'arcmin',
@@ -102,25 +99,25 @@ def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath,
             output_dots = False,
         )
 
-    e1 = res[0]['e1']
-    e2 = res[0]['e2']
-    ra = res[0]['ra']
-    dec = res[0]['dec']
+    e1 = res['g1']
+    e2 = res['g2']
+    ra = res['ra']
+    dec = res['dec']
 
     if subtract_mean:
         e1 -= np.mean(e1)
         e2 -= np.mean(e2)
 
     if rank == 0:
-        if not os.path.exists(out_path+'patch_centers.txt'):
-            cat_patch = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=100)
+        if not os.path.exists(os.path.join(out_path, 'patch_centers.txt')):
+            cat_patch = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, w=res['w'], npatch=200)
             cat_patch.write_patch_centers(os.path.join(out_path, 'patch_centers.txt'))
             print('patch center done')
             del cat_patch
     comm.Barrier()
 
 
-    cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, patch_centers=os.path.join(out_path,'patch_centers.txt'))
+    cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, w=res['w'], patch_centers=os.path.join(out_path,'patch_centers.txt'))
     print('catalog done', rank)
     gg = treecorr.GGCorrelation(bin_config, verbose=2)
     gg.process(cat, comm=comm)
@@ -162,8 +159,8 @@ def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath,
                                             )
                 XpXm = func(gg)
                 cov_XpXm = gg.estimate_cov(method=cov_method, func=func) 
-                np.save(os.path.join(out_path,'XpXm_BS.npy'), XpXm)
-                np.save(os.path.join(out_path,'XpXm_BScov.npy'), cov_XpXm)
+                np.save(os.path.join(out_path,'XpXm_JK.npy'), XpXm)
+                np.save(os.path.join(out_path,'XpXm_JKcov.npy'), cov_XpXm)
                 print('done')
             else:
                 print('please compute correlation function first')
