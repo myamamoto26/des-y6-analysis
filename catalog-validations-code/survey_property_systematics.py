@@ -7,14 +7,15 @@ import fitsio as fio
 import matplotlib as mpl
 import glob
 import pickle
+from des_y6utils import mdet
 
-def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, survey_property, method, num_sim, outpath, prop, band, mdet_mom):
+def survey_systematic_maps(mdet_input_filepaths, sample_variance_filepaths, survey_property, method, num_sim, outpath, prop, band, mdet_mom, mdet_cuts):
 
     """
     
     Parameters
     ----------
-    fs: The input file for the tilenames
+    # fs: The input file for the tilenames
     mdet_input_filepaths: The input filepath for the metadetection catalogs
     Example) /global/cscratch1/sd/myamamot/metadetect/cuts_v3
 
@@ -30,6 +31,7 @@ def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, 
     prop: the systematic map property
     band: the band for which survey systematic is measured
     mdet_mom: which estimator to use
+    mdet_cuts: which version of selection cuts to use
     """
 
     import healpy as hp
@@ -96,7 +98,7 @@ def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, 
    
         for i, step in enumerate(['noshear', '1p', '1m', '2p', '2m']):
             msk_s = np.where(d['mdet_step'] == step)[0]
-            bin_index = np.digitize(d_bin_signal[msk_s], bin_edges) - 1
+            bin_index = np.digitize(d_bin_signal[msk_s], bin_edges, right=True) - 1
 
             t0 = time.time()
             np.add.at(total_shear_output[i], (bin_index, 0), d[msk_s][mdet_mom+'_g_1']) 
@@ -109,7 +111,7 @@ def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, 
 
     def _accum_shear_bin_pkdgrav(d, d_bin_signal, bin_edges, total_shear_output, total_number_output):
    
-        bin_index = np.digitize(d_bin_signal, bin_edges) - 1
+        bin_index = np.digitize(d_bin_signal, bin_edges, right=True) - 1
 
         np.add.at(total_shear_output[0], (bin_index, 0), d['e1']) 
         np.add.at(total_shear_output[0], (bin_index, 1), d['e2']) 
@@ -132,13 +134,11 @@ def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, 
 
     print('computing survey systematics')
     # accumulate shear in each bin. 
+    fs = glob.glob(mdet_input_filepaths)
     for i, fname in tqdm(enumerate(fs)):
-        fp = os.path.join(mdet_input_filepaths, fname)
-        if os.path.exists(fp):
-            d = fio.read(fp)
-        else:
-            continue
-
+        d = fio.read(fname)
+        msk = mdet.make_mdet_cuts(d, mdet_cuts)
+        d = d[msk]
         d_pix = hp.ang2pix(4096, d['ra'], d['dec'], nest=True, lonlat=True)
         if method=='pixel':
             group_shear_output, group_number_output = _accum_shear_pixel(d, d_pix, group_shear_output, group_number_output)
@@ -191,24 +191,25 @@ def survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, 
 
 def main(argv):
 
-    f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
-    fs = f.read().split('\n')[:-1]
+    # f = open('/global/project/projectdirs/des/myamamot/metadetect/mdet_files.txt', 'r')
+    # fs = f.read().split('\n')[:-1]
 
-    # properties; airmass, seeing, exposure time, sky brightness
-    # argument1: airmass, fwhm, exposure, sky
-    # argument2: g, i
+    # properties; airmass, seeing, exposure time, sky brightness, sky sigma
+    # argument1: airmass, fwhm, exposure, sky_brightness, sky_sigma
+    # argument2: r, i
     prop = sys.argv[1]
     band = sys.argv[2]
-    survey_property = glob.glob('/global/project/projectdirs/des/myamamot/survey_property_maps/'+prop+'_*_'+band+'.fits')[0]
+    survey_property = glob.glob('/global/cfs/cdirs/des/myamamot/survey_property_maps/'+prop+'_*_'+band+'.fits')[0]
 
     num_sim = 200
     method = 'bin'
 
     mdet_input_filepaths = sys.argv[3]
     sample_variance_filepaths = sys.argv[4]
-    outpath = sys.argv[5]
+    outpath = sys.argv[5] # airmass, exposure, fwhm, sky_brightness, sky_sigma
     mdet_mom = sys.argv[6]
-    survey_systematic_maps(fs, mdet_input_filepaths, sample_variance_filepaths, survey_property, method, num_sim, outpath, prop, band, mdet_mom)
+    mdet_cuts = sys.argv[7]
+    survey_systematic_maps(mdet_input_filepaths, sample_variance_filepaths, survey_property, method, num_sim, outpath, prop, band, mdet_mom, mdet_cuts)
 
 if __name__ == "__main__":
     main(sys.argv)
