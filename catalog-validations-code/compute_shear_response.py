@@ -4,6 +4,38 @@ import os, sys
 from tqdm import tqdm
 import glob
 from des_y6utils import mdet
+import pickle
+
+def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
+    from math import log10
+    # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
+
+    logstepx = log10(xmax/xmin)/xsteps
+    logstepy = log10(ymax/ymin)/ysteps
+
+    indexx = (np.log10(x/xmin)/logstepx).astype(int)
+    indexy = (np.log10(y/ymin)/logstepy).astype(int)
+
+    indexx = np.maximum(indexx,0)
+    indexx = np.minimum(indexx, xsteps-1)
+    indexy = np.maximum(indexy,0)
+    indexy = np.minimum(indexy, ysteps-1)
+
+    return indexx,indexy
+
+def _find_shear_weight(d, wgt_dict, mdet_mom, snmin, snmax, sizemin, sizemax, steps):
+    
+    if wgt_dict is None:
+        weights = np.ones(len(d))
+        return weights
+
+    shear_wgt = wgt_dict['weight']
+    shear_response = wgt_dict['response']
+    indexx, indexy = assign_loggrid(d[mdet_mom+'_s2n'], d[mdet_mom+'_T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
+    weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
+    # response = np.array([shear_response[x, y] for x, y in zip(indexx, indexy)])
+    
+    return weights
 
 def _accum_shear_per_tile(res, mdet_step, g1, g2, weight):
 
@@ -20,7 +52,6 @@ def _accum_shear_per_tile(res, mdet_step, g1, g2, weight):
     """
     for step in ['noshear', '1p', '1m', '2p', '2m']:
         msk_s = np.where(mdet_step == step)[0]
-        
         np.add.at(
             res[step], 
             (0, 0), 
@@ -63,7 +94,8 @@ def compute_response_over_catalogs(mdet_input_filepaths, response_output_filepat
     mdet_cuts: which version of the cuts
     """
 
-    filenames = sorted(glob.glob(mdet_input_filepaths))
+    # filenames = sorted(glob.glob(mdet_input_filepaths))
+    filenames = np.load('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/som_weight_test/som_training_files.npy')
     binnum = 1
     res = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
            '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
@@ -75,12 +107,23 @@ def compute_response_over_catalogs(mdet_input_filepaths, response_output_filepat
         fp = os.path.join(mdet_input_filepaths, fname)
         if os.path.exists(fp):
             d = fio.read(fp)
-            msk = mdet.make_mdet_cuts(d, mdet_cuts) 
+            # msk = mdet.make_mdet_cuts(d, mdet_cuts) 
+            msk = mdet._make_mdet_cuts_wmom(
+            d,
+            min_s2n=5.0,
+            min_t_ratio=1.1,
+            n_terr=0.0,
+            max_mfrac=0.1,
+            max_s2n=np.inf,
+        )
             d = d[msk]
         else:
             continue
         # weight = np.ones(len(d['mdet_step']))
-        weight = 1/(0.07**2 + 0.5 * (d[mdet_mom+'_g_cov_1_1'] + d[mdet_mom+'_g_cov_2_2']))
+        # weight = 1/(0.07**2 + 0.5 * (d[mdet_mom+'_g_cov_1_1'] + d[mdet_mom+'_g_cov_2_2']))
+        with open('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/som_weight_test/inverse_variance_weight_som_test_10steps.pickle', 'rb') as handle:
+            wgt_dict = pickle.load(handle)
+        weight = _find_shear_weight(d, wgt_dict, mdet_mom, 10, 600, 1.2, 2.0, 10)
         res = _accum_shear_per_tile(res, d['mdet_step'], d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'], weight)
     
     g1 = res['noshear'][0][0] / res['num_noshear'][0][0]
