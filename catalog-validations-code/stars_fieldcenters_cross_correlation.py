@@ -66,38 +66,31 @@ def shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, mde
     cat1_bright = treecorr.Catalog(ra=ra_piff[mask_bright], dec=dec_piff[mask_bright], ra_units='deg', dec_units='deg', patch_centers=f_pc)
     cat1_faint = treecorr.Catalog(ra=ra_piff[mask_faint], dec=dec_piff[mask_faint], ra_units='deg', dec_units='deg', patch_centers=f_pc)
 
-    cat2_files = glob.glob(mdet_input_filepath)
-    cat2_bright = []
-    cat2_faint = []
-    for cat2_file in tqdm(cat2_files):
-        d_mdet = fio.read(cat2_file)
+    # random point subtraction. 
+    cat1r_file = random_point_map
+    cat1r = treecorr.Catalog(cat1r_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', patch_centers=f_pc)
+    fname = ['bright', 'faint']
+    cat2_files = sorted(glob.glob(mdet_input_filepath))
+    ng_bright = treecorr.NGCorrelation(bin_config, verbose=2)
+    ng_faint = treecorr.NGCorrelation(bin_config, verbose=2)
+    ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
+    for i,cat2_f in tqdm(enumerate(cat2_files)):
+        d_mdet = fio.read(cat2_f)
         msk = mdet.make_mdet_cuts(d_mdet, mdet_cuts) 
         msk_noshear = (d_mdet['mdet_step']=='noshear')
 
         d_mdet = d_mdet[msk & msk_noshear]
         g1 = d_mdet[mdet_mom+'_g_1']/R
         g2 = d_mdet[mdet_mom+'_g_2']/R
-        cat_bright = treecorr.Catalog(ra=d_mdet['ra'], dec=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=f_pc)
-        cat_faint = treecorr.Catalog(ra=d_mdet['ra'], dec=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=f_pc)
-        cat2_bright.append(cat_bright)
-        cat2_faint.append(cat_faint)
+        cat2 = treecorr.Catalog(ra=d_mdet['ra'], dec=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch=i, npatch=200)
 
-    # random point subtraction. 
-    cat1r_file = random_point_map
-    cat1r = treecorr.Catalog(cat1r_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', patch_centers=f_pc)
-    cat2_both = [cat2_bright, cat2_faint]
-    fname = ['bright', 'faint']
-    for ii,cat1 in enumerate([cat1_bright, cat1_faint]):
-        ng = treecorr.NGCorrelation(bin_config, verbose=2)
-        ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
-        for i,cat2 in tqdm(enumerate(cat2_both[ii])):
-            ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_both[ii])-1))
-            ng_rand.process(cat1r, cat2, initialize=(i==0), finalize=(i==len(cat2_both[ii])-1))
-            cat2.unload()
-        # np.save(os.path.join(out_path, mdet_mom+'_stars_shear_cross_correlation_cov_'+fname[ii]+'.npy'), ng.cov)
-        # ng.write(os.path.join(out_path, mdet_mom+'_stars_shear_cross_correlation_output_'+fname[ii]+'.fits'))
+        ng_bright.process(cat1_bright, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1), low_mem=True)
+        ng_faint.process(cat1_faint, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1), low_mem=True)
+        ng_rand.process(cat1r, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1), low_mem=True)
+        cat2.unload()
 
-        ng.write(os.path.join(out_path, mdet_mom+'_stars_shear_cross_correlation_final_output_'+fname[ii]+'.fits'), rg=ng_rand)
+    ng_bright.write(os.path.join(out_path, mdet_mom+'_stars_shear_cross_correlation_final_output_bright.fits'), rg=ng_rand)
+    ng_faint.write(os.path.join(out_path, mdet_mom+'_stars_shear_cross_correlation_final_output_faint.fits'), rg=ng_rand)
 
 # Figure 14; Tangential shear around field center
 def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, mdet_cuts):
@@ -164,6 +157,7 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
                 continue
 
         exp_num = []
+        ccd_num = []
         existing_coadd_filepaths = glob.glob('/global/cfs/cdirs/des/myamamot/pizza-slice/data/*.fits.fz', recursive=True)
         for t in tqdm(tilenames):
             for pizza_f in coadd_paths[t]:
@@ -184,12 +178,18 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
                 for iid in image_id:
                     msk_im = np.where(image_info['image_id'] == iid)
                     # ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
+                    # ccd_num.append(ccdnum)
                     expnum = _get_exp_num(image_info['image_path'][msk_im][0])
                     exp_num.append(expnum)
         exp_num = np.unique(np.array(exp_num))
         total_exp_num = len(exp_num)
         print('total exposure number', total_exp_num)
 
+        # ccd_exp_num = list(set([(ccd, exp) for ccd, exp in zip(ccd_num, exp_num)]))
+        # with open('/global/cscratch1/sd/myamamot/pizza-slice/theo_ccd_exp_num.txt', 'w') as f:
+        #     for l in ccd_exp_num:
+        #         f.write(str(l[0])+', '+str(l[1]))
+        #         f.write('\n')
         with open('/global/cscratch1/sd/myamamot/pizza-slice/ccd_exp_num.txt', 'w') as f:
             for l in exp_num:
                 f.write(str(l))
@@ -238,7 +238,7 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
     cat1r_file = random_point_map
     cat1r = treecorr.Catalog(cat1r_file, ra_col='ra', dec_col='dec', ra_units='deg', dec_units='deg', patch_centers=f_pc)
     ng_rand = treecorr.NGCorrelation(bin_config, verbose=2)
-    cat2_files = glob.glob(mdet_input_filepath)
+    cat2_files = sorted(glob.glob(mdet_input_filepath))
     ng = treecorr.NGCorrelation(bin_config, verbose=2)
     for i,cat2_f in tqdm(enumerate(cat2_files)):
         d_mdet = fio.read(cat2_f)
@@ -248,19 +248,16 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
 
         g1 = d_mdet[mdet_mom+'_g_1']/R
         g2 = d_mdet[mdet_mom+'_g_2']/R
-        cat2 = treecorr.Catalog(ra=d_mdet['ra'], dec=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch_centers=f_pc)
-    
-        ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
-        ng_rand.process(cat1r, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1))
+        cat2 = treecorr.Catalog(ra=d_mdet['ra'], dec=d_mdet['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, patch=i, npatch=200)
+        ng.process(cat1, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1), low_mem=True)
+        ng_rand.process(cat1r, cat2, initialize=(i==0), finalize=(i==len(cat2_files)-1), low_mem=True)
         cat2.unload()
-    
-    nn_rand = treecorr.NNCorrelation(bin_config, verbose=2)
-    nn_rand.process(cat1r)
-    ng_final = ng.calculateXi(nn_rand, dr=ng_rand)
-    ng_cov = ng_final.cov
-    
-    np.save(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output_cov.npy'), ng_cov)
+
     ng.write(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output.fits'), rg=ng_rand)
+    ng.calculateXi(rg=ng_rand)
+    ng_cov = ng.cov
+    np.save(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output_cov.npy'), ng_cov)
+    
 
 def mean_shear_tomoz(gold_f, fs):
 
@@ -387,8 +384,8 @@ def main(argv):
     random_point_map = sys.argv[5]
     mdet_cuts = int(sys.argv[6])
     
-    # shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, mdet_cuts)
-    tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, mdet_cuts)
+    shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, mdet_cuts)
+    # tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepath, mdet_mom, out_path, random_point_map, mdet_cuts)
     # mean_shear_tomoz(gold_f, fs)
 
 if __name__ == "__main__":
