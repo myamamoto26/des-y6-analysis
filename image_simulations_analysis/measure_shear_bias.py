@@ -69,7 +69,7 @@ def _msk_it(d, mdet_mom, s2n_cut=None, size_cut=None, shear=''):
         # (d["mask_flags"] == 0) & 
         (d[mdet_mom+"_s2n"] > 10) & 
         (d["mfrac"] < 0.1) &
-        (d["shear_bands"] == "012") )
+        (d["shear_bands"] == "123") )
 
 
 def _measure_m_c(res_g1p, res_g1m, swap=False):
@@ -210,6 +210,7 @@ for tilename in tilenames[:-1]:
         d_m = fio.read(f"""/global/cfs/cdirs/des/y6-image-sims/eastlake/g1n002/{tilename}_metadetect-v7_mdetcat_part0000.fits""")
     else: 
         print('missing ', tilename)
+        continue
 
     d_p = d_p[_msk_it(d_p, mdet_mom)]
     nobj_p += len(d_p)
