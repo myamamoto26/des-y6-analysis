@@ -49,7 +49,7 @@ If one wants to compute the mean shear over properties like PSF shape/size and g
 ## inverse_weight.py (updated 10/05/22)
 If one wants to compute galaxy count, RMS of the shear, the shear response, and the inverse variance shear weight as a function of S/N and Tratio (T/Tpsf), 
 
-```python inverse_weight.py /global/cfs/cdirs/des/y6-shear-catalogs/metadetection_patches/patch-*.fits /global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle wmom```
+```python inverse_weight.py /global/cfs/cdirs/des/y6-shear-catalogs/metadetection_patches/patch-*.fits /global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/inverse_variance_weight_v3.pickle wmom 2```
 
 ### Required items: selection-cut metadetection catalogs, the file which contains metadetection file names
 
@@ -91,7 +91,7 @@ If one wants to compute the shape noise and effective number density (C13, H12) 
 ## stars_fieldcenters_cross_correlation.py
 If one wants to compute the cross-correlation function of shear with bright/faint stars or CCD field centers, 
 
-```python stars_fieldcenters_cross_correlation.py /global/cscratch1/sd/myamamot/metadetect/shear_response_v2.txt /global/cscratch1/sd/myamamot/metadetect/cuts_v2/*_metadetect-v5_mdetcat_part0000.fits wmom /global/cscratch1/sd/myamamot/metadetect/systematics /global/homes/m/myamamot/DES/des-y6-analysis/y6-combined-hsmap_random.fits Y6A2_PIZACUTTER```
+```python catalog-validations-code/stars_fieldcenters_cross_correlation.py "/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/v2/SN_size_weighted_response_v2.txt" "/global/cfs/cdirs/des/y6-shear-catalogs/metadetection_patches_v1_blinded/patch-*.fits" wmom "/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/v2" "/global/cfs/cdirs/des/y6-shear-catalogs/y6-combined-hsmap_random.fits" 2```
 
 ### Required items:  selection-cut metadetection catalogs, the file which contains a random point map made from the survey mask map, the file which contains the shear reponse over all the tiles
 
@@ -107,6 +107,6 @@ If one wants to compute the mean shear variations across focal planes (CCDs) to 
 ## survey_property_systematics.py
 If one wants to compute the survey map systematics (mean shear vs survey property like airmass) based on the survey property maps and the sample variance sims, 
 
-```python survey_property_systematics.py airmass g /global/cscratch1/sd/myamamot/metadetect/cuts_v3 /global/cscratch1/sd/myamamot/sample_variance /global/cscratch1/sd/myamamot/survey_property_maps/airmass wmom```
+```python survey_property_systematics.py airmass r "/global/cfs/cdirs/des/y6-shear-catalogs/metadetection_patches_v1_blinded/patch-*.fits" /global/cscratch1/sd/myamamot/sample_variance /global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/survey_sys/airmass wmom 2```
 
 ### Required items:  selection-cut metadetection catalogs, the survey property catalogs, PKDGRAV simulation catalogs
