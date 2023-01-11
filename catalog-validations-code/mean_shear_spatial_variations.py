@@ -41,20 +41,21 @@ def _accum_shear(ccdres, ccdnum, cname, shear, mdet_step, xind, yind, g, x_side,
 
     return ccdres
 
-def _accum_shear_per_ccd(ccdres_all, ccdres, tilename):
+def _accum_shear_per_ccd(ccd, ccdres_all, ccdres, tilename):
 
     # Create ccd number key. 
-    for ccdnum in list(ccdres):
-        if ccdnum not in list(ccdres_all):
-            ccdres_all[ccdnum] = {}
-        if tilename not in list(ccdres_all[ccdnum]):
-            ccdres_all[ccdnum][tilename] = {}
+    # for ccdnum in list(ccdres):
+    #     if ccdnum not in list(ccdres_all):
+    #         ccdres_all[ccdnum] = {}
+    if tilename not in list(ccdres_all):
+        ccdres_all[tilename] = {}
 
     cnames = ['g1', 'g2', 'g1p', 'g1m', 'g2p', 'g2m']
-    for ccdnum in list(ccdres):
+    # for ccdnum in list(ccdres):
+    if ccd in list(ccdres):
         for cname in cnames:
-            ccdres_all[ccdnum][tilename][cname] = ccdres[ccdnum][cname]
-            ccdres_all[ccdnum][tilename]["num_"+cname] = ccdres[ccdnum]["num_"+cname]
+            ccdres_all[tilename][cname] = ccdres[ccd][cname]
+            ccdres_all[tilename]["num_"+cname] = ccdres[ccd]["num_"+cname]
 
     return ccdres_all
 
@@ -79,8 +80,12 @@ def _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side, per_ccd=False):
                     # ccdres_all[ccdnum][cname] += ccdres[ccdnum][cname]
                     # ccdres_all[ccdnum]["num_"+cname] += ccdres[ccdnum]["num_"+cname]
     else:
+        count = 0
         cnames = ['g1', 'g2', 'g1p', 'g1m', 'g2p', 'g2m']
         for tname in list(ccdres):
+            if len(list(ccdres[tname])) == 0:
+                count += 1
+                continue
             for cname in cnames:
                 if cname not in list(ccdres_all):
                     ccdres_all[cname] = np.zeros((y_side, x_side))
@@ -91,7 +96,7 @@ def _accum_shear_from_file(ccdres_all, ccdres, x_side, y_side, per_ccd=False):
                     np.add.at(ccdres_all["num_"+cname], (rows, cols), ccdres[tname]["num_"+cname][rows, cols])
                     # ccdres_all[cname] += ccdres[tname][cname]
                     # ccdres_all["num_"+cname] += ccdres[tname]["num_"+cname]
-
+        print('The number of tiles that were not included in this CCD analysis: ', count)
     return ccdres_all
 
 def _accum_shear_for_jk(ccdres_all, ccdres):
@@ -464,21 +469,24 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
             size = comm.Get_size()
             print('mpi', rank, size)
 
-            ccdres_all_ccd = {}
-            split_tilenames = np.array_split(tilenames, size)
-            for t in tqdm(split_tilenames[rank]):
-                try:
-                    with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle'), 'rb') as handle:
-                        ccdres = pickle.load(handle)
-                        handle.close()
-                    ccdres_all_ccd = _accum_shear_per_ccd(ccdres_all_ccd, ccdres, t)
-                except:
-                    print(t, 'this tile cannot be found.')
-                    continue
+            for c in range(1, num_ccd+1):
+                if rank == c:
+                    ccdres_all_ccd = {}
+                    for t in tqdm(tilenames):
+                        try:
+                            with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle'), 'rb') as handle:
+                                ccdres = pickle.load(handle)
+                                handle.close()
+                            ccdres_all_ccd = _accum_shear_per_ccd(c, ccdres_all_ccd, ccdres, t)
+                        except:
+                            print(t, 'this tile cannot be found.')
+                            continue
             comm.Barrier()
-            for c in list(ccdres_all_ccd):
-                with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_ccd_'+str(c)+'.pickle'), 'wb') as raw:
-                    pickle.dump(ccdres_all_ccd[c], raw, protocol=pickle.HIGHEST_PROTOCOL)
+            for c in range(1, num_ccd+1):
+                if rank == c:
+                    with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_ccd_'+str(c)+'.pickle'), 'wb') as raw:
+                        pickle.dump(ccdres_all_ccd, raw, protocol=pickle.HIGHEST_PROTOCOL)
+            sys.exit()
 
         # Add raw sums for all the tiles from individual tile file. 
         if not os.path.exists(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_all.pickle')):
@@ -511,7 +519,7 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
                 print(c, 'ccd not found')
                 continue
 
-            with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_ccd_'+str(c)+'.pickle', 'rb')) as handle:
+            with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_ccd_'+str(c)+'.pickle'), 'rb') as handle:
                 ccdres = pickle.load(handle)
 
             # Accumulate all the shears first. 
@@ -519,7 +527,11 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
             ccdres_jk = _accum_shear_from_file(ccdres_jk, ccdres, x_side, y_side, per_ccd=True)
             for t in list(ccdres):
                 res_jk = ccdres_jk.copy()
-                res_jk = _accum_shear_for_jk(res_jk, ccdres[t])
+                if len(list(ccdres[t])) != 0:
+                    res_jk = _accum_shear_for_jk(res_jk, ccdres[t])
+                else:
+                    continue
+
                 if t not in list(all_ccd_shear):
                     all_ccd_shear[t] = {}
                     for cname in cnames:
@@ -533,7 +545,7 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
                         rows,cols = np.where(~np.isnan(res_jk[cname]))
                         np.add.at(all_ccd_shear[t][cname], (rows, cols), res_jk[cname][rows, cols])
                         np.add.at(all_ccd_shear[t]["num_"+cname], (rows, cols), res_jk["num_"+cname][rows, cols])
-        
+            print('the number of tiles being considered: ', len(all_ccd_shear.keys()))
         jk_x_g1 = np.zeros((jk_sample, bin_num))
         jk_y_g1 = np.zeros((jk_sample, bin_num))
         jk_x_g2 = np.zeros((jk_sample, bin_num))
@@ -541,7 +553,8 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
         unused_tile = 0
         for j,t in tqdm(enumerate(tilenames)):
             if t not in list(all_ccd_shear):
-                unused_tile += 1 
+                unused_tile += 1
+                continue
             mean_row_g1_jk, mean_row_g2_jk = comb_rows(all_ccd_shear[t], bin_num)
             mean_col_g1_jk, mean_col_g2_jk = comb_cols(all_ccd_shear[t], bin_num)
 
@@ -553,6 +566,7 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
         jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
         print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
         print(mean_row_g1)
+        print('the number of unused tile', unused_tile)
         jk_dict = {'x_g1': mean_row_g1, 'y_g1': mean_col_g1, 'x_g2': mean_row_g2, 'y_g2': mean_col_g2, 
                     'jc_x_g1': jc_x_g1, 'jc_y_g1': jc_y_g1, 'jc_x_g2': jc_x_g2, 'jc_y_g2': jc_y_g2}
         with open(os.path.join(shear_variations_path, 'mean_shear_jk_cov.pickle'), 'wb') as handle:
@@ -565,7 +579,7 @@ def main(argv):
     pizza_coadd_info = sys.argv[3]
     shear_variations_path = sys.argv[4]
     shear_per_tile = False
-    shear_per_ccd = True
+    shear_per_ccd = False
     mdet_mom = sys.argv[7]
     mdet_cuts = int(sys.argv[8])
 
