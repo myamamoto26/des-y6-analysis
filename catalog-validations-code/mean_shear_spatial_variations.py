@@ -10,17 +10,55 @@ import json
 # from joblib import Parallel, delayed
 import time
 import pickle
-from skimage.measure import block_reduce
-import drawDECam.drawDECam as dDECam
-import matplotlib
-import math
+# from skimage.measure import block_reduce
+# import drawDECam.drawDECam as dDECam
+# import matplotlib
+# import math
 from des_y6utils import mdet
 import galsim
+
+def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
+    from math import log10
+    # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
+
+    logstepx = log10(xmax/xmin)/xsteps
+    logstepy = log10(ymax/ymin)/ysteps
+
+    indexx = (np.log10(x/xmin)/logstepx).astype(int)
+    indexy = (np.log10(y/ymin)/logstepy).astype(int)
+
+    indexx = np.maximum(indexx,0)
+    indexx = np.minimum(indexx, xsteps-1)
+    indexy = np.maximum(indexy,0)
+    indexy = np.minimum(indexy, ysteps-1)
+
+    return indexx,indexy
+
+def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_mom):
+    
+    if wgt_dict is None:
+        weights = np.ones(len(d))
+        return weights
+
+    shear_wgt = wgt_dict['weight']
+    smoothing = True
+    if smoothing:
+        from scipy.ndimage import gaussian_filter
+        smooth_response = gaussian_filter(wgt_dict['response'], sigma=2.0)
+        shear_wgt = (smooth_response/wgt_dict['meanes'])**2
+    indexx, indexy = assign_loggrid(np.array(d['gauss_s2n']), np.array(d['gauss_T_ratio']), snmin, snmax, steps, sizemin, sizemax, steps)
+    weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
+
+    # prior = ngmix.priors.GPriorBA(0.3, rng=np.random.RandomState())
+    # pvals = prior.get_prob_array2d(d['wmom_g_1'], d['wmom_g_2'])
+    # weights *= pvals
+    
+    return weights
 
 def _get_ccd_num(image_path):
     return int(image_path.split('/')[1].split('_')[2][1:])
 
-def _accum_shear(ccdres, ccdnum, cname, shear, mdet_step, xind, yind, g, x_side, y_side):
+def _accum_shear(ccdres, ccdnum, cname, shear, mdet_step, xind, yind, g, wgt, x_side, y_side):
     msk_s = (mdet_step == shear)
     if cname not in list(ccdres[ccdnum]):
         ccdres[ccdnum][cname] = np.zeros((y_side, x_side))
@@ -31,12 +69,12 @@ def _accum_shear(ccdres, ccdnum, cname, shear, mdet_step, xind, yind, g, x_side,
         np.add.at(
             ccdres[ccdnum][cname], 
             (yind[msk_s], xind[msk_s]), 
-            g[msk_s],
+            g[msk_s]*wgt[msk_s],
         )
         np.add.at(
             ccdres[ccdnum]["num_" + cname], 
             (yind[msk_s], xind[msk_s]), 
-            np.ones_like(g[msk_s]),
+            wgt[msk_s],
         )
 
     return ccdres
@@ -108,6 +146,36 @@ def _accum_shear_for_jk(ccdres_all, ccdres):
         np.negative.at(ccdres_all["num_"+cname], (rows, cols), ccdres["num_"+cname][rows, cols])
     return ccdres_all
 
+def _compute_shear_per_jksample(stats, ccdres, i):
+
+    for tilename in stats.keys():
+        ccdres_ = ccdres.copy()
+        del ccdres_[tilename]
+        d_e1 = np.stack([ccdres_[j]['g1'] for j in ccdres_.keys()])
+        d_nume1 = np.stack([ccdres_[j]['num_g1'] for j in ccdres_.keys()])
+        d_e2 = np.stack([ccdres_[j]['g2'] for j in ccdres_.keys()])
+        d_nume2 = np.stack([ccdres_[j]['num_g2'] for j in ccdres_.keys()])
+        d_1p = np.stack([ccdres_[j]['g1p'] for j in ccdres_.keys()])
+        d_num1p = np.stack([ccdres_[j]['num_g1p'] for j in ccdres_.keys()])
+        d_1m = np.stack([ccdres_[j]['g1m'] for j in ccdres_.keys()])
+        d_num1m = np.stack([ccdres_[j]['num_g1m'] for j in ccdres_.keys()])
+        d_2p = np.stack([ccdres_[j]['g2p'] for j in ccdres_.keys()])
+        d_num2p = np.stack([ccdres_[j]['num_g2p'] for j in ccdres_.keys()])
+        d_2m = np.stack([ccdres_[j]['g2m'] for j in ccdres_.keys()])
+        d_num2m = np.stack([ccdres_[j]['num_g2m'] for j in ccdres_.keys()])
+        
+        e1_ = np.sum(d_e1, axis=0)/np.sum(d_nume1, axis=0)
+        e2_ = np.sum(d_e2, axis=0)/np.sum(d_nume2, axis=0)
+        R11 = (np.sum(d_1p, axis=0)/np.sum(d_num1p, axis=0) - np.sum(d_1m, axis=0)/np.sum(d_num1m, axis=0))/2/0.01
+        R22 = (np.sum(d_2p, axis=0)/np.sum(d_num2p, axis=0) - np.sum(d_2m, axis=0)/np.sum(d_num2m, axis=0))/2/0.01
+        R = (R11 + R22)/2. 
+        
+        stats[tilename]['e1'] = e1_/R
+        stats[tilename]['e2'] = e2_/R
+
+    return stats
+
+
 def _compute_g1_g2(ccdres, ccdnum):
     g1 = ccdres[ccdnum]["g1"] / ccdres[ccdnum]["num_g1"]
     g1p = ccdres[ccdnum]["g1p"] / ccdres[ccdnum]["num_g1p"]
@@ -168,6 +236,23 @@ def comb_cols(d, nbin):
     g1, g2 = _compute_g1_g2_per_ccd(bin_shear)  
     return g1, g2
 
+def _compute_jackknife_error_estimate(stats, tnames, N):
+
+    jk_cov = {'e1':{}, 'e2':{}}
+    e1_ = np.stack([stats[i]['e1'] for i in tnames])
+    e2_ = np.stack([stats[i]['e2'] for i in tnames])
+
+    jk_all_g1_ave = np.mean(e1_, axis=0)
+    jk_all_g2_ave = np.mean(e2_, axis=0)
+
+    cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((e1_ - jk_all_g1_ave)**2, axis=0))
+    cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((e2_ - jk_all_g2_ave)**2, axis=0))
+
+    jk_cov['e1'] = cov_g1
+    jk_cov['e2'] = cov_g2
+
+    return jk_cov
+
 def _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, N):
 
     # Make zero entries nan values.
@@ -181,15 +266,15 @@ def _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, N):
     jk_y_g2 = np.delete(jk_y_g2, msk, axis=0)
 
     # compute jackknife average. 
-    jk_x_g1_ave = np.mean(jk_x_g1, axis=0)
-    jk_y_g1_ave = np.mean(jk_y_g1, axis=0)
-    jk_x_g2_ave = np.mean(jk_x_g2, axis=0)
-    jk_y_g2_ave = np.mean(jk_y_g2, axis=0)
+    jk_x_g1_ave = np.nanmean(jk_x_g1, axis=0)
+    jk_y_g1_ave = np.nanmean(jk_y_g1, axis=0)
+    jk_x_g2_ave = np.nanmean(jk_x_g2, axis=0)
+    jk_y_g2_ave = np.nanmean(jk_y_g2, axis=0)
 
-    x_cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_x_g1 - jk_x_g1_ave)**2, axis=0))
-    y_cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_y_g1 - jk_y_g1_ave)**2, axis=0))
-    x_cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_x_g2 - jk_x_g2_ave)**2, axis=0))
-    y_cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.sum((jk_y_g2 - jk_y_g2_ave)**2, axis=0))
+    x_cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.nansum((jk_x_g1 - jk_x_g1_ave)**2, axis=0))
+    y_cov_g1 = np.sqrt((N-1)/N)*np.sqrt(np.nansum((jk_y_g1 - jk_y_g1_ave)**2, axis=0))
+    x_cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.nansum((jk_x_g2 - jk_x_g2_ave)**2, axis=0))
+    y_cov_g2 = np.sqrt((N-1)/N)*np.sqrt(np.nansum((jk_y_g2 - jk_y_g2_ave)**2, axis=0))
 
     return x_cov_g1, y_cov_g1, x_cov_g2, y_cov_g2
 
@@ -197,8 +282,10 @@ def _categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_o
 
     """Computes which 32x32 cell the objects are in."""
 
-    xind = np.floor((x-ccd_x_min + 0.5)/piece_side).astype(int)
-    yind = np.floor((y-ccd_y_min + 0.5)/piece_side).astype(int)
+    # xind = np.floor((x-ccd_x_min + 0.5)/piece_side).astype(int)
+    # yind = np.floor((y-ccd_y_min + 0.5)/piece_side).astype(int)
+    xind = np.floor((x-ccd_x_min)/piece_side).astype(int)
+    yind = np.floor((y-ccd_y_min)/piece_side).astype(int)
 
     msk_cut = np.where(
         (xind >= 0)
@@ -215,7 +302,7 @@ def _categorize_obj_in_ccd(piece_side, nx, ny, ccd_x_min, ccd_y_min, x, y, msk_o
 
     return xind, yind, msk_obj
 
-def find_objects_in_ccd_and_sum_shears(ccdres, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, mdet_mom):
+def find_objects_in_ccd_and_sum_shears(ccdres, objloc, mdet_obj, coadd_files, ccd_x_min, ccd_y_min, x_side, y_side, piece_side, mdet_mom, wgt_filepath):
 
     """
     Computes x,y coordinates in single-epoch image frame from RA,DEC in metadetection catalogs, and sums up the raw shear in each cell for each CCD. 
@@ -256,6 +343,8 @@ def find_objects_in_ccd_and_sum_shears(ccdres, mdet_obj, coadd_files, ccd_x_min,
         image_id = np.unique(epochs[(epochs['flags']==0)]['image_id'])
         image_id = image_id[image_id != 0]
         for iid in image_id:
+            if iid not in objloc.keys():
+                objloc[iid] = {}
             msk_im = np.where(image_info['image_id'] == iid)
             gs_wcs = galsim.FitsWCS(header=json.loads(image_info['wcs'][msk_im][0]))
             position_offset = image_info['position_offset'][msk_im][0]
@@ -278,6 +367,12 @@ def find_objects_in_ccd_and_sum_shears(ccdres, mdet_obj, coadd_files, ccd_x_min,
             pos_x, pos_y = gs_wcs.radecToxy(ra_obj, dec_obj, units="degrees")
             pos_x = pos_x - position_offset
             pos_y = pos_y - position_offset
+            # save coordinates along with shear
+            objloc[iid]['x'] = pos_x; objloc[iid]['y'] = pos_y
+            objloc[iid]['g1'] = mdet_obj[mdet_mom+"_g_1"]
+            objloc[iid]['g2'] = mdet_obj[mdet_mom+"_g_2"]
+            objloc[iid]['mdet_step'] = mdet_obj["mdet_step"]
+
             ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
             xind, yind, msk_obj = _categorize_obj_in_ccd(piece_side, x_side, y_side, ccd_x_min, ccd_y_min, pos_x, pos_y, msk_obj)
             if (np.any(pos_x<=98) or np.any(pos_x>1950)):
@@ -290,15 +385,21 @@ def find_objects_in_ccd_and_sum_shears(ccdres, mdet_obj, coadd_files, ccd_x_min,
                 ccdres[ccdnum] = {}
 
             mdet_step = mdet_obj["mdet_step"][msk_obj]
-        
-            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], x_side, y_side)
 
-    return ccdres
+            # Weights
+            with open(wgt_filepath, 'rb') as handle:
+                wgt_dict = pickle.load(handle)
+            shear_wgt = _find_shear_weight(mdet_obj, wgt_dict, wgt_dict['xedges'][0], wgt_dict['xedges'][-1], wgt_dict['yedges'][0], wgt_dict['yedges'][-1], len(wgt_dict['xedges'])-1, mdet_mom)
+            objloc[iid]['w'] = shear_wgt
+        
+            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], shear_wgt[msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj],shear_wgt[msk_obj],  x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], shear_wgt[msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], shear_wgt[msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], shear_wgt[msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], shear_wgt[msk_obj], x_side, y_side)
+
+    return ccdres, objloc
 
 def compute_shear_stack_CCDs(ccdres, x_side, y_side, out_path, stack_north_south=False, block=False):
     
@@ -365,7 +466,7 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, out_path, stack_north_south
         
         if block: # trim cells around edges. 
             for cname in list(shear_stack):
-                shear_stack[cname] = shear_stack[cname][2:-2, 2:-2]
+                shear_stack[cname] = shear_stack[cname][3:-3, 3:-3]
 
             if not os.path.exists(os.path.join(out_path, 'mdet_shear_focal_plane_stacked.pickle')):
                 with open(os.path.join(out_path, 'mdet_shear_focal_plane_stacked.pickle'), 'wb') as raw:
@@ -377,7 +478,12 @@ def compute_shear_stack_CCDs(ccdres, x_side, y_side, out_path, stack_north_south
             mean_g2 = np.rot90(g2, 3)
             print(mean_g1, mean_g2)
 
-def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, pizza_coadd_info, shear_variations_path, mdet_mom, mdet_cuts, individual_tiles = False, make_per_ccd_files = False):
+def _make_color_cut(d, cmin, cmax):
+    gmi =  mdet._compute_asinh_mags(d["pgauss_band_flux_g"], 0) - mdet._compute_asinh_mags(d["pgauss_band_flux_i"], 2)
+    msk = ((gmi > cmin) & (gmi <= cmax))
+    return msk
+
+def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, pizza_coadd_info, shear_variations_path, mdet_mom, mdet_cuts, wgt_filepath, individual_tiles = False, make_per_ccd_files = False, compute_jk_errors=False):
 
     """
     
@@ -401,11 +507,11 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
     make_per_ccd_tiles: the argument whether you want to create pickle files per CCD. This will make # of CCDs worth of files and the tile information is contained in each file. This is necessary for computing jackknife errors. (Boolean)
     """
 
-    ccd_x_min = 48
-    ccd_x_max = 2000
-    ccd_y_min = 48
-    ccd_y_max = 4048
-    cell_side = 32
+    ccd_x_min = 0 # 48
+    ccd_x_max = 2048 # 2000
+    ccd_y_min = 0 #48
+    ccd_y_max = 4096 #4048
+    cell_side = 128
     x_side = int(np.ceil((ccd_x_max - ccd_x_min)/cell_side))
     y_side = int(np.ceil((ccd_y_max - ccd_y_min)/cell_side))
     num_ccd = 62
@@ -441,22 +547,26 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
         split_tilenames = np.array_split(tilenames, size)
         for t in tqdm(split_tilenames[rank]):
             ccdres = {}
+            objloc = {}
             obj_num = 0
             if not os.path.exists(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle')):
                 try:
                     d = fio.read(os.path.join(mdet_input_filepaths, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
                     msk = mdet.make_mdet_cuts(d, mdet_cuts)
                     d = d[msk]
+                    # d = d[_make_color_cut(d, 1.49, 4.00)]
                 except:
                     print(t, " does not exist. skipping")
                     continue
                 # msk = if additional cuts are necessary. 
-                ccdres = find_objects_in_ccd_and_sum_shears(ccdres, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, mdet_mom)
+                ccdres,objloc = find_objects_in_ccd_and_sum_shears(ccdres, objloc, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, mdet_mom, wgt_filepath)
                 for c in list(ccdres.keys()):
                     obj_num += np.sum(ccdres[c]['num_g1'])
                 print('number of objects in this tile, ', obj_num)
                 with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle'), 'wb') as raw:
                     pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
+                with open(os.path.join(shear_variations_path, 'focal_plane_coords_'+t+'.pickle'), 'wb') as raw:
+                    pickle.dump(objloc, raw, protocol=pickle.HIGHEST_PROTOCOL)
             else:
                 print('Already made this tile.', t)
         comm.Barrier()
@@ -469,24 +579,60 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
             size = comm.Get_size()
             print('mpi', rank, size)
 
-            for c in range(1, num_ccd+1):
-                if rank == c:
-                    ccdres_all_ccd = {}
-                    for t in tqdm(tilenames):
-                        try:
-                            with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle'), 'rb') as handle:
-                                ccdres = pickle.load(handle)
-                                handle.close()
-                            ccdres_all_ccd = _accum_shear_per_ccd(c, ccdres_all_ccd, ccdres, t)
-                        except:
-                            print(t, 'this tile cannot be found.')
-                            continue
+            for c in tqdm(range(1, num_ccd+1)):
+                if c % size != rank:
+                    continue
+                ccdres_all_ccd = {}
+                for t in tqdm(tilenames):
+                    try:
+                        with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle'), 'rb') as handle:
+                            ccdres = pickle.load(handle)
+                            handle.close()
+                        ccdres_all_ccd = _accum_shear_per_ccd(c, ccdres_all_ccd, ccdres, t)
+                    except:
+                        print(t, 'this tile cannot be found.')
+                        continue
+                with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_ccd_'+str(c)+'.pickle'), 'wb') as raw:
+                    pickle.dump(ccdres_all_ccd, raw, protocol=pickle.HIGHEST_PROTOCOL)
             comm.Barrier()
-            for c in range(1, num_ccd+1):
-                if rank == c:
-                    with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_ccd_'+str(c)+'.pickle'), 'wb') as raw:
-                        pickle.dump(ccdres_all_ccd, raw, protocol=pickle.HIGHEST_PROTOCOL)
-            sys.exit()
+
+        if True:
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+            rank = comm.Get_rank()
+            size = comm.Get_size()
+            print('mpi', rank, size)
+
+            # Compute jackknife errors for mean shear in focal plane.
+            print('checking jackknife errors on focal plane...')
+            jk_sample = len(tilenames)
+            # jk_stats_tiles = {i: {'e1': np.zeros((y_side, x_side)), 'e2': np.zeros((y_side, x_side))} for i in tilenames}
+            # jk_stats = {i: jk_stats_tiles for i in range(1, num_ccd+1)}
+            for c in tqdm(range(1, num_ccd+1)):
+                if c % size != rank:
+                    continue
+                jk_stats = {i: {'e1': np.zeros((y_side, x_side)), 'e2': np.zeros((y_side, x_side))} for i in tilenames}
+                with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_ccd_'+str(c)+'.pickle'), 'rb') as raw:
+                    ccdres_ccd = pickle.load(raw)
+                ccdres_ccd_ = ccdres_ccd.copy()
+                for tilename in ccdres_ccd_.keys():
+                    if len(ccdres_ccd_[tilename]) == 0:
+                        del ccdres_ccd[tilename]
+                        del jk_stats[tilename]
+                if len(ccdres_ccd.keys()) == 0:
+                    continue
+                jk_stats = _compute_shear_per_jksample(jk_stats, ccdres_ccd, c)
+
+                jk_stats_final = {'e1': np.zeros((y_side, x_side)), 'e2': np.zeros((y_side, x_side))}
+                tnames = ccdres_ccd.keys()
+                jk_cov = _compute_jackknife_error_estimate(jk_stats, tnames, len(tnames))
+                jk_stats_final['e1'] = jk_cov['e1']
+                jk_stats_final['e2'] = jk_cov['e2']
+                print(jk_stats_final)
+                with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_ccd_'+str(c)+'_jk_cov.pickle'), 'wb') as raw:
+                    pickle.dump(jk_stats_final, raw, protocol=pickle.HIGHEST_PROTOCOL)
+            comm.Barrier()
+            print('computed jackknife errors for mean shear variations in focal plane coordinates.')
 
         # Add raw sums for all the tiles from individual tile file. 
         if not os.path.exists(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_all.pickle')):
@@ -503,12 +649,13 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
                 ccdres_all = pickle.load(raw) 
         
         # Saves accumulated pickle file for north/south and all, and then compute the mean shear for x-stack and y-stack.
-        bin_num = 20
+        bin_num = 15
         d_shear = compute_shear_stack_CCDs(ccdres_all, x_side, y_side, shear_variations_path, stack_north_south=True, block=True)
         mean_row_g1, mean_row_g2 = comb_rows(d_shear, bin_num)
         mean_col_g1, mean_col_g2 = comb_cols(d_shear, bin_num)
 
-        # Compute jackknife error estimate. 
+    # Compute jackknife error estimate. 
+    if compute_jk_errors:
         print('Computing jackknife error')
         jk_sample = len(tilenames)
 
@@ -578,12 +725,14 @@ def main(argv):
     mdet_tilename_filepath = sys.argv[2]
     pizza_coadd_info = sys.argv[3]
     shear_variations_path = sys.argv[4]
-    shear_per_tile = False
-    shear_per_ccd = False
-    mdet_mom = sys.argv[7]
-    mdet_cuts = int(sys.argv[8])
+    weight_filepath = sys.argv[5]
+    shear_per_tile = eval(sys.argv[6])
+    shear_per_ccd = eval(sys.argv[7])
+    jk_errors = eval(sys.argv[8]) # Do not use sbatch for this step.  
+    mdet_mom = sys.argv[9]
+    mdet_cuts = int(sys.argv[10])
 
-    compute_mean_shear_variations(mdet_input_filepaths,mdet_tilename_filepath, pizza_coadd_info, shear_variations_path, mdet_mom, mdet_cuts, individual_tiles=shear_per_tile, make_per_ccd_files=shear_per_ccd)
+    compute_mean_shear_variations(mdet_input_filepaths,mdet_tilename_filepath, pizza_coadd_info, shear_variations_path, mdet_mom, mdet_cuts, weight_filepath, individual_tiles=shear_per_tile, make_per_ccd_files=shear_per_ccd, compute_jk_errors=jk_errors)
     
 if __name__ == "__main__":
     main(sys.argv)

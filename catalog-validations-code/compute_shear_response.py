@@ -51,7 +51,7 @@ def _accum_shear_per_tile(res, mdet_step, g1, g2, weight):
     weight: Weight on each galaxy. 
     """
     for step in ['noshear', '1p', '1m', '2p', '2m']:
-        msk_s = np.where(mdet_step == step)[0]
+        msk_s = (mdet_step == step)
         np.add.at(
             res[step], 
             (0, 0), 
@@ -75,7 +75,7 @@ def _accum_shear_per_tile(res, mdet_step, g1, g2, weight):
     return res
 
 
-def compute_response_over_catalogs(mdet_input_filepaths, response_output_filepath, mdet_mom, mdet_cuts):
+def compute_response_over_catalogs(mdet_input_filepaths, response_output_filepath, wgt_filepath, mdet_mom, mdet_cuts, weight_scheme):
 
     """
     Returns the diagonal part of the shear response R11, R22 from the metadetection catalogs over all the tiles.
@@ -88,14 +88,17 @@ def compute_response_over_catalogs(mdet_input_filepaths, response_output_filepat
     response_output_filepath: The file path where the output text file is written
     Example) /global/cscratch1/sd/myamamot/metadetect/shear_response_v3.txt
 
+    wgt_filepath: The file path where the shear weights are written
+
     mdet_mom: which measurement do we want to make cuts on
     Example) wmom
 
     mdet_cuts: which version of the cuts
+
+    weight_scheme: which weighting scheme do you want to use (e.g., s2n_size, shape_error, uniform)
     """
 
-    # filenames = sorted(glob.glob(mdet_input_filepaths))
-    filenames = np.load('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/som_weight_test/som_training_files.npy')
+    filenames = sorted(glob.glob(mdet_input_filepaths))
     binnum = 1
     res = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
            '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
@@ -107,23 +110,27 @@ def compute_response_over_catalogs(mdet_input_filepaths, response_output_filepat
         fp = os.path.join(mdet_input_filepaths, fname)
         if os.path.exists(fp):
             d = fio.read(fp)
-            # msk = mdet.make_mdet_cuts(d, mdet_cuts) 
-            msk = mdet._make_mdet_cuts_wmom(
-            d,
-            min_s2n=5.0,
-            min_t_ratio=1.1,
-            n_terr=0.0,
-            max_mfrac=0.1,
-            max_s2n=np.inf,
-        )
+            msk = mdet.make_mdet_cuts(d, mdet_cuts) 
+        #     msk = mdet._make_mdet_cuts_wmom(
+        #     d,
+        #     min_s2n=5.0,
+        #     min_t_ratio=1.1,
+        #     n_terr=0.0,
+        #     max_mfrac=0.1,
+        #     max_s2n=np.inf,
+        # )
             d = d[msk]
         else:
             continue
-        # weight = np.ones(len(d['mdet_step']))
-        # weight = 1/(0.07**2 + 0.5 * (d[mdet_mom+'_g_cov_1_1'] + d[mdet_mom+'_g_cov_2_2']))
-        with open('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/som_weight_test/inverse_variance_weight_som_test_10steps.pickle', 'rb') as handle:
-            wgt_dict = pickle.load(handle)
-        weight = _find_shear_weight(d, wgt_dict, mdet_mom, 10, 600, 1.2, 2.0, 10)
+        
+        if weight_scheme == 'uniform':
+            weight = np.ones(len(d['mdet_step']))
+        elif weight_scheme == 'shape_error':
+            weight = 1/(0.17**2 + 0.5*(d[mdet_mom+'_g_cov_1_1'] + d[mdet_mom+'_g_cov_2_2']))
+        elif weight_scheme == 's2n_sizer':
+            with open(wgt_filepath, 'rb') as handle:
+                wgt_dict = pickle.load(handle)
+            weight = _find_shear_weight(d, wgt_dict, mdet_mom, 10, 300, 0.5, 5.0, 20)
         res = _accum_shear_per_tile(res, d['mdet_step'], d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'], weight)
     
     g1 = res['noshear'][0][0] / res['num_noshear'][0][0]
@@ -147,10 +154,12 @@ def main(argv):
     
     mdet_input_filepaths = sys.argv[1]
     response_output_filepath = sys.argv[2]
-    mdet_mom = sys.argv[3]
-    mdet_cuts = int(sys.argv[4])
+    weight_filepath = sys.argv[3]
+    mdet_mom = sys.argv[4]
+    mdet_cuts = int(sys.argv[5])
+    weight_scheme = sys.argv[6]
 
-    compute_response_over_catalogs(mdet_input_filepaths, response_output_filepath, mdet_mom, mdet_cuts)
+    compute_response_over_catalogs(mdet_input_filepaths, response_output_filepath, weight_filepath, mdet_mom, mdet_cuts, weight_scheme)
 
 if __name__ == "__main__":
     main(sys.argv)

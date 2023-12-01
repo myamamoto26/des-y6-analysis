@@ -13,7 +13,7 @@ def _save_measurement_info(mdet_files, outpath, stats_file, mdet_cuts, mdet_mom,
     """
 
     res = np.zeros(200000000, dtype=[('ra', float), ('psfrec_g_1', float), ('psfrec_g_2', float), ('psfrec_T', float), (mdet_mom+'_s2n', float), ('pgauss_T', float), (mdet_mom+'_T_ratio', float)])
-
+    
     start = 0
     for f in tqdm(mdet_files):
         d = fio.read(f)
@@ -148,13 +148,13 @@ def _compute_shear_per_jksample(res_jk, res, ith_tilename, tilenames, binnum):
     jk_sample_mean = _compute_g1_g2(res_jk, binnum, method='jk')
     return jk_sample_mean
 
-def _accum_shear_per_tile(res, tilename, g_step, g1, g2, g_qa, bin_low, bin_high, binnum):
+def _accum_shear_per_tile(res, tilename, g_step, g1, g2, g_qa, bin_low, bin_high, binnum):#, mean_shear_color):
     
     for step in ['noshear', '1p', '1m', '2p', '2m']:
         msk_s = np.where(g_step == step)[0]
         qa_masked = g_qa[msk_s]
-        g1_masked = g1[msk_s]
-        g2_masked = g2[msk_s]
+        g1_masked = g1[msk_s] #- mean_shear_color['mean_g1'][msk_s]
+        g2_masked = g2[msk_s] #- mean_shear_color['mean_g2'][msk_s]
         
         for bin in range(binnum):
             msk_bin = np.where(((qa_masked >= bin_low[bin]) & (qa_masked <= bin_high[bin])))[0]
@@ -263,6 +263,26 @@ def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_
     
     return weights
 
+def _find_mean_shear_in_color_bins(d):
+    
+    def flux2mag(flux, zero_pt=30):
+        return zero_pt - 2.5 * np.log10(flux)
+
+    with open('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/v2/mean_shear_measurement_final_v2_gmicolor.pickle', 'rb') as f:
+        d_color = pickle.load(f)
+    with open('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/v2/mean_shear_bin_final_v2_gmicolor.pickle', 'rb') as f:
+        d_bin = pickle.load(f)
+    
+    d_mean_shear = np.zeros(len(d), dtype=[('mean_g1', 'f8'), ('mean_g2', 'f8')])
+    gmi = flux2mag(d['pgauss_band_flux_g']) - flux2mag(d['pgauss_band_flux_i'])
+    imz = flux2mag(d['pgauss_band_flux_i']) - flux2mag(d['pgauss_band_flux_z'])
+    for b in range(len(d_color['gmi']['bin_mean'])):
+        msk = ((d['mdet_step'] == 'noshear') & (gmi > d_bin['gmi']['low'][b]) & (gmi < d_bin['gmi']['high'][b]))
+        d_mean_shear['mean_g1'][msk] = d_color['gmi']['g1'][b]
+        d_mean_shear['mean_g2'][msk] = d_color['gmi']['g2'][b]
+
+    return d_mean_shear
+
 def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, outpath, nperbin, measurement_file, mdet_cuts, shear_wgt_file=None, additional_cuts=None):
 
     """
@@ -284,7 +304,7 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
     Example) ['pgauss_s2n', 'pgauss_T_ratio']
     """
 
-    patch = False
+    patch = True
     mdet_files = sorted(glob.glob(mdet_input_filepaths))
     if patch:
         fids = [fname.split('/')[-1][6:10] for fname in mdet_files]
@@ -310,7 +330,7 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
             
         measurement_result = {}
         print('accumulating shapes...')
-        for key in list(bin_dict.keys()):
+        for key in list(bin_dict.keys())[:2]:
             bins = bin_dict[key]
             res = {} # dictionary to accumulate raw sums. 
             # res_tile_mean = {} # dictionary to accumulate mean shear for each tile. 
@@ -322,13 +342,9 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
                 msk = mdet.make_mdet_cuts(d, mdet_cuts)
                 d = d[msk]
                 if additional_cuts:
-                    for cut in additional_cuts:
-                        if cut == mdet_mom+'_s2n':
-                            d = d[d[cut] < 200]
-                        elif cut == mdet_mom+'_T_ratio':
-                            d = d[d[cut] > 1.5]
-                        elif cut == 'nepoch_g':
-                            d = d[d[cut] > 4]
+                    Tmin = 0.43
+                    Tmax = 1.88
+                    d = d[((d['pgauss_T'] > Tmin) & (d['pgauss_T'] < Tmax))]
                 num_objects += len(d)
                 res[pname] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
                                         '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
@@ -341,7 +357,9 @@ def compute_mean_shear(mdet_input_filepaths, stats_file, bin_file, mdet_mom, out
                     shear_wgt = _find_shear_weight(d, wgt_dict, 10, 600, 1.2, 2.0, 20, mdet_mom)
                 elif mdet_mom == 'gauss':
                     shear_wgt = _find_shear_weight(d, wgt_dict, 10, 300, 0.5, 3.0, 20, mdet_mom)
-                res = _accum_shear_per_tile(res, pname, d['mdet_step'], d[mdet_mom+'_g_1']*shear_wgt, d[mdet_mom+'_g_2']*shear_wgt, d[key], bins['low'], bins['high'], binnum)
+                ### CORRECTING MEAN SHEAR IN EACH COLOR BIN. ###
+                # mean_shear_color = _find_mean_shear_in_color_bins(d)
+                res = _accum_shear_per_tile(res, pname, d['mdet_step'], d[mdet_mom+'_g_1']*shear_wgt, d[mdet_mom+'_g_2']*shear_wgt, d[key], bins['low'], bins['high'], binnum) #, mean_shear_color)
 
             # Accumulate all the tiles shears. 
             res['all'] = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 

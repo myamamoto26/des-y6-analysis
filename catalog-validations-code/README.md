@@ -38,10 +38,10 @@ If one wants to compute the shear response over all the catalogs,
 ### Required items: selection-cut metadetection catalogs, the file which contains metadetection file names
 
 
-## mean_shear_stats.py (updated 10/05/22)
+## mean_shear_stats.py (updated 1/18/22)
 If one wants to compute the mean shear over properties like PSF shape/size and galaxy size, 
 
-```python mean_shear_stats.py /global/cfs/cdirs/des/y6-shear-catalogs/metadetection_patches/patch-*.fits bin_stats.fits bin_hist.pickle wmom /global/cscratch1/sd/myamamoto/des-y6-analysis/y6_measurement 5000000 mean_shear_stats.pickle /global/cscratch1/sd/myamamot/metadetect/inverse_variance_weight_v3_Trcut_snmax1000.pickle None```
+```python mean_shear_stats.py "/global/cfs/cdirs/des/y6-shear-catalogs/metadetection_patches_v1_blinded/patch-*.fits" mean_shear_stats_final_v2_weighted.fits mean_shear_bin_final_v2_weighted.pickle wmom "/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/v2" 6000000 mean_shear_measurement_final_v2_mean_subtracted_color.pickle "/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/v2/inverse_variance_weight_final_v2.pickle" None 2```
 
 ### Required items: selection-cut metadetection catalogs, the file which contains shear response+shear weight in the bins of S/N and T/Tpsf
 

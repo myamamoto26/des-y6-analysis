@@ -9,19 +9,21 @@ import pickle
 def flux2mag(flux, zero_pt=30):
     return zero_pt - 2.5 * np.log10(flux)
 
-def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
+def measure_rho(data_, min_sep, max_sep, max_mag, stats_out_dir, f_patch_center, error_method='jackknife', tag=None, use_xy=False, prefix='piff',
                 alt_tt=False, opt=None, subtract_mean=False, do_rho0=False):
     """Compute the rho statistics
     """
     import treecorr
+    d_piff=data_[1].data
+    msk = ((d_piff.field("BAND") == "r")) # | (d_piff.field("BAND") == "i") | (d_piff.field("BAND") == "z"))
 
-    e1 = data['G1_DATA']
-    e2 = data['G2_DATA']
-    T = data['T_DATA']
-    p_e1 = data['G1_MODEL']
-    p_e2 = data['G2_MODEL']
-    p_T = data['T_MODEL']
-    m = flux2mag(data['FLUX'])
+    e1 = d_piff.field('G1_DATA')[msk] #data['G1_DATA']
+    e2 = d_piff.field('G2_DATA')[msk] #data['G2_DATA']
+    T = d_piff.field('T_DATA')[msk] #data['T_DATA']
+    p_e1 = d_piff.field('G1_MODEL')[msk]
+    p_e2 = d_piff.field('G2_MODEL')[msk]
+    p_T = d_piff.field('T_MODEL')[msk]
+    m = flux2mag(d_piff.field('FLUX')[msk])
 
     if max_mag > 0:
         e1 = e1[m<max_mag]
@@ -68,8 +70,8 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         qcat = treecorr.Catalog(x=x, y=y, x_units='arcsec', y_units='arcsec', g1=q1, g2=q2)
         wcat = treecorr.Catalog(x=x, y=y, x_units='arcsec', y_units='arcsec', g1=w1, g2=w2, k=dt)
     else:
-        ra = data['RA']
-        dec = data['DEC']
+        ra = d_piff.field('RA')[msk]
+        dec = d_piff.field('DEC')[msk]
         if max_mag > 0:
             ra = ra[m<max_mag]
             dec = dec[m<max_mag]
@@ -77,13 +79,13 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         print('dec = ',dec)
 
         print('making ecat')
-        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=200)
+        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, patch_centers=f_patch_center)
         ecat.nfields.clear()
         print('making qcat')
-        qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, patch_centers=ecat.patch_centers)
+        qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, patch_centers=f_patch_center)
         qcat.nfields.clear()
         print('making wcat')
-        wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, patch_centers=ecat.patch_centers)
+        wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, patch_centers=f_patch_center)
         wcat.nfields.clear()
         print('catalog done')
 
@@ -98,11 +100,12 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
         sep_units = 'arcmin',
         bin_slop = 0.1,
 
-        min_sep = 0.5,
+        min_sep = min_sep, 
         max_sep = max_sep,
         bin_size = 0.2,
 
-        var_method = 'jackknife'
+        var_method = error_method, 
+        output_dots = False,
     )
 
     if opt == 'lucas':
@@ -137,11 +140,14 @@ def measure_rho(data, max_sep, max_mag, tag=None, use_xy=False, prefix='piff',
             
         print('mean xi+ = ',rho.xip.mean())
         print('mean xi- = ',rho.xim.mean())
-        np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/'+cat1.name+'_'+cat2.name+'_cov.npy', rho.cov)
+        np.save(os.path.join(stats_out_dir, cat1.name+'_'+cat2.name+'_cov.npy'), rho.cov)
         results.append(rho)
-    cov = treecorr.estimate_multi_cov([results[5], results[0], results[1], results[2], results[3], results[4]], 'jackknife')
+    if do_rho0:
+        cov = treecorr.estimate_multi_cov([results[5], results[0], results[1], results[2], results[3], results[4]], error_method)
+    else:
+        cov = treecorr.estimate_multi_cov([results[0], results[1], results[2], results[3], results[4]], error_method)
     print(cov)
-    np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/rho_multi_cov.npy',cov)
+    np.save(os.path.join(stats_out_dir, 'rho_multi_cov.npy'), cov)
 
     if alt_tt:
         print('Doing alt correlation of %s vs %s'%(dtcat.name, dtcat.name))
@@ -236,19 +242,20 @@ def write_stats_tau(stat_file, tau0, tau2, tau5):
         json.dump([stats], fp)
     print('Done writing ',stat_file)
 
-def measure_tau(piff_data, max_sep, max_mag, mdet_input_flat, stats_out_dir, tag=None, use_xy=False, prefix='piff',
-                alt_tt=False, opt=None, subtract_mean=False):
+def measure_tau(piff_data, min_sep, max_sep, max_mag, mdet_input_flat, stats_out_dir, f_patch_center, error_method='jackknife', tag=None, use_xy=False, prefix='piff', alt_tt=False, opt=None, subtract_mean_psf=False, subtract_mean_shear=False):
     """Compute the tau statistics
     """
     import treecorr
+    d_piff=piff_data[1].data
+    msk = ((d_piff.field("BAND") == "r")) # | (d_piff.field("BAND") == "i") | (d_piff.field("BAND") == "z"))
 
-    e1 = piff_data['G1_DATA']
-    e2 = piff_data['G2_DATA']
-    T = piff_data['T_DATA']
-    p_e1 = piff_data['G1_MODEL']
-    p_e2 = piff_data['G2_MODEL']
-    p_T = piff_data['T_MODEL']
-    m = flux2mag(piff_data['FLUX'])
+    e1 = d_piff.field('G1_DATA')[msk] #data['G1_DATA']
+    e2 = d_piff.field('G2_DATA')[msk] #data['G2_DATA']
+    T = d_piff.field('T_DATA')[msk] #data['T_DATA']
+    p_e1 = d_piff.field('G1_MODEL')[msk]
+    p_e2 = d_piff.field('G2_MODEL')[msk]
+    p_T = d_piff.field('T_MODEL')[msk]
+    m = flux2mag(d_piff.field('FLUX')[msk])
 
     if max_mag > 0:
         e1 = e1[m<max_mag]
@@ -273,7 +280,7 @@ def measure_tau(piff_data, max_sep, max_mag, mdet_input_flat, stats_out_dir, tag
     print('std dT = ',np.std(T-p_T))
     print('mean dT/T = ',np.mean(dt))
     print('std dT/T = ',np.std(dt))
-    if subtract_mean:
+    if subtract_mean_psf:
         e1 -= np.mean(e1)
         e2 -= np.mean(e2)
         q1 -= np.mean(q1)
@@ -295,19 +302,19 @@ def measure_tau(piff_data, max_sep, max_mag, mdet_input_flat, stats_out_dir, tag
         qcat = treecorr.Catalog(x=x, y=y, x_units='arcsec', y_units='arcsec', g1=q1, g2=q2)
         wcat = treecorr.Catalog(x=x, y=y, x_units='arcsec', y_units='arcsec', g1=w1, g2=w2, k=dt)
     else:
-        ra = piff_data['RA']
-        dec = piff_data['DEC']
+        ra = d_piff.field('RA')[msk]
+        dec = d_piff.field('DEC')[msk]
         if max_mag > 0:
             ra = ra[m<max_mag]
             dec = dec[m<max_mag]
         print('ra = ',ra)
         print('dec = ',dec)
 
-        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, npatch=200)
+        ecat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, patch_centers=f_patch_center)
         ecat.nfields.clear()
-        qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, patch_centers=ecat.patch_centers)
+        qcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=q1, g2=q2, patch_centers=f_patch_center)
         qcat.nfields.clear()
-        wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, patch_centers=ecat.patch_centers)
+        wcat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=w1, g2=w2, k=dt, patch_centers=f_patch_center)
         wcat.nfields.clear()
         print('catalog done')
 
@@ -322,11 +329,12 @@ def measure_tau(piff_data, max_sep, max_mag, mdet_input_flat, stats_out_dir, tag
         sep_units = 'arcmin',
         bin_slop = 0.1,
 
-        min_sep = 0.5,
+        min_sep = min_sep, 
         max_sep = max_sep,
         bin_size = 0.2,
 
-        var_method='jackknife'
+        var_method=error_method,
+        output_dots = False,
     )
 
     if opt == 'lucas':
@@ -345,12 +353,18 @@ def measure_tau(piff_data, max_sep, max_mag, mdet_input_flat, stats_out_dir, tag
     for cat1 in [ecat, qcat, wcat]:
         print('Doing correlation of %s vs %s'%(cat1.name, 'shear'))
         gg = treecorr.GGCorrelation(bin_config, verbose=2)
-        cat2 = treecorr.Catalog(ra=cat2_d['ra'], dec=cat2_d['ra'], ra_units='deg', dec_units='deg', g1=cat2_d['g1']/cat2_d['R_all'], g2=cat2_d['g2']/cat2_d['R_all'], w=cat2_d['w'], patch_centers=ecat.patch_centers)
+        if subtract_mean_shear:
+            g1 = cat2_d['g1']/cat2_d['R_all'] - np.average(cat2_d['g1']/cat2_d['R_all'], weights=cat2_d['w'])
+            g2 = cat2_d['g2']/cat2_d['R_all'] - np.average(cat2_d['g2']/cat2_d['R_all'], weights=cat2_d['w'])
+        else:
+            g1 = cat2_d['g1']/cat2_d['R_all']
+            g2 = cat2_d['g2']/cat2_d['R_all']
+        cat2 = treecorr.Catalog(ra=cat2_d['ra'], dec=cat2_d['dec'], ra_units='deg', dec_units='deg', g1=g1, g2=g2, w=cat2_d['w'], patch_centers=f_patch_center)
         gg.process(cat1, cat2)
         cat2.unload()
         results.append(gg)
         # np.save('/global/cscratch1/sd/myamamot/metadetect/rho_tau_stats/'+cat1.name+'_shear_cov.npy', gg.cov)
-    cov = treecorr.estimate_multi_cov([results[0], results[1], results[2]], 'jackknife')
+    cov = treecorr.estimate_multi_cov([results[0], results[1], results[2]], error_method)
     print(cov)
     np.save(os.path.join(stats_out_dir, 'tau_multi_cov.npy'),cov)
 

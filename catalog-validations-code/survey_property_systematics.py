@@ -159,7 +159,11 @@ def _divide_bins(data, prop, nperbin=1000000, dict_type=True):
         pix_val = data
 
     if prop == 'exptime':
-        hist = stat.histogram(pix_val, binsize=90, more=True)
+        hist = stat.histogram(pix_val, binsize=90, max=1500, more=True)
+        hist['high'][-1] = np.max(pix_val)
+    elif prop == 'stellar':
+        pix_val = pix_val[pix_val > 0]
+        hist = stat.histogram(pix_val, nperbin=nperbin, more=True)
     else:
         hist = stat.histogram(pix_val, nperbin=nperbin, more=True)
     binnum = len(hist['mean'])
@@ -199,7 +203,12 @@ def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_
         return weights
 
     shear_wgt = wgt_dict['weight']
-    indexx, indexy = assign_loggrid(d[mdet_mom+'_s2n'], d[mdet_mom+'_T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
+    smoothing = True
+    if smoothing:
+        from scipy.ndimage import gaussian_filter
+        smooth_response = gaussian_filter(wgt_dict['response'], sigma=2.0)
+        shear_wgt = (smooth_response/wgt_dict['meanes'])**2
+    indexx, indexy = assign_loggrid(np.array(d['gauss_s2n']), np.array(d['gauss_T_ratio']), snmin, snmax, steps, sizemin, sizemax, steps)
     weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
 
     # prior = ngmix.priors.GPriorBA(0.3, rng=np.random.RandomState())
@@ -219,7 +228,7 @@ def jk_function(input_, outpath, sample_variance_filepath, mdet_mom):
     bin_shear = {i: {'g1':[], 'g2':[]} for i in range(binnum)}
     group_shear_output = {'noshear': np.zeros((binnum, 2)), '1p': np.zeros((binnum, 2)), '1m': np.zeros((binnum, 2)), '2p': np.zeros((binnum, 2)), '2m': np.zeros((binnum, 2)), 
                         'num_noshear': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-    with open(os.path.join(sample_variance_filepath, 'seed__fid_'+str(sim_id+1)+'.pkl'), 'rb') as handle:
+    with open(os.path.join(sample_variance_filepath, 'seed__fid_cosmogrid_'+str(sim_id+1)+'.pkl'), 'rb') as handle:
         res = pickle.load(handle)
         handle.close()
     d = res['sources'][0]
@@ -274,22 +283,30 @@ def main(argv):
     mdet_cuts = sys.argv[7]
     nperbin = sys.argv[8]
     weight_scheme = sys.argv[9]
-    band = map_file.split('/')[-1].split('_')[2]
+    weight_filepath = sys.argv[10]
+    if prop == 'background':
+        band = map_file.split('/')[-1].split('_')[-1][0]
+    else:
+        band = map_file.split('/')[-1].split('_')[2]
 
     # bin up signals
     hmap = healsparse.HealSparseMap.read(map_file)
     print('healsparse map read...')
     # sys.stdout.flush()
     if prop == 'stellar':
-        syst_ref = healsparse.HealSparseMap.read('/global/cfs/cdirs/des/myamamot/survey_property_maps/y6a2_decasu_r_airmass_wmean.hs')
-        pix_signal = hmap.get_values_pix(syst_ref.valid_pixels)
+        # mask_map = healsparse.HealSparseMap.read('/global/cfs/cdirs/des/y6-shear-catalogs/y6-combined-hleda-gaiafull-des-stars-hsmap16384-nomdet-v3.fits')
+        # vpix, ra, dec = hmap.valid_pixels_pos(return_pixels=True)
+        # in_footprint = mask_map.get_values_pos(ra, dec, valid_mask=True)
+        # hmap[vpix[~in_footprint]] = hmap._sentinel
+        hmap = hmap.degrade(512)
+        pix_signal = hmap.get_values_pix(hmap.valid_pixels)
     else:
         pix_signal = hmap.get_values_pix(hmap.valid_pixels)
     binnum, bin_edges, hist = _divide_bins(pix_signal, prop, nperbin=nperbin, dict_type=False)
 
     # spread out jobs
     group_shear_output = {'noshear': np.zeros((binnum, 2)), '1p': np.zeros((binnum, 2)), '1m': np.zeros((binnum, 2)), '2p': np.zeros((binnum, 2)), '2m': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-    fs = glob.glob(mdet_input_filepaths)
+    fs = sorted(glob.glob(mdet_input_filepaths))
     bin_shear = {i: {'g1':[], 'g2':[]} for i in range(binnum)}
     if not os.path.exists(os.path.join(outpath, 'accum_shear_patch_'+band+'_0.pickle')):
         for i, fname in enumerate(fs):
@@ -301,7 +318,7 @@ def main(argv):
             msk = mdet.make_mdet_cuts(d, mdet_cuts)
             d = d[msk]
             if weight_scheme == 's2n_sizer':
-                with open(os.path.join('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/v3/inverse_variance_weight_v3_s2n10-1000_Tratio0.5-5.pickle'), 'rb') as handle:
+                with open(weight_filepath, 'rb') as handle:
                     wgt_dict = pickle.load(handle)
                     snmin = wgt_dict['xedges'][0]
                     snmax = wgt_dict['xedges'][-1]
@@ -350,7 +367,7 @@ def main(argv):
 
     # Do jackknife; run each sim for each rank
     runs = []
-    for sim_id in range(200):
+    for sim_id in range(800):
         runs.append([sim_id, hmap, band, bin_edges, binnum, hist])
     for i in range(len(runs)):
         if i % size != rank:

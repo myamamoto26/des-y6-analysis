@@ -4,7 +4,7 @@ import fitsio as fio
 import numpy as np
 import treecorr
 import pickle
-sys.path.append('/global/project/projectdirs/des/myamamot/metadetect/')
+sys.path.append('/global/cfs/cdirs/des/myamamot/metadetect/')
 from hybrideb import hybrideb
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -59,7 +59,7 @@ def read_fpfm(fname): #, gammat, gammax):
     
     return fp, fm
 
-def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath, corr_out_pickle_filepath, bmode, cov_method):
+def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath, corr_out_pickle_filepath, bmode,):
     """
     Computes 2pt correlation functions for B-mode estimation. 
 
@@ -78,29 +78,51 @@ def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath,
     Example) /global/project/projectdirs/des/myamamot/2pt_corr/y6_shear2pt_nontomo_v3.pkl
 
     bmode: whether or not do B-mode estiamtion (Boolean)
-
-    cov_method: what covariance computation method
-    Example) jackknife, bootstrap
     """
 
-    subtract_mean = True
+    subtract_mean = False
     # Load Y6 catalogs
     res = fio.read(mdet_input_flatfile)
 
     bin_config = dict(
             sep_units = 'arcmin',
-            bin_slop = 1.0,
 
             min_sep = 1,
             max_sep = 400,
-            nbins = 1000,
+            nbins = 100,
             # bin_size = 0.2,
 
             output_dots = False,
         )
+    
+    """
+    # Do the interpolation on shear-color trend. 
+    with open('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/v2/mean_shear_measurement_final_v2_gmicolor.pickle', 'rb') as f:
+        d_color = pickle.load(f)
+        f.close()
+    with open('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/v2/mean_shear_bin_final_v2_gmicolor.pickle', 'rb') as fc:
+        d_bin = pickle.load(fc)
+        fc.close()
 
-    e1 = res['g1']
-    e2 = res['g2']
+    from scipy.optimize import curve_fit
+    def func(x, a, b, c):
+        return a*x**2 + b*x + c
+    popt_e1, pcov_e1 = curve_fit(func, d_color['gmi']['bin_mean'], d_color['gmi']['g1'], sigma=d_color['gmi']['g1_cov'])
+    popt_e2, pcov_e2 = curve_fit(func, d_color['gmi']['bin_mean'], d_color['gmi']['g2'], sigma=d_color['gmi']['g2_cov'])
+    def flux2mag(flux, zero_pt=30):
+        return zero_pt - 2.5 * np.log10(flux)
+    gmi = flux2mag(res['g_flux']) - flux2mag(res['i_flux'])
+    for i in range(len(d_color['gmi']['bin_mean'])):
+        msk = ((gmi > d_bin['gmi']['low'][i]) & (gmi <= d_bin['gmi']['high'][i]))
+        d_msk = res[msk]
+        color_msk = gmi[msk]
+        res['g1'][msk] = func(color_msk, popt_e1[0], popt_e1[1], popt_e1[2])
+        res['g2'][msk] = func(color_msk, popt_e2[0], popt_e2[1], popt_e2[2])
+    """
+
+    e1 = res['e1']/res['R']
+    e2 = res['e2']/res['R']
+    w = res['w']
     ra = res['ra']
     dec = res['dec']
 
@@ -108,19 +130,11 @@ def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath,
         e1 -= np.mean(e1)
         e2 -= np.mean(e2)
 
-    if rank == 0:
-        if not os.path.exists(os.path.join(out_path, 'patch_centers.txt')):
-            cat_patch = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, w=res['w'], npatch=200)
-            cat_patch.write_patch_centers(os.path.join(out_path, 'patch_centers.txt'))
-            print('patch center done')
-            del cat_patch
-    comm.Barrier()
-
-
-    cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, w=res['w'], patch_centers=os.path.join(out_path,'patch_centers.txt'))
+    f_pc = '/global/cfs/cdirs/des/y6-shear-catalogs/patches-centers-altrem-npatch200-seed8888.fits'
+    cat = treecorr.Catalog(ra=ra, dec=dec, ra_units='deg', dec_units='deg', g1=e1, g2=e2, w=w, patch_centers=f_pc)
     print('catalog done', rank)
     gg = treecorr.GGCorrelation(bin_config, verbose=2)
-    gg.process(cat, comm=comm)
+    gg.process(cat, low_mem=True, comm=comm)
     print('calculation done', rank)
 
     if rank == 0:
@@ -130,6 +144,8 @@ def _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath,
 
         cov_jk = gg.estimate_cov('jackknife')
         np.save(os.path.join(out_path,'y6_shear2pt_nontomo_JKcov.npy'), cov_jk)
+        cov_boot = gg.estimate_cov('bootstrap')
+        np.save(os.path.join(out_path,'y6_shear2pt_nontomo_BOOTcov.npy'), cov_boot)
     comm.Barrier()
 
     if bmode: 
@@ -171,10 +187,9 @@ def main(argv):
     out_path = sys.argv[2]
     corr_out_fits_filepath = sys.argv[3]
     corr_out_pickle_filepath = sys.argv[4]
-    bmode = sys.argv[5]
-    cov_method = sys.argv[6]
+    bmode = eval(sys.argv[5])
 
-    _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath, corr_out_pickle_filepath, bmode, cov_method)
+    _compute_2pt_function(mdet_input_flatfile, out_path, corr_out_fits_filepath, corr_out_pickle_filepath, bmode,)
 
 if __name__ == "__main__":
     main(sys.argv)

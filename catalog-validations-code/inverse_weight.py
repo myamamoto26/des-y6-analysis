@@ -12,7 +12,7 @@ from math import log10
 import pickle
 from des_y6utils import mdet
 
-def inverse_variance_weight(mdet_input_filepaths, shear_wgt_output_filepath, mdet_mom, steps, snmin, snmax, sizemin, sizemax, mdet_cuts):
+def inverse_variance_weight(d, shear_wgt_output_filepath, mdet_mom, steps, snmin, snmax, sizemin, sizemax, mdet_cuts):
 
     """
     Returns galaxy count, shear response, variance of e, shear weight as a function of S/N and size ratio.
@@ -79,12 +79,12 @@ def inverse_variance_weight(mdet_input_filepaths, shear_wgt_output_filepath, mde
 
     def find_assign_grid(d, mdet_step, mdet_mom, snmin, snmax, steps, sizemin, sizemax):
 
-        mask = (d['mdet_step']==mdet_step)
+        mask = mdet_step
         mastercat_snr = d[mask][mdet_mom+'_s2n']
         mastercat_Tr = d[mask][mdet_mom+'_T_ratio']
         new_indexx,new_indexy = assign_loggrid(mastercat_snr, mastercat_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
         
-        return new_indexx, new_indexy, mask
+        return new_indexx, new_indexy
 
     def find_bincount_2d(indexx, indexy, steps):
 
@@ -101,19 +101,19 @@ def inverse_variance_weight(mdet_input_filepaths, shear_wgt_output_filepath, mde
 
     def accumulate_shear_per_tile(res, d, mdet_mom, snmin, snmax, steps, sizemin, sizemax):
 
-        g1p_indexx, g1p_indexy, mask_1p = find_assign_grid(d, '1p', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
+        g1p_indexx, g1p_indexy = find_assign_grid(d, '1p', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
         g1p_count = find_bincount_2d(g1p_indexx, g1p_indexy, steps)
-        g1m_indexx, g1m_indexy, mask_1m = find_assign_grid(d, '1m', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
+        g1m_indexx, g1m_indexy = find_assign_grid(d, '1m', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
         g1m_count = find_bincount_2d(g1m_indexx, g1m_indexy, steps)
-        g2p_indexx, g2p_indexy, mask_2p = find_assign_grid(d, '2p', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
+        g2p_indexx, g2p_indexy = find_assign_grid(d, '2p', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
         g2p_count = find_bincount_2d(g2p_indexx, g2p_indexy, steps)
-        g2m_indexx, g2m_indexy, mask_2m = find_assign_grid(d, '2m', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
+        g2m_indexx, g2m_indexy = find_assign_grid(d, '2m', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
         g2m_count = find_bincount_2d(g2m_indexx, g2m_indexy, steps)
 
-        np.add.at(res['g_1p'], (g1p_indexx, g1p_indexy), d[mask_1p][mdet_mom+'_g_1'])
-        np.add.at(res['g_1m'], (g1m_indexx, g1m_indexy), d[mask_1m][mdet_mom+'_g_1'])
-        np.add.at(res['g_2p'], (g2p_indexx, g2p_indexy), d[mask_2p][mdet_mom+'_g_2'])
-        np.add.at(res['g_2m'], (g2m_indexx, g2m_indexy), d[mask_2m][mdet_mom+'_g_2'])
+        np.add.at(res['g_1p'], (g1p_indexx, g1p_indexy), d['1p'][mdet_mom+'_g_1'])
+        np.add.at(res['g_1m'], (g1m_indexx, g1m_indexy), d['1m'][mdet_mom+'_g_1'])
+        np.add.at(res['g_2p'], (g2p_indexx, g2p_indexy), d['2p'][mdet_mom+'_g_2'])
+        np.add.at(res['g_2m'], (g2m_indexx, g2m_indexy), d['2m'][mdet_mom+'_g_2'])
         
         np.add.at(res['g1p_count'], (), g1p_count)
         np.add.at(res['g1m_count'], (), g1m_count)
@@ -173,8 +173,7 @@ def inverse_variance_weight(mdet_input_filepaths, shear_wgt_output_filepath, mde
     # fs = f.read().split('\n')[:-1]
     # filenames = [fname.split('/')[-1] for fname in fs]
     # filenames = glob.glob(mdet_input_filepaths)
-    filenames = np.load('/global/cscratch1/sd/myamamot/des-y6-analysis/y6_measurement/som_weight_test/som_training_files.npy')
-    patch_names = [str(num).zfill(4) for num in range(200)]
+    # patch_names = [str(num).zfill(4) for num in range(200)]
     res = {'g_1p': np.zeros((steps, steps)),
            'g_1m': np.zeros((steps, steps)),
            'g_2p': np.zeros((steps, steps)),
@@ -186,47 +185,33 @@ def inverse_variance_weight(mdet_input_filepaths, shear_wgt_output_filepath, mde
     
     # Accumulate raw sums of shear and mean shear corrected with response per tile. 
     total_count = 0
-    for fname in tqdm(filenames):
-        if os.path.exists(fname):
-            d = fio.read(fname)
-            # msk = mdet.make_mdet_cuts(d, mdet_cuts) 
-            msk = mdet._make_mdet_cuts_wmom(
-            d,
-            min_s2n=5.0,
-            min_t_ratio=1.1,
-            n_terr=0.0,
-            max_mfrac=0.1,
-            max_s2n=np.inf,
-        )
-            d = d[msk]
-        else:
-            print('doesnt exist, ', fname)
-            continue
-        total_count += len(d[d['mdet_step']=='noshear'])
-        
-        # Since we set upper limits on S/N (<1000) and Tratio (<3.0) which are not considered in cuts_and_save_catalogs.py, we need to make additional cuts here. 
-        d = d[((d[mdet_mom+'_s2n'] < snmax) & (d[mdet_mom+'_T_ratio'] < sizemax))]
-        
-        mask_noshear = (d['mdet_step'] == 'noshear')
-        mastercat_noshear_snr = d[mask_noshear][mdet_mom+'_s2n']
-        mastercat_noshear_Tr = d[mask_noshear][mdet_mom+'_T_ratio']
-        new_e1 = d[mask_noshear][mdet_mom+'_g_1']
-        new_e2 = d[mask_noshear][mdet_mom+'_g_2']
-        
-        # Need raw sums of shear for shear response. 
-        res = accumulate_shear_per_tile(res, d, mdet_mom, snmin, snmax, steps, sizemin, sizemax)
-        new_indexx,new_indexy = assign_loggrid(mastercat_noshear_snr, mastercat_noshear_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
-        new_count = np.zeros((steps, steps))
-        np.add.at(new_count,(new_indexx,new_indexy), 1)
-        np.add.at(count_all,(), new_count)
-        np.add.at(m,(new_indexx,new_indexy), np.sqrt((new_e1**2+new_e2**2)/2)) # RMS of shear isn't corrected for the response. 
-        # new_meanes = mesh_average(new_means, np.sqrt((new_e1**2+new_e2**2)/2),new_indexx,new_indexy,steps,new_count)
+    total_count += len(d['noshear']['ra'])
+    
+    # Since we set upper limits on S/N (<1000) and Tratio (<3.0) which are not considered in cuts_and_save_catalogs.py, we need to make additional cuts here. 
+    # d = d[((d[mdet_mom+'_s2n'] < snmax) & (d[mdet_mom+'_T_ratio'] < sizemax))]
+    
+    # mask_noshear = (d['mdet_step'] == 'noshear')
+    mastercat_noshear_snr = d['noshear'][mdet_mom+'_s2n']
+    mastercat_noshear_Tr = d['noshear'][mdet_mom+'_T_ratio']
+    new_e1 = d['noshear'][mdet_mom+'_g_1']
+    new_e2 = d['noshear'][mdet_mom+'_g_2']
+    
+    # Need raw sums of shear for shear response. 
+    res = accumulate_shear_per_tile(res, d, mdet_mom, snmin, snmax, steps, sizemin, sizemax)
+    new_indexx,new_indexy = assign_loggrid(mastercat_noshear_snr, mastercat_noshear_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
+    new_count = np.zeros((steps, steps))
+    np.add.at(new_count,(new_indexx,new_indexy), 1)
+    np.add.at(count_all,(), new_count)
+    print(new_count, count_all)
+    np.add.at(m,(new_indexx,new_indexy), (new_e1**2+new_e2**2)/2) # RMS of shear isn't corrected for the response. 
+    # new_meanes = mesh_average(new_means, np.sqrt((new_e1**2+new_e2**2)/2),new_indexx,new_indexy,steps,new_count)
 
     H, xedges, yedges = np.histogram2d(mastercat_noshear_snr, mastercat_noshear_Tr, bins=[np.logspace(log10(snmin),log10(snmax),steps+1), np.logspace(log10(sizemin),log10(sizemax),steps+1)])
     # new_response = mesh_response_master_cat(d[msk], snmin, snmax, steps, sizemin, sizemax)
     new_response = compute_mesh_response(res)
-    new_meanes = m/count_all
+    new_meanes = np.sqrt(m/count_all)
     new_shearweight = (new_response/new_meanes)**2
+
 
     res_measurement = {'xedges': xedges, 'yedges': yedges, 'count': count_all, 'meanes': new_meanes, 'response': new_response, 'weight': new_shearweight}
 
@@ -236,6 +221,61 @@ def inverse_variance_weight(mdet_input_filepaths, shear_wgt_output_filepath, mde
     print('total number count before cuts', total_count)
     print('total number count after cuts', np.sum(count_all))
 
+def read_mdet_h5(datafile, keys, response=False, subtract_mean_shear=False):
+
+    def _get_shear_weights(dat):
+        return 1/(0.21**2 + 0.5*(np.array(dat['gauss_g_cov_1_1']) + np.array(dat['gauss_g_cov_2_2'])))
+    def _wmean(q,w):
+        return np.sum(q*w)/np.sum(w)
+    
+    mdet_steps = ['noshear', '1p', '1m', '2p', '2m']
+    d_out = {}
+    import h5py as h5
+    f = h5.File(datafile, 'r')
+    for mdet_step in mdet_steps:
+        d = f.get('/mdet/'+mdet_step)
+        nrows = len(np.array( d['ra'] ))
+        formats = []
+        for key in keys:
+            formats.append('f4')
+        data = np.recarray(shape=(nrows,), formats=formats, names=keys)
+        for key in keys:  
+            data[key] = np.array(d[key])
+        d_out[mdet_step] = data
+        print('made recarray with hdf5 file')
+    
+    # response correction
+    if response:
+        d_2p = f.get('/mdet/2p')
+        d_1p = f.get('/mdet/1p')
+        d_2m = f.get('/mdet/2m')
+        d_1m = f.get('/mdet/1m')
+        # compute response with weights
+        g1p = _wmean(np.array(d_1p["gauss_g_1"]), _get_shear_weights(d_1p))                                     
+        g1m = _wmean(np.array(d_1m["gauss_g_1"]), _get_shear_weights(d_1m))
+        R11 = (g1p - g1m) / 0.02
+
+        g2p = _wmean(np.array(d_2p["gauss_g_2"]), _get_shear_weights(d_2p))
+        g2m = _wmean(np.array(d_2m["gauss_g_2"]), _get_shear_weights(d_2m))
+        R22 = (g2p - g2m) / 0.02
+
+        R = (R11 + R22)/2.
+        data['g1'] /= R
+        data['g2'] /= R
+
+    # mean_g1 = _wmean(data['g1'], data['w'])
+    # mean_g2 = _wmean(data['g2'], data['w'])
+    # std_g1 = np.var(data['g1'])
+    # std_g2 = np.var(data['g2'])
+    # mean_shear = [mean_g1, mean_g2, std_g1, std_g2]
+    # mean shear subtraction
+    if subtract_mean_shear:
+        print('subtracting mean shear')
+        print('mean g1 g2 =(%1.8f,%1.8f)'%(mean_g1, mean_g2))          
+        data['g1'] -= mean_g1
+        data['g2'] -= mean_g2
+
+    return d_out
 
 def main(argv):
 
@@ -243,9 +283,9 @@ def main(argv):
     shear_wgt_output_filepath = sys.argv[2]
     mdet_mom = sys.argv[3]
     mdet_cuts = int(sys.argv[4])
-    steps = 10
-    snmin=10
-    snmax=600
+    steps = int(sys.argv[5])
+    snmin=int(sys.argv[6])
+    snmax=int(sys.argv[7])
     if mdet_mom in ['pgauss', 'pgauss_reg0.90']:
         sizemin=0.5
         sizemax=3
@@ -253,10 +293,12 @@ def main(argv):
         sizemin=1.2
         sizemax=2.0 # to-do; check the histogram of Tratio to determine this value.
     elif mdet_mom == 'gauss':
-        sizemin = 0.5
-        sizemax = 3
+        sizemin = float(sys.argv[8])
+        sizemax = float(sys.argv[9])
     
-    inverse_variance_weight(mdet_input_filepaths, shear_wgt_output_filepath, mdet_mom, steps, snmin, snmax, sizemin, sizemax, mdet_cuts)
+    keys = ['ra', 'dec',  mdet_mom+'_g_1',  mdet_mom+'_g_2',  mdet_mom+'_s2n', mdet_mom+'_T_ratio']
+    gal_data = read_mdet_h5(mdet_input_filepaths, keys, response=False, subtract_mean_shear=False)
+    inverse_variance_weight(gal_data, shear_wgt_output_filepath, mdet_mom, steps, snmin, snmax, sizemin, sizemax, mdet_cuts)
 
 if __name__ == "__main__":
     main(sys.argv)
