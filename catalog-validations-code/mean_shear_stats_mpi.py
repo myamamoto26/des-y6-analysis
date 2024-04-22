@@ -5,6 +5,161 @@ import os, sys
 import pickle
 from tqdm import tqdm
 from des_y6utils import mdet
+import h5py as h5
+
+def read_mdet_h5(datafile, gal_weight_file, keys, mdet_step, patch_id=None, response=False, subtract_mean_shear=False, subtract_shear_color=False):
+
+    def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
+        """
+        Computes indices of 2D grids. Only used when we use shear weight that is binned by S/N and size ratio. 
+        """
+        from math import log10
+        # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
+
+        logstepx = log10(xmax/xmin)/xsteps
+        logstepy = log10(ymax/ymin)/ysteps
+
+        indexx = (np.log10(x/xmin)/logstepx).astype(int)
+        indexy = (np.log10(y/ymin)/logstepy).astype(int)
+
+        indexx = np.maximum(indexx,0)
+        indexx = np.minimum(indexx, xsteps-1)
+        indexy = np.maximum(indexy,0)
+        indexy = np.minimum(indexy, ysteps-1)
+
+        return indexx,indexy
+
+    def assign_grid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
+        # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
+        
+        stepx = (xmax/xmin)/xsteps
+        stepy = (ymax/ymin)/ysteps
+        
+        indexx = ((x/xmin)/stepx).astype(int)
+        indexy = ((y/ymin)/stepy).astype(int)
+        
+        indexx = np.maximum(indexx,0)
+        indexx = np.minimum(indexx, xsteps-1)
+        indexy = np.maximum(indexy,0)
+        indexy = np.minimum(indexy, ysteps-1)
+        
+        return indexx,indexy
+
+    def _find_shear_weight(dat, mask, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_mom):
+
+        """
+        Assigns shear weights to the objects based on the grids. 
+        """
+        
+        if wgt_dict is None:
+            weights = np.ones(len(dat))
+            return weights
+
+        shear_wgt = wgt_dict['weight']
+        smoothing = True
+        if smoothing:
+            from scipy.ndimage import gaussian_filter
+            smooth_response = gaussian_filter(wgt_dict['response'], sigma=2.0)
+            shear_wgt = (smooth_response/wgt_dict['meanes'])**2
+        indexx, indexy = assign_loggrid(np.array(dat[mdet_mom+'_s2n'])[mask], np.array(dat[mdet_mom+'_T_ratio'])[mask], snmin, snmax, steps, sizemin, sizemax, steps)
+        weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
+        
+        return weights
+
+    def _get_shear_weights(dat, mask, gal_weight_file, shape_err=False):
+        if shape_err:
+            return 1/(0.22**2 + 0.5*(np.array(dat['gauss_g_cov_1_1'])[mask] + np.array(dat['gauss_g_cov_2_2'])[mask]))
+        else:
+            with open(gal_weight_file, 'rb') as handle:
+                wgt_dict = pickle.load(handle)
+                snmin = wgt_dict['xedges'][0]
+                snmax = wgt_dict['xedges'][-1]
+                sizemin = wgt_dict['yedges'][0]
+                sizemax = wgt_dict['yedges'][-1]
+                steps = len(wgt_dict['xedges'])-1
+            shear_wgt = _find_shear_weight(dat, mask, wgt_dict, snmin, snmax, sizemin, sizemax, steps, 'gauss')
+            return shear_wgt
+
+    def _wmean(q,w):
+        return np.sum(q*w)/np.sum(w)
+    
+    import h5py as h5
+    f = h5.File(datafile, 'r')
+    d = f.get('/mdet/'+mdet_step)
+    if patch_id is None:
+        nrows = len(np.array( d['ra'] ))
+        mask = np.ones(nrows)!=0
+    else:
+        mask = (np.array( d['patch_num'] ) == patch_id)
+        nrows = len(np.array( d['ra'] )[mask])
+    formats = []
+    for key in keys:
+        formats.append('f4')
+    data = np.recarray(shape=(nrows,), formats=formats, names=keys)
+    for key in keys:  
+        if key == 'w':
+            data['w'] = _get_shear_weights(d, mask, gal_weight_file)
+        elif key in ('g1', 'g2'):
+            data[key] = np.array(d['gauss_'+key[0]+'_'+key[1]])[mask]
+        elif key == 'gauss_T':
+            data[key] = np.array(d['gauss_psf_T'])[mask] * np.array(d['gauss_T_ratio'])[mask]
+        elif key == 'gmi':
+            mag_g = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_g"])[mask], 0)
+            mag_i = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_i"])[mask], 2)
+            data[key] = mag_g - mag_i
+        elif key == 'rmz':
+            mag_r = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_r"])[mask], 1)
+            mag_z = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_z"])[mask], 3)
+            data[key] = mag_r - mag_z
+        else:
+            data[key] = np.array(d[key])[mask]
+    # print('made recarray with hdf5 file')
+    
+    # response correction
+    if response:
+        d_2p = f.get('/mdet/2p')
+        d_1p = f.get('/mdet/1p')
+        d_2m = f.get('/mdet/2m')
+        d_1m = f.get('/mdet/1m')
+        # compute response with weights
+        g1p = _wmean(np.array(d_1p["gauss_g_1"]), _get_shear_weights(d_1p, gal_weight_file))                                     
+        g1m = _wmean(np.array(d_1m["gauss_g_1"]), _get_shear_weights(d_1m, gal_weight_file))
+        R11 = (g1p - g1m) / 0.02
+
+        g2p = _wmean(np.array(d_2p["gauss_g_2"]), _get_shear_weights(d_2p, gal_weight_file))
+        g2m = _wmean(np.array(d_2m["gauss_g_2"]), _get_shear_weights(d_2m, gal_weight_file))
+        R22 = (g2p - g2m) / 0.02
+
+        R = (R11 + R22)/2.
+        data['g1'] /= R
+        data['g2'] /= R
+
+        mean_g1 = _wmean(data['g1'], data['w'])
+        mean_g2 = _wmean(data['g2'], data['w'])
+        std_g1 = np.var(data['g1'])
+        std_g2 = np.var(data['g2'])
+        mean_shear = [mean_g1, mean_g2, std_g1, std_g2]
+        # mean shear subtraction
+        if subtract_mean_shear:
+            print('subtracting mean shear')
+            print('mean g1 g2 =(%1.8f,%1.8f)'%(mean_g1, mean_g2))          
+            data['g1'] -= mean_g1
+            data['g2'] -= mean_g2
+    
+    # option to subtract mean shear based on per-object color.
+    if subtract_shear_color:
+        with open("/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/v6/color_grid.pickle", "rb") as f:
+            color_grid = pickle.load(f)
+            g1_color = color_grid['e1']/color_grid['count']
+            g2_color = color_grid['e2']/color_grid['count']
+        gmimin = -2.0; gmimax = 4.0; rmzmin = -2.0; rmzmax = 4.0; steps=20
+        indexx, indexy = assign_grid(data['gmi'], data['rmz'], gmimin, gmimax, steps, rmzmin, rmzmax, steps)
+        mean_g1_color = np.array([g1_color[x, y] for x, y in zip(indexx, indexy)])
+        mean_g2_color = np.array([g2_color[x, y] for x, y in zip(indexx, indexy)])
+        data['g1'] -= mean_g1_color
+        data['g2'] -= mean_g2_color
+
+    return data
 
 def flux2mag(flux, zero_pt=30):
     return zero_pt - 2.5 * np.log10(flux)
@@ -62,6 +217,28 @@ def _compute_bins(stats_file, outpath, bin_file, nperbin):
 
     bin_dict = {}
     d = fio.read(os.path.join(outpath, stats_file))
+    for col in list(d.dtype.names)[1:]:
+        prop = d[col]
+        hist = stat.histogram(prop, nperbin=nperbin, more=True)
+        bin_num = len(hist['hist'])
+        print('number of bins', bin_num, 'in ', col)
+
+        bin_dict[col] = hist
+
+    with open(os.path.join(outpath, bin_file), 'wb') as handle:
+        pickle.dump(bin_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return bin_dict
+
+def _compute_bins_from_h5(gal_data, outpath, bin_file, nperbin):
+    """
+    Compute the bin edges and mean from the flat catalog made by _save_measurement_info. 
+    """
+
+    from esutil import stat
+
+    bin_dict = {}
+    d = gal_data
     for col in list(d.dtype.names)[1:]:
         prop = d[col]
         hist = stat.histogram(prop, nperbin=nperbin, more=True)
@@ -155,13 +332,12 @@ def _compute_shear_per_jksample(res_jk, res, ith_tilename, tilenames, binnum):
     jk_sample_mean = _compute_g1_g2(res_jk, binnum, method='jk')
     return jk_sample_mean
 
-def _accum_shear_per_tile(res, g_step, g1, g2, g_qa, bin_low, bin_high, binnum, weight):
+def _accum_shear_per_tile(res, dat, key, bin_low, bin_high, binnum):
     
-    for step in ['noshear', '1p', '1m', '2p', '2m']:
-        msk_s = np.where(g_step == step)[0]
-        qa_masked = g_qa[msk_s]
-        g1_masked = g1[msk_s]*weight[msk_s] #- mean_shear_color['mean_g1'][msk_s]
-        g2_masked = g2[msk_s]*weight[msk_s] #- mean_shear_color['mean_g2'][msk_s]
+    for i,step in enumerate(['noshear', '1p', '1m', '2p', '2m']):
+        g1_masked = dat[i]['g1'] * dat[i]['w']
+        g2_masked = dat[i]['g2'] * dat[i]['w']
+        qa_masked = dat[i][key]
         
         for bin in range(binnum):
             msk_bin = np.where(((qa_masked >= bin_low[bin]) & (qa_masked <= bin_high[bin])))[0]
@@ -178,12 +354,12 @@ def _accum_shear_per_tile(res, g_step, g1, g2, g_qa, bin_low, bin_high, binnum, 
             np.add.at(
                 res["num_" + step], 
                 (bin, 0), 
-                np.sum(weight[msk_s][msk_bin]),
+                np.sum(dat[i]['w'][msk_bin]),
             )
             np.add.at(
                 res["num_" + step], 
                 (bin, 1), 
-                np.sum(weight[msk_s][msk_bin]),
+                np.sum(dat[i]['w'][msk_bin]),
             )
     
     return res
@@ -282,49 +458,44 @@ def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_
 
 
 
-def function(input_, mdet_cuts, binnum, mdet_mom, wgt_file, bins, outpath, weights='shape_err'):
+def function(input_, mdet_files, mdet_cuts, binnum, mdet_mom, wgt_file, bins, outpath, weights='shape_err'):
 
-    [key,pname,fname,bins,binnum] = input_
-   
-    d = fio.read(fname)
-    msk = mdet.make_mdet_cuts(d, mdet_cuts) 
+    [key,pname,bins,binnum] = input_
+    
+    if key == 'gmi':
+        keys = ['g1', 'g2', 'w', 'rmz', key]
+    elif key == 'rmz':
+        keys = ['g1', 'g2', 'w', 'gmi', key]
+    else:
+        keys = ['g1', 'g2', 'w', 'gmi', 'rmz', key]
+    subtract_color = True # option to subtract mean shear from color grid
+    d = read_mdet_h5(mdet_files, wgt_file, keys, 'noshear', patch_id=pname, response=False, subtract_mean_shear=True, subtract_shear_color=subtract_color)
+    d_1p = read_mdet_h5(mdet_files, wgt_file, keys, '1p', patch_id=pname, response=False, subtract_mean_shear=True, subtract_shear_color=subtract_color)
+    d_1m = read_mdet_h5(mdet_files, wgt_file, keys, '1m', patch_id=pname, response=False, subtract_mean_shear=True, subtract_shear_color=subtract_color)
+    d_2p = read_mdet_h5(mdet_files, wgt_file, keys, '2p', patch_id=pname, response=False, subtract_mean_shear=True, subtract_shear_color=subtract_color)
+    d_2m = read_mdet_h5(mdet_files, wgt_file, keys, '2m', patch_id=pname, response=False, subtract_mean_shear=True, subtract_shear_color=subtract_color)
+    d_all = [d, d_1p, d_1m, d_2p, d_2m]
     # msk = mdet._make_mdet_cuts_gauss(d, n_terr=3) # if you need max_t cut, add it here. max_t = 0.689 (top 25% cut) for gauss, 0.466 for pgauss. 
-    d = d[msk]
-    
-    
+    """
     ## ADD ADDITIONAL CUTS HERE. (e.g., size, color selections)
     # color splits: blue-[-2.00, 0.76], mid-[0.76, 1.49], red-[1.49, 4.00]
     # size splits: small-[0.095, 0.301], midsize-[0.301, 0.455], large-[0.454, 8000]
     # size S/N splits: bad-[1.63e-4, 7.30], ok-[7.30, 15], good-[15-35361]
-    dcut = flux2mag(d['pgauss_band_flux_g']) - flux2mag(d['pgauss_band_flux_i'])
+    # dcut = flux2mag(d['pgauss_band_flux_g']) - flux2mag(d['pgauss_band_flux_i'])
     # dcut = (d['gauss_T_ratio'] * d["gauss_psf_T"]) * d['gauss_T_err']
     # dcut2 = (d['gauss_T_ratio'] * d["gauss_psf_T"])/d['gauss_T_err']
     dmin = 1.49
     dmax = 4.00
-    d = d[((dcut > dmin) & (dcut < dmax))] 
-    # d = d[((dcut < 1) | (dcut2 > 10))] 
-    
+    for cat in d_all:
+        cat = cat[((cat['gmi'] > dmin) & (cat['gmi'] < dmax))] 
+    """
     
     res = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
             '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
             '1m': np.zeros((binnum, 2)), 'num_1m': np.zeros((binnum, 2)),
             '2p': np.zeros((binnum, 2)), 'num_2p': np.zeros((binnum, 2)),
             '2m': np.zeros((binnum, 2)), 'num_2m': np.zeros((binnum, 2))}
-    if weights == 's2n_sizer':
-        with open(os.path.join(outpath, wgt_file), 'rb') as handle:
-            wgt_dict = pickle.load(handle)
-        shear_wgt = _find_shear_weight(d, wgt_dict, wgt_dict['xedges'][0], wgt_dict['xedges'][-1], wgt_dict['yedges'][0], wgt_dict['yedges'][-1], len(wgt_dict['xedges'])-1, mdet_mom)
-    elif weights == 'shape_err':
-        shear_wgt = 1/(0.17**2 + 0.5*(d[mdet_mom+'_g_cov_1_1'] + d[mdet_mom+'_g_cov_2_2']))
-    
-    if key not in ['gmi', 'imz', 'gauss_T']:
-        res = _accum_shear_per_tile(res, d['mdet_step'], d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'], d[key], bins['low'], bins['high'], binnum, shear_wgt)
-    elif key == 'gauss_T':
-        gaussT = d[mdet_mom+"_T_ratio"]*d[mdet_mom+"_psf_T"]
-        res = _accum_shear_per_tile(res, d['mdet_step'], d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'], gaussT, bins['low'], bins['high'], binnum, shear_wgt)
-    else:
-        color = flux2mag(d['pgauss_band_flux_'+key[0]]) - flux2mag(d['pgauss_band_flux_'+key[2]])
-        res = _accum_shear_per_tile(res, d['mdet_step'], d[mdet_mom+'_g_1'], d[mdet_mom+'_g_2'], color, bins['low'], bins['high'], binnum, shear_wgt)
+    res = _accum_shear_per_tile(res, d_all, key, bins['low'], bins['high'], binnum)
 
     output_fpath = os.path.join(outpath, '{0}_{1}'.format(key,pname)+'.pickle')
     with open(output_fpath, 'wb') as fp:
@@ -348,40 +519,44 @@ def main(argv):
     mdet_cuts = int(sys.argv[9])
     weight_scheme = sys.argv[10]
 
-    mdet_files = sorted(glob.glob(sys.argv[1]))
-    if not os.path.exists(os.path.join(outpath, stats_file)):
+    mdet_files = sys.argv[1]
+    if not os.path.exists(os.path.join(outpath, bin_file)):
         if rank == 0:
             print('creating flat and bin file. ')
-            _save_measurement_info(mdet_files, outpath, stats_file, mdet_cuts, mdet_mom) 
-            bin_dict = _compute_bins(stats_file, outpath, bin_file, nperbin)
+            keys = ['ra', 'psfrec_g_1', 'psfrec_g_2', 'psfrec_T', 'pgauss_T', 'gauss_psf_T', 'gauss_s2n', 'gauss_T_ratio', 'gauss_T', 'gmi', 'rmz', 'mfrac']
+            gal_data = read_mdet_h5(mdet_files, wgt_file, keys, 'noshear', response=False, subtract_mean_shear=True)
+            bin_dict = _compute_bins_from_h5(gal_data, outpath, bin_file, nperbin)
+            # _save_measurement_info(mdet_files, outpath, stats_file, mdet_cuts, mdet_mom) 
+            # bin_dict = _compute_bins(stats_file, outpath, bin_file, nperbin)
     comm.Barrier()
     print('finished binning up...')
     with open(os.path.join(outpath, bin_file), 'rb') as handle:
         bin_dict = pickle.load(handle)
 
-    patch = True
-    if patch:
-        fids = [fname.split('/')[-1][6:10] for fname in mdet_files]
+    patch_h5 = True
+    if patch_h5:
+        fids = np.arange(200)
     else:
-        fids = [fname.split('/')[-1].split('_')[0] for fname in mdet_files]
+        fids = [fname.split('/')[-1][6:10] for fname in mdet_files]
     
     runs = []
     for key in list(bin_dict.keys()):
-        for pname,fname in zip(fids, mdet_files):
+        for pname in fids:
             bins = bin_dict[key]
             binnum = len(bins['hist'])
-            runs.append([key,pname,fname,bins,binnum])
+            runs.append([key,pname,bins,binnum])
 
     if len(measurement_file.split('/')) == 2:
         outpath2 = os.path.join(outpath, measurement_file.split('/')[0])
     else:
         outpath2 = outpath
+
     for i in range(len(runs)):
         if i % size != rank:
             continue
         if i % 100 == 0:
             print('made it to ', i)
-        function(runs[i], mdet_cuts, binnum, mdet_mom, wgt_file, bins, outpath2, weights=weight_scheme)
+        function(runs[i], mdet_files, mdet_cuts, binnum, mdet_mom, wgt_file, bins, outpath2, weights=weight_scheme)
     comm.Barrier()
 
     # compute jackknife errors by leaving one tile/patch out for each rank. 
