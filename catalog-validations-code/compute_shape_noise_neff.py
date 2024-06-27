@@ -23,7 +23,7 @@ def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
 
     return indexx,indexy
 
-def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_mom):
+def _find_shear_weight(d, mask, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_mom):
 
     """
     Assigns shear weights to the objects based on the grids. 
@@ -39,35 +39,40 @@ def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_
         from scipy.ndimage import gaussian_filter
         smooth_response = gaussian_filter(wgt_dict['response'], sigma=2.0)
         shear_wgt = (smooth_response/wgt_dict['meanes'])**2
-    indexx, indexy = assign_loggrid(d[mdet_mom+'_s2n'], d[mdet_mom+'_T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
+    indexx, indexy = assign_loggrid(np.array(d[mdet_mom+'_s2n'])[mask], np.array(d[mdet_mom+'_T_ratio'])[mask], snmin, snmax, steps, sizemin, sizemax, steps)
     weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
     
     return weights
 
-def read_mdet_h5(datafile, keys, response=False, subtract_mean_shear=False):
 
-    def _get_shear_weights(dat):
-        shape_err = False
-        if shape_err:
-            return 1/(0.22**2 + 0.5*(np.array(dat['gauss_g_cov_1_1']) + np.array(dat['gauss_g_cov_2_2'])))
-        else:
-            with open(os.path.join('/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/v5b/inverse_variance_weight_v5b_s2n_10-1000_Tratio_0.5-5.pickle'), 'rb') as handle:
-                wgt_dict = pickle.load(handle)
-                snmin = wgt_dict['xedges'][0]
-                snmax = wgt_dict['xedges'][-1]
-                sizemin = wgt_dict['yedges'][0]
-                sizemax = wgt_dict['yedges'][-1]
-                steps = len(wgt_dict['xedges'])-1
-            shear_wgt = _find_shear_weight(dat, wgt_dict, snmin, snmax, sizemin, sizemax, steps, 'gauss')
-            return shear_wgt
-        
-    def _wmean(q,w):
-        return np.sum(q*w)/np.sum(w)
+def _get_shear_weights(dat, mask):
+    shape_err = False
+    if shape_err:
+        return 1/(0.22**2 + 0.5*(np.array(dat['gauss_g_cov_1_1'])[mask] + np.array(dat['gauss_g_cov_2_2'])[mask]))
+    else:
+        with open(os.path.join('/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/v6_UNBLINDED/inverse_variance_weight_v6.pickle'), 'rb') as handle:
+            wgt_dict = pickle.load(handle)
+            snmin = wgt_dict['xedges'][0]
+            snmax = wgt_dict['xedges'][-1]
+            sizemin = wgt_dict['yedges'][0]
+            sizemax = wgt_dict['yedges'][-1]
+            steps = len(wgt_dict['xedges'])-1
+        shear_wgt = _find_shear_weight(dat, mask, wgt_dict, snmin, snmax, sizemin, sizemax, steps, 'gauss')
+        return shear_wgt
+    
+
+def _wmean(q,w):
+    return np.sum(q*w)/np.sum(w)
+
+
+def read_mdet_h5(datafile, keys, response=False, subtract_mean_shear=False):
     
     import h5py as h5
     f = h5.File(datafile, 'r')
     d = f.get('/mdet/noshear')
+    # mask_mfrac = False; mfrac = 0.01
     nrows = len(np.array( d['ra'] ))
+    mask = np.ones(nrows)!=0
     formats = []
     for key in keys:
         formats.append('f4')
@@ -76,29 +81,28 @@ def read_mdet_h5(datafile, keys, response=False, subtract_mean_shear=False):
         if key == 'R':
             continue
         elif key == 'w':
-            # data['w'] = _get_shear_weights(d)
-            data['w'] = _get_shear_weights(d)
+            data['w'] = _get_shear_weights(d, mask)
         elif key in ('g1', 'g2'):
-            data[key] = np.array(d['gauss_'+key[0]+'_'+key[1]])
+            data[key] = np.array(d['gauss_'+key[0]+'_'+key[1]])[mask]
         elif key in ('g1_cov', 'g2_cov'):
-            data[key] = np.array(d['gauss_'+key[0]+'_cov_'+key[1]+'_'+key[1]])
+            data[key] = np.array(d['gauss_'+key[0]+'_cov_'+key[1]+'_'+key[1]])[mask]
         else:
-            data[key] = np.array(d[key])
+            data[key] = np.array(d[key])[mask]
     print('made recarray with hdf5 file')
     
     # response correction
     if response:
-        d_2p = f.get('/mdet/2p')
-        d_1p = f.get('/mdet/1p')
-        d_2m = f.get('/mdet/2m')
-        d_1m = f.get('/mdet/1m')
+        d_2p = f.get('/mdet/2p'); mask_2p = np.ones(len(np.array( d_2p['ra'] )))!=0
+        d_1p = f.get('/mdet/1p'); mask_1p = np.ones(len(np.array( d_1p['ra'] )))!=0
+        d_2m = f.get('/mdet/2m'); mask_2m = np.ones(len(np.array( d_2m['ra'] )))!=0
+        d_1m = f.get('/mdet/1m'); mask_1m = np.ones(len(np.array( d_1m['ra'] )))!=0
         # compute response with weights
-        g1p = _wmean(np.array(d_1p["gauss_g_1"]), _get_shear_weights(d_1p))                                     
-        g1m = _wmean(np.array(d_1m["gauss_g_1"]), _get_shear_weights(d_1m))
+        g1p = _wmean(np.array(d_1p["gauss_g_1"])[mask_1p], _get_shear_weights(d_1p, mask_1p))                                     
+        g1m = _wmean(np.array(d_1m["gauss_g_1"])[mask_1m], _get_shear_weights(d_1m, mask_1m))
         R11 = (g1p - g1m) / 0.02
 
-        g2p = _wmean(np.array(d_2p["gauss_g_2"]), _get_shear_weights(d_2p))
-        g2m = _wmean(np.array(d_2m["gauss_g_2"]), _get_shear_weights(d_2m))
+        g2p = _wmean(np.array(d_2p["gauss_g_2"])[mask_2p], _get_shear_weights(d_2p, mask_2p))
+        g2m = _wmean(np.array(d_2m["gauss_g_2"])[mask_2m], _get_shear_weights(d_2m, mask_2m))
         R22 = (g2p - g2m) / 0.02
 
         R = (R11 + R22)/2.
@@ -120,6 +124,75 @@ def read_mdet_h5(datafile, keys, response=False, subtract_mean_shear=False):
         data['g2'] -= mean_g2
 
     return data, mean_shear
+
+
+def read_mdet_h5_tomobin(datafile, keys, patch_id=None, response=False, subtract_mean_shear=False, ):
+    
+    tomobins = ['/tomo_bin_0', '/tomo_bin_1', '/tomo_bin_2', '/tomo_bin_3']
+    data_all = {}
+    for t in tomobins:
+    
+        import h5py as h5
+        f = h5.File(datafile, 'r')
+        d = f.get('noshear'+t)
+        if patch_id is None:
+            nrows = len(np.array( d['ra'] ))
+            mask = np.ones(nrows)!=0
+        else:
+            mask = (np.array( d['patch_num'] ) == patch_id)
+            nrows = len(np.array( d['ra'] )[mask])
+        formats = []
+        for key in keys:
+            formats.append('f4')
+        data = np.recarray(shape=(nrows,), formats=formats, names=keys)
+        data_all[t[-5:]] = data
+        for key in keys:  
+            if key == 'R':
+                continue
+            if key == 'w':
+                data['w'] = _get_shear_weights(d, mask)
+            elif key in ('g1', 'g2'):
+                data[key] = np.array(d['gauss_'+key[0]+'_'+key[1]])[mask]
+            elif key in ('g1_cov', 'g2_cov'):
+                data[key] = np.array(d['gauss_'+key[0]+'_cov_'+key[1]+'_'+key[1]])[mask]
+            else:
+                data[key] = np.array(d[key])[mask]
+        print('made recarray with hdf5 file')
+
+        # response correction
+        if response:
+            d_2p = f.get('2p'+t); nrows = len(np.array( d_2p['ra'] )); mask_2p = np.ones(nrows)!=0
+            d_1p = f.get('1p'+t); nrows = len(np.array( d_1p['ra'] )); mask_1p = np.ones(nrows)!=0
+            d_2m = f.get('2m'+t); nrows = len(np.array( d_2m['ra'] )); mask_2m = np.ones(nrows)!=0
+            d_1m = f.get('1m'+t); nrows = len(np.array( d_1m['ra'] )); mask_1m = np.ones(nrows)!=0
+            # compute response with weights
+            g1p = _wmean(np.array(d_1p["gauss_g_1"]), _get_shear_weights(d_1p, mask_1p))                                     
+            g1m = _wmean(np.array(d_1m["gauss_g_1"]), _get_shear_weights(d_1m, mask_1m))
+            R11 = (g1p - g1m) / 0.02
+
+            g2p = _wmean(np.array(d_2p["gauss_g_2"]), _get_shear_weights(d_2p, mask_2p))
+            g2m = _wmean(np.array(d_2m["gauss_g_2"]), _get_shear_weights(d_2m, mask_2m))
+            R22 = (g2p - g2m) / 0.02
+
+            R = (R11 + R22)/2.
+            data['R'] = np.ones(len(data['g1'])) * R
+            print('weighted shear response is ', R)
+            # data['g1'] /= R
+            # data['g2'] /= R
+
+            mean_g1 = _wmean(data['g1'], data['w'])
+            mean_g2 = _wmean(data['g2'], data['w'])
+            std_g1 = np.var(data['g1'])
+            std_g2 = np.var(data['g2'])
+            mean_shear = [mean_g1, mean_g2, std_g1, std_g2]
+            # mean shear subtraction
+            if subtract_mean_shear:
+                print('subtracting mean shear')
+                print('mean g1 g2 =(%1.8f,%1.8f)'%(mean_g1, mean_g2))          
+                data['g1'] -= mean_g1
+                data['g2'] -= mean_g2
+                
+    return data_all, mean_shear
 
 # IN Y3, sigma_e/sqrt(neff*A) = 0.00171474466
 def _compute_y3_values():
@@ -203,7 +276,7 @@ def _compute_shape_noise(mdet_input_flat, version, method):
     method: which weight to use
     """
 
-    A = 4435.515784199025 * 60 * 60 # survey area for Y6 (v3 mask)
+    A = 4031.03590997686 * 60 * 60 # survey area for Y6 (v3 shear mask: 4421.517941753458)
 
     # For Y3 catalog
     if version == 'y3':
@@ -277,12 +350,13 @@ def _compute_shape_noise(mdet_input_flat, version, method):
         neff = ( a/b/c )
         Neff = (a/b)
 
-    sigma_gamma = sigma_e/np.sqrt(Neff)/A # precision per square degree. 
-    weighted_c1 = np.average(e1, weights=w)
-    weighted_c2 = np.average(e2, weights=w)
+    sigma_gamma = sigma_e/np.sqrt(Neff) # precision per square degree. 
+    weighted_c1 = np.average(g1, weights=w)
+    weighted_c2 = np.average(g2, weights=w)
 
-    print(sigma_e, neff, Neff, sigma_gamma, weighted_c1, weighted_c2)
-    return sigma_e, neff, Neff, sigma_gamma, weighted_c1, weighted_c2
+    N = len(e1)
+    print(sigma_e, neff, N, Neff, sigma_gamma, weighted_c1, weighted_c2)
+    return sigma_e, neff, N, Neff, sigma_gamma, weighted_c1, weighted_c2
 
 def main(argv):
 
@@ -292,6 +366,8 @@ def main(argv):
     parser.add_argument("definition", help="the definition of neff and shape noise (h12 or c13)", type=str)
     parser.add_argument("weight", help="the definition of shear weights (s2n_sizer or shape_err)", type=str)
     parser.add_argument("--save_result", help="whether or not save the result to text file", type=bool)
+    parser.add_argument("--joint_mask", help="whether or not apply the joint mask", type=bool)
+    parser.add_argument("--in_tomo", help="whether or not measure things in tomo bins", type=bool)
     parser.set_defaults(save_result=False)
     args = parser.parse_args()
 
@@ -300,9 +376,24 @@ def main(argv):
     method = args.weight
     
     keys = ['ra', 'dec', 'g1', 'g2', 'w', 'R', 'g1_cov', 'g2_cov']
-    gal_data, mean_shear = read_mdet_h5(input_file, keys, response=True, subtract_mean_shear=False)
+    if args.in_tomo:
+        gal_data, mean_shear = read_mdet_h5_tomobin(input_file, keys, response=True, subtract_mean_shear=False)
+    else:
+        gal_data, mean_shear = read_mdet_h5(input_file, keys, response=True, subtract_mean_shear=False)
 
-    sigma_e, neff, Neff, sigma_gamma, c1, c2 = _compute_shape_noise(gal_data, neff_version, method)
+    if args.joint_mask:
+        import healsparse
+        hmap = healsparse.HealSparseMap.read('/global/cfs/cdirs/des/y6kp-cats/2024-06-04/jointmask_DESY6_2024-06-04.hsp')
+        in_footprint = hmap.get_values_pos(gal_data['ra'], gal_data['dec'], valid_mask=True)
+        gal_data = gal_data[in_footprint]
+        print(len(gal_data))
+
+    if args.in_tomo:
+        for i in range(4):
+            print('bin %s' % i)
+            sigma_e, neff, N, Neff, sigma_gamma, c1, c2 = _compute_shape_noise(gal_data['bin_%s'%i], neff_version, method)
+    else:
+        sigma_e, neff, N, Neff, sigma_gamma, c1, c2 = _compute_shape_noise(gal_data, neff_version, method)
     quant = np.array([sigma_e, neff, Neff, sigma_gamma, c1, c2])
     if args.save_result:
         np.savetxt(os.path.join('/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/v5/', neff_version+'_shape_noise_neff.csv'), quant, delimiter=',', header="sigma_e,neff,sigma_gamma,c1,c2", comments="")
