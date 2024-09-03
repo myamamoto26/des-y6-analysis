@@ -12,7 +12,7 @@ from math import log10
 import pickle
 from des_y6utils import mdet
 
-def inverse_variance_weight(d, shear_wgt_output_filepath, mdet_mom, steps, snmin, snmax, sizemin, sizemax, mdet_cuts):
+def inverse_variance_weight(d, shear_wgt_output_filepath, mdet_mom, steps, snmin, snmax, sizemin, sizemax, mdet_cuts, equal_bins):
 
     """
     Returns galaxy count, shear response, variance of e, shear weight as a function of S/N and size ratio.
@@ -33,6 +33,19 @@ def inverse_variance_weight(d, shear_wgt_output_filepath, mdet_mom, steps, snmin
     sizemax: The maximum size ratio to be considered
     mdet_cuts: which cut ID do you want to use?
     """
+
+    def equal_bin(N, m):
+        sep = (N.size/float(m))*np.arange(1,m+1)
+        idx = sep.searchsorted(np.arange(N.size))
+        return idx[N.argsort().argsort()]
+
+
+    def get_bins(s2n, sr):
+        is2n = equal_bin(np.log10(s2n),20)
+        isr = equal_bin(np.log10(sr),20)
+
+        return is2n,isr
+
 
     def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
         # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
@@ -77,12 +90,15 @@ def inverse_variance_weight(d, shear_wgt_output_filepath, mdet_mom, steps, snmin
         m /= count
         return m
 
-    def find_assign_grid(d, mdet_step, mdet_mom, snmin, snmax, steps, sizemin, sizemax):
+    def find_assign_grid(d, mdet_step, mdet_mom, snmin, snmax, steps, sizemin, sizemax, equalbins=False):
 
         mask = mdet_step
         mastercat_snr = d[mask][mdet_mom+'_s2n']
         mastercat_Tr = d[mask][mdet_mom+'_T_ratio']
-        new_indexx,new_indexy = assign_loggrid(mastercat_snr, mastercat_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
+        if equalbins:
+            new_indexx,new_indexy = get_bins(mastercat_snr, mastercat_Tr)
+        else:
+            new_indexx,new_indexy = assign_loggrid(mastercat_snr, mastercat_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
         
         return new_indexx, new_indexy
 
@@ -99,17 +115,18 @@ def inverse_variance_weight(d, shear_wgt_output_filepath, mdet_mom, steps, snmin
         
         return all_count
 
-    def accumulate_shear_per_tile(res, d, mdet_mom, snmin, snmax, steps, sizemin, sizemax):
+    def accumulate_shear_per_tile(res, d, mdet_mom, snmin, snmax, steps, sizemin, sizemax, equalbins=False):
 
-        g1p_indexx, g1p_indexy = find_assign_grid(d, '1p', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
+        g1p_indexx, g1p_indexy = find_assign_grid(d, '1p', mdet_mom, snmin, snmax, steps, sizemin, sizemax, equalbins=equalbins)
         g1p_count = find_bincount_2d(g1p_indexx, g1p_indexy, steps)
-        g1m_indexx, g1m_indexy = find_assign_grid(d, '1m', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
+        g1m_indexx, g1m_indexy = find_assign_grid(d, '1m', mdet_mom, snmin, snmax, steps, sizemin, sizemax, equalbins=equalbins)
         g1m_count = find_bincount_2d(g1m_indexx, g1m_indexy, steps)
-        g2p_indexx, g2p_indexy = find_assign_grid(d, '2p', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
+        g2p_indexx, g2p_indexy = find_assign_grid(d, '2p', mdet_mom, snmin, snmax, steps, sizemin, sizemax, equalbins=equalbins)
         g2p_count = find_bincount_2d(g2p_indexx, g2p_indexy, steps)
-        g2m_indexx, g2m_indexy = find_assign_grid(d, '2m', mdet_mom, snmin, snmax, steps, sizemin, sizemax)
+        g2m_indexx, g2m_indexy = find_assign_grid(d, '2m', mdet_mom, snmin, snmax, steps, sizemin, sizemax, equalbins=equalbins)
         g2m_count = find_bincount_2d(g2m_indexx, g2m_indexy, steps)
 
+        print(res['g_1p'].shape, len(g1p_indexx), len(d['1p'][mdet_mom+'_g_1']))
         np.add.at(res['g_1p'], (g1p_indexx, g1p_indexy), d['1p'][mdet_mom+'_g_1'])
         np.add.at(res['g_1m'], (g1m_indexx, g1m_indexy), d['1m'][mdet_mom+'_g_1'])
         np.add.at(res['g_2p'], (g2p_indexx, g2p_indexy), d['2p'][mdet_mom+'_g_2'])
@@ -197,8 +214,12 @@ def inverse_variance_weight(d, shear_wgt_output_filepath, mdet_mom, steps, snmin
     new_e2 = d['noshear'][mdet_mom+'_g_2']
     
     # Need raw sums of shear for shear response. 
-    res = accumulate_shear_per_tile(res, d, mdet_mom, snmin, snmax, steps, sizemin, sizemax)
-    new_indexx,new_indexy = assign_loggrid(mastercat_noshear_snr, mastercat_noshear_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
+    res = accumulate_shear_per_tile(res, d, mdet_mom, snmin, snmax, steps, sizemin, sizemax, equalbins=equal_bins)
+    if equal_bins:
+        print('binning in equal number of objects')
+        new_indexx,new_indexy = get_bins(mastercat_noshear_snr, mastercat_noshear_Tr)
+    else:
+        new_indexx,new_indexy = assign_loggrid(mastercat_noshear_snr, mastercat_noshear_Tr, snmin, snmax, steps, sizemin, sizemax, steps)
     new_count = np.zeros((steps, steps))
     np.add.at(new_count,(new_indexx,new_indexy), 1)
     np.add.at(count_all,(), new_count)
@@ -263,19 +284,42 @@ def read_mdet_h5(datafile, keys, response=False, subtract_mean_shear=False):
         data['g1'] /= R
         data['g2'] /= R
 
-    # mean_g1 = _wmean(data['g1'], data['w'])
-    # mean_g2 = _wmean(data['g2'], data['w'])
-    # std_g1 = np.var(data['g1'])
-    # std_g2 = np.var(data['g2'])
-    # mean_shear = [mean_g1, mean_g2, std_g1, std_g2]
-    # mean shear subtraction
-    if subtract_mean_shear:
-        print('subtracting mean shear')
-        print('mean g1 g2 =(%1.8f,%1.8f)'%(mean_g1, mean_g2))          
-        data['g1'] -= mean_g1
-        data['g2'] -= mean_g2
+        mean_g1 = _wmean(data['g1'], data['w'])
+        mean_g2 = _wmean(data['g2'], data['w'])
+        # std_g1 = np.var(data['g1'])
+        # std_g2 = np.var(data['g2'])
+        # mean_shear = [mean_g1, mean_g2, std_g1, std_g2]
+        # mean shear subtraction
+        if subtract_mean_shear:
+            print('subtracting mean shear')
+            print('mean g1 g2 =(%1.8f,%1.8f)'%(mean_g1, mean_g2))          
+            data['g1'] -= mean_g1
+            data['g2'] -= mean_g2
 
     return d_out
+
+
+def read_mdet_h5_tomobin(t, datafile, keys, patch_id=None, response=False, subtract_mean_shear=False):
+    
+    mdet_steps = ['noshear', '1p', '1m', '2p', '2m']
+    d_out = {}
+
+    import h5py as h5
+    f = h5.File(datafile, 'r')
+    for mdet_step in mdet_steps:
+        d = f.get(mdet_step+'/'+t)
+        nrows = len(np.array( d['ra'] ))
+        formats = []
+        for key in keys:
+            formats.append('f4')
+        data = np.recarray(shape=(nrows,), formats=formats, names=keys)
+        for key in keys:  
+            data[key] = np.array(d[key])
+        d_out[mdet_step] = data
+    print('made recarray with hdf5 file')
+
+    return d_out
+
 
 def main(argv):
 
@@ -296,9 +340,16 @@ def main(argv):
         sizemin = float(sys.argv[8])
         sizemax = float(sys.argv[9])
     
+    tomo = eval(sys.argv[10]); tomobin = str(sys.argv[11])
+    equalbins = eval(sys.argv[12])
     keys = ['ra', 'dec',  mdet_mom+'_g_1',  mdet_mom+'_g_2',  mdet_mom+'_s2n', mdet_mom+'_T_ratio']
-    gal_data = read_mdet_h5(mdet_input_filepaths, keys, response=False, subtract_mean_shear=False)
-    inverse_variance_weight(gal_data, shear_wgt_output_filepath, mdet_mom, steps, snmin, snmax, sizemin, sizemax, mdet_cuts)
+    if not tomo:
+        gal_data = read_mdet_h5(mdet_input_filepaths, keys, response=False, subtract_mean_shear=False)
+    else:
+        gal_data = read_mdet_h5_tomobin('tomo_bin_'+tomobin, mdet_input_filepaths, keys, response=False, subtract_mean_shear=False)
+        # snmin = np.min(gal_data['noshear']['gauss_s2n']); snmax = np.max(gal_data['noshear']['gauss_s2n'])
+        # sizemin = np.min(gal_data['noshear']['gauss_T_ratio']); sizemax = np.max(gal_data['noshear']['gauss_T_ratio'])
+    inverse_variance_weight(gal_data, shear_wgt_output_filepath, mdet_mom, steps, snmin, snmax, sizemin, sizemax, mdet_cuts, equal_bins=equalbins)
 
 if __name__ == "__main__":
     main(sys.argv)
