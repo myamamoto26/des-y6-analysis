@@ -3,6 +3,18 @@ import numpy as np
 import os,sys
 import pickle
 
+def equal_bin(N, m):
+    sep = (N.size/float(m))*np.arange(1,m+1)
+    idx = sep.searchsorted(np.arange(N.size))
+    return idx[N.argsort().argsort()]
+
+
+def get_bins(s2n, sr):
+    is2n = equal_bin(np.log10(s2n),20)
+    isr = equal_bin(np.log10(sr),20)
+
+    return is2n,isr
+
 def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
     """
     Computes indices of 2D grids. Only used when we use shear weight that is binned by S/N and size ratio. 
@@ -40,17 +52,18 @@ def _find_shear_weight(d, mask, wgt_dict, snmin, snmax, sizemin, sizemax, steps,
         smooth_response = gaussian_filter(wgt_dict['response'], sigma=2.0)
         shear_wgt = (smooth_response/wgt_dict['meanes'])**2
     indexx, indexy = assign_loggrid(np.array(d[mdet_mom+'_s2n'])[mask], np.array(d[mdet_mom+'_T_ratio'])[mask], snmin, snmax, steps, sizemin, sizemax, steps)
+    # indexx, indexy = get_bins(np.array(d[mdet_mom+'_s2n'])[mask], np.array(d[mdet_mom+'_T_ratio'])[mask])
     weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
     
     return weights
 
 
-def _get_shear_weights(dat, mask):
+def _get_shear_weights(dat, mask, weight_file):
     shape_err = False
     if shape_err:
         return 1/(0.22**2 + 0.5*(np.array(dat['gauss_g_cov_1_1'])[mask] + np.array(dat['gauss_g_cov_2_2'])[mask]))
     else:
-        with open(os.path.join('/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/v6_UNBLINDED/inverse_variance_weight_v6.pickle'), 'rb') as handle:
+        with open(os.path.join(weight_file), 'rb') as handle:
             wgt_dict = pickle.load(handle)
             snmin = wgt_dict['xedges'][0]
             snmax = wgt_dict['xedges'][-1]
@@ -65,11 +78,16 @@ def _wmean(q,w):
     return np.sum(q*w)/np.sum(w)
 
 
-def read_mdet_h5(datafile, keys, response=False, subtract_mean_shear=False):
+def read_mdet_h5(datafile, keys, weight_file, response=False, subtract_mean_shear=False, mastercat=False):
     
+    if mastercat:
+        sup = 'desy6kp'
+    else:
+        sup = ''
+
     import h5py as h5
     f = h5.File(datafile, 'r')
-    d = f.get('/mdet/noshear')
+    d = f.get(sup+'/mdet/noshear')
     # mask_mfrac = False; mfrac = 0.01
     nrows = len(np.array( d['ra'] ))
     mask = np.ones(nrows)!=0
@@ -81,7 +99,7 @@ def read_mdet_h5(datafile, keys, response=False, subtract_mean_shear=False):
         if key == 'R':
             continue
         elif key == 'w':
-            data['w'] = _get_shear_weights(d, mask)
+            data['w'] = _get_shear_weights(d, mask, weight_file)
         elif key in ('g1', 'g2'):
             data[key] = np.array(d['gauss_'+key[0]+'_'+key[1]])[mask]
         elif key in ('g1_cov', 'g2_cov'):
@@ -92,17 +110,17 @@ def read_mdet_h5(datafile, keys, response=False, subtract_mean_shear=False):
     
     # response correction
     if response:
-        d_2p = f.get('/mdet/2p'); mask_2p = np.ones(len(np.array( d_2p['ra'] )))!=0
-        d_1p = f.get('/mdet/1p'); mask_1p = np.ones(len(np.array( d_1p['ra'] )))!=0
-        d_2m = f.get('/mdet/2m'); mask_2m = np.ones(len(np.array( d_2m['ra'] )))!=0
-        d_1m = f.get('/mdet/1m'); mask_1m = np.ones(len(np.array( d_1m['ra'] )))!=0
+        d_2p = f.get(sup+'/mdet/2p'); mask_2p = np.ones(len(np.array( d_2p['ra'] )))!=0
+        d_1p = f.get(sup+'/mdet/1p'); mask_1p = np.ones(len(np.array( d_1p['ra'] )))!=0
+        d_2m = f.get(sup+'/mdet/2m'); mask_2m = np.ones(len(np.array( d_2m['ra'] )))!=0
+        d_1m = f.get(sup+'/mdet/1m'); mask_1m = np.ones(len(np.array( d_1m['ra'] )))!=0
         # compute response with weights
-        g1p = _wmean(np.array(d_1p["gauss_g_1"])[mask_1p], _get_shear_weights(d_1p, mask_1p))                                     
-        g1m = _wmean(np.array(d_1m["gauss_g_1"])[mask_1m], _get_shear_weights(d_1m, mask_1m))
+        g1p = _wmean(np.array(d_1p["gauss_g_1"])[mask_1p], _get_shear_weights(d_1p, mask_1p, weight_file))                                     
+        g1m = _wmean(np.array(d_1m["gauss_g_1"])[mask_1m], _get_shear_weights(d_1m, mask_1m, weight_file))
         R11 = (g1p - g1m) / 0.02
 
-        g2p = _wmean(np.array(d_2p["gauss_g_2"])[mask_2p], _get_shear_weights(d_2p, mask_2p))
-        g2m = _wmean(np.array(d_2m["gauss_g_2"])[mask_2m], _get_shear_weights(d_2m, mask_2m))
+        g2p = _wmean(np.array(d_2p["gauss_g_2"])[mask_2p], _get_shear_weights(d_2p, mask_2p, weight_file))
+        g2m = _wmean(np.array(d_2m["gauss_g_2"])[mask_2m], _get_shear_weights(d_2m, mask_2m, weight_file))
         R22 = (g2p - g2m) / 0.02
 
         R = (R11 + R22)/2.
@@ -126,7 +144,7 @@ def read_mdet_h5(datafile, keys, response=False, subtract_mean_shear=False):
     return data, mean_shear
 
 
-def read_mdet_h5_tomobin(datafile, keys, patch_id=None, response=False, subtract_mean_shear=False, ):
+def read_mdet_h5_tomobin(datafile, keys, weight_file_p, patch_id=None, response=False, subtract_mean_shear=False, equalbins=False):
     
     tomobins = ['/tomo_bin_0', '/tomo_bin_1', '/tomo_bin_2', '/tomo_bin_3']
     data_all = {}
@@ -134,6 +152,7 @@ def read_mdet_h5_tomobin(datafile, keys, patch_id=None, response=False, subtract
     
         import h5py as h5
         f = h5.File(datafile, 'r')
+        # d = f.get('noshear'+t)
         d = f.get('noshear'+t)
         if patch_id is None:
             nrows = len(np.array( d['ra'] ))
@@ -145,12 +164,19 @@ def read_mdet_h5_tomobin(datafile, keys, patch_id=None, response=False, subtract
         for key in keys:
             formats.append('f4')
         data = np.recarray(shape=(nrows,), formats=formats, names=keys)
+
+        if equalbins:
+            weight_file = weight_file_p + "inverse_variance_weight_v6_UNBLINDED_bin" + t[-1] + "_equalbins.pickle"
+            # weight_file = weight_file_p + "inverse_variance_weight_v6_mastercat0715_bin" + t[-1] + "_equalbins.pickle"
+        else:
+            weight_file = weight_file_p
+
         data_all[t[-5:]] = data
         for key in keys:  
             if key == 'R':
                 continue
             if key == 'w':
-                data['w'] = _get_shear_weights(d, mask)
+                data['w'] = _get_shear_weights(d, mask, weight_file)
             elif key in ('g1', 'g2'):
                 data[key] = np.array(d['gauss_'+key[0]+'_'+key[1]])[mask]
             elif key in ('g1_cov', 'g2_cov'):
@@ -166,12 +192,12 @@ def read_mdet_h5_tomobin(datafile, keys, patch_id=None, response=False, subtract
             d_2m = f.get('2m'+t); nrows = len(np.array( d_2m['ra'] )); mask_2m = np.ones(nrows)!=0
             d_1m = f.get('1m'+t); nrows = len(np.array( d_1m['ra'] )); mask_1m = np.ones(nrows)!=0
             # compute response with weights
-            g1p = _wmean(np.array(d_1p["gauss_g_1"]), _get_shear_weights(d_1p, mask_1p))                                     
-            g1m = _wmean(np.array(d_1m["gauss_g_1"]), _get_shear_weights(d_1m, mask_1m))
+            g1p = _wmean(np.array(d_1p["gauss_g_1"]), _get_shear_weights(d_1p, mask_1p, weight_file))                                     
+            g1m = _wmean(np.array(d_1m["gauss_g_1"]), _get_shear_weights(d_1m, mask_1m, weight_file))
             R11 = (g1p - g1m) / 0.02
 
-            g2p = _wmean(np.array(d_2p["gauss_g_2"]), _get_shear_weights(d_2p, mask_2p))
-            g2m = _wmean(np.array(d_2m["gauss_g_2"]), _get_shear_weights(d_2m, mask_2m))
+            g2p = _wmean(np.array(d_2p["gauss_g_2"]), _get_shear_weights(d_2p, mask_2p, weight_file))
+            g2m = _wmean(np.array(d_2m["gauss_g_2"]), _get_shear_weights(d_2m, mask_2m, weight_file))
             R22 = (g2p - g2m) / 0.02
 
             R = (R11 + R22)/2.
@@ -206,11 +232,27 @@ def _compute_y3_values():
     mask = np.array(m.get('/index/select'))
 
     # Load weights
-    w = np.array(m.get('/catalog/metacal/unsheared/weight'))
-    w_1p = np.array(m.get('/catalog/metacal/sheared_1p/weight'))
-    w_2p = np.array(m.get('/catalog/metacal/sheared_2p/weight'))
-    w_1m = np.array(m.get('/catalog/metacal/sheared_1m/weight'))
-    w_2m = np.array(m.get('/catalog/metacal/sheared_2m/weight'))
+    # w = np.array(m.get('/catalog/metacal/unsheared/weight'))
+    # w_1p = np.array(m.get('/catalog/metacal/sheared_1p/weight'))
+    # w_2p = np.array(m.get('/catalog/metacal/sheared_2p/weight'))
+    # w_1m = np.array(m.get('/catalog/metacal/sheared_1m/weight'))
+    # w_2m = np.array(m.get('/catalog/metacal/sheared_2m/weight'))
+    with open('/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/y3_weight_grid', 'wb') as dat:
+        wgt_dict = pickle.load(dat)
+        weights_dict = {step:[] for step in ['unsheared', 'sheared_1p', 'sheared_1m', 'sheared_2p', 'sheared_2m']}
+        for step in ['unsheared', 'sheared_1p', 'sheared_1m', 'sheared_2p', 'sheared_2m']:
+            snr = np.array(m.get('/catalog/metacal/'+step+'/snr'))
+            Tr = np.array(m.get('/catalog/metacal/'+step+'/size_ratio'))
+
+            shear_wgt = wgt_dict['weight']
+            indexx, indexy = assign_loggrid(snr, Tr, 10, 300, 20, 0.5, 5.0, 20)
+            weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
+            weights_dict[step] = weights
+        w = weights_dict['unsheared']
+        w_1p = weights_dict['sheared_1p']
+        w_1m = weights_dict['sheared_1m']
+        w_2p = weights_dict['sheared_2p']
+        w_2m = weights_dict['sheared_2m']
 
     # load sheared ellipticities
     e1_1m = np.array(m.get('/catalog/metacal/sheared_1m/e_1'))
@@ -259,9 +301,9 @@ def _compute_y3_values():
     s   = (m1+m2)/2. 
     # w = w[mask]
 
-    return s
+    return w[mask],s
 
-def _compute_shape_noise(mdet_input_flat, version, method):
+def _compute_shape_noise(mdet_input_flat, version, method, mastercat):
 
     """
     Computes shape noise and effective number density of the shape catalog using two different definitions. 
@@ -276,12 +318,14 @@ def _compute_shape_noise(mdet_input_flat, version, method):
     method: which weight to use
     """
 
-    A = 4031.03590997686 * 60 * 60 # survey area for Y6 (v3 shear mask: 4421.517941753458)
+    if mastercat:
+        A = 4031.03590997686 * 60 * 60 # survey area for Y6 (v3 shear mask: 4421.517941753458)
+    else:
+        A = 4421.517941753458 * 60 * 60
 
     # For Y3 catalog
     if version == 'y3':
-        w = mdet_input_flat['w']
-        s = _compute_y3_values()
+        w,s = _compute_y3_values()
     else:
         # Y6
         if method in ('s2n_sizer', 'shape_err'):
@@ -365,21 +409,29 @@ def main(argv):
     parser.add_argument("input_file", help="the path to input flat catalogs", type=str)
     parser.add_argument("definition", help="the definition of neff and shape noise (h12 or c13)", type=str)
     parser.add_argument("weight", help="the definition of shear weights (s2n_sizer or shape_err)", type=str)
+    parser.add_argument("weight_file", help="name of the file for the weight grid", type=str)
     parser.add_argument("--save_result", help="whether or not save the result to text file", type=bool)
     parser.add_argument("--joint_mask", help="whether or not apply the joint mask", type=bool)
     parser.add_argument("--in_tomo", help="whether or not measure things in tomo bins", type=bool)
-    parser.set_defaults(save_result=False)
+    parser.add_argument("--mastercat", help="whether or not use master cat", type=bool)
+    parser.add_argument("--equalbins", help="whether or not use equal bins in weights", type=bool)
+    parser.set_defaults(save_result=False, in_tomo=False, mastercat=False, equalbins=False)
     args = parser.parse_args()
 
     input_file = args.input_file
     neff_version = args.definition
     method = args.weight
+    weight_file = args.weight_file
+    equalbins = args.equalbins
     
     keys = ['ra', 'dec', 'g1', 'g2', 'w', 'R', 'g1_cov', 'g2_cov']
     if args.in_tomo:
-        gal_data, mean_shear = read_mdet_h5_tomobin(input_file, keys, response=True, subtract_mean_shear=False)
+        gal_data, mean_shear = read_mdet_h5_tomobin(input_file, keys, weight_file, response=True, subtract_mean_shear=False, equalbins=equalbins)
     else:
-        gal_data, mean_shear = read_mdet_h5(input_file, keys, response=True, subtract_mean_shear=False)
+        if args.mastercat:
+            gal_data, mean_shear = read_mdet_h5(input_file, keys, weight_file, response=True, subtract_mean_shear=False, mastercat=args.mastercat)
+        else:
+            gal_data, mean_shear = read_mdet_h5(input_file, keys, weight_file, response=True, subtract_mean_shear=False, mastercat=args.mastercat)
 
     if args.joint_mask:
         import healsparse
@@ -391,9 +443,9 @@ def main(argv):
     if args.in_tomo:
         for i in range(4):
             print('bin %s' % i)
-            sigma_e, neff, N, Neff, sigma_gamma, c1, c2 = _compute_shape_noise(gal_data['bin_%s'%i], neff_version, method)
+            sigma_e, neff, N, Neff, sigma_gamma, c1, c2 = _compute_shape_noise(gal_data['bin_%s'%i], neff_version, method, args.mastercat)
     else:
-        sigma_e, neff, N, Neff, sigma_gamma, c1, c2 = _compute_shape_noise(gal_data, neff_version, method)
+        sigma_e, neff, N, Neff, sigma_gamma, c1, c2 = _compute_shape_noise(gal_data, neff_version, method, args.mastercat)
     quant = np.array([sigma_e, neff, Neff, sigma_gamma, c1, c2])
     if args.save_result:
         np.savetxt(os.path.join('/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/v5/', neff_version+'_shape_noise_neff.csv'), quant, delimiter=',', header="sigma_e,neff,sigma_gamma,c1,c2", comments="")

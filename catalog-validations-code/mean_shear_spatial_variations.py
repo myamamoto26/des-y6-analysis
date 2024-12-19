@@ -17,43 +17,160 @@ import pickle
 from des_y6utils import mdet
 import galsim
 
-def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
-    from math import log10
-    # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
 
-    logstepx = log10(xmax/xmin)/xsteps
-    logstepy = log10(ymax/ymin)/ysteps
+def read_mdet_h5(datafile, gal_weight_file, keys, mdet_step, patch_id=None, response=False, subtract_mean_shear=False, add_step=False):
 
-    indexx = (np.log10(x/xmin)/logstepx).astype(int)
-    indexy = (np.log10(y/ymin)/logstepy).astype(int)
+    def assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
+        """
+        Computes indices of 2D grids. Only used when we use shear weight that is binned by S/N and size ratio. 
+        """
+        from math import log10
+        # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
 
-    indexx = np.maximum(indexx,0)
-    indexx = np.minimum(indexx, xsteps-1)
-    indexy = np.maximum(indexy,0)
-    indexy = np.minimum(indexy, ysteps-1)
+        logstepx = log10(xmax/xmin)/xsteps
+        logstepy = log10(ymax/ymin)/ysteps
 
-    return indexx,indexy
+        indexx = (np.log10(x/xmin)/logstepx).astype(int)
+        indexy = (np.log10(y/ymin)/logstepy).astype(int)
 
-def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_mom):
+        indexx = np.maximum(indexx,0)
+        indexx = np.minimum(indexx, xsteps-1)
+        indexy = np.maximum(indexy,0)
+        indexy = np.minimum(indexy, ysteps-1)
+
+        return indexx,indexy
     
-    if wgt_dict is None:
-        weights = np.ones(len(d))
+    def assign_grid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
+        # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
+        
+        xbins=np.linspace(xmin, xmax, xsteps+1)
+        ybins=np.linspace(ymin, ymax, ysteps+1)
+
+        indexx=np.digitize(x, xbins, right=True)
+        indexy=np.digitize(y, ybins, right=True)
+
+        indexx = indexx - 1
+        indexy = indexy - 1
+
+        indexx = np.maximum(indexx,0)
+        indexx = np.minimum(indexx, xsteps-1)
+        indexy = np.maximum(indexy,0)
+        indexy = np.minimum(indexy, ysteps-1)
+
+        return indexx,indexy
+    
+
+    def _find_shear_weight(dat, mask, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_mom):
+
+        """
+        Assigns shear weights to the objects based on the grids. 
+        """
+        
+        if wgt_dict is None:
+            weights = np.ones(len(dat))
+            return weights
+
+        shear_wgt = wgt_dict['weight']
+        smoothing = True
+        if smoothing:
+            from scipy.ndimage import gaussian_filter
+            smooth_response = gaussian_filter(wgt_dict['response'], sigma=2.0)
+            shear_wgt = (smooth_response/wgt_dict['meanes'])**2
+        indexx, indexy = assign_loggrid(np.array(dat[mdet_mom+'_s2n'])[mask], np.array(dat[mdet_mom+'_T_ratio'])[mask], snmin, snmax, steps, sizemin, sizemax, steps)
+        weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
+        
         return weights
 
-    shear_wgt = wgt_dict['weight']
-    smoothing = True
-    if smoothing:
-        from scipy.ndimage import gaussian_filter
-        smooth_response = gaussian_filter(wgt_dict['response'], sigma=2.0)
-        shear_wgt = (smooth_response/wgt_dict['meanes'])**2
-    indexx, indexy = assign_loggrid(np.array(d['gauss_s2n']), np.array(d['gauss_T_ratio']), snmin, snmax, steps, sizemin, sizemax, steps)
-    weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
+    def _get_shear_weights(dat, mask, gal_weight_file, shape_err=False):
+        if shape_err:
+            return 1/(0.22**2 + 0.5*(np.array(dat['gauss_g_cov_1_1'])[mask] + np.array(dat['gauss_g_cov_2_2'])[mask]))
+        else:
+            with open(gal_weight_file, 'rb') as handle:
+                wgt_dict = pickle.load(handle)
+                snmin = wgt_dict['xedges'][0]
+                snmax = wgt_dict['xedges'][-1]
+                sizemin = wgt_dict['yedges'][0]
+                sizemax = wgt_dict['yedges'][-1]
+                steps = len(wgt_dict['xedges'])-1
+            shear_wgt = _find_shear_weight(dat, mask, wgt_dict, snmin, snmax, sizemin, sizemax, steps, 'gauss')
+            return shear_wgt
 
-    # prior = ngmix.priors.GPriorBA(0.3, rng=np.random.RandomState())
-    # pvals = prior.get_prob_array2d(d['wmom_g_1'], d['wmom_g_2'])
-    # weights *= pvals
+    def _wmean(q,w):
+        return np.sum(q*w)/np.sum(w)
     
-    return weights
+    import h5py as h5
+    f = h5.File(datafile, 'r')
+    d = f.get('/mdet/'+mdet_step)
+    if patch_id is None:
+        nrows = len(np.array( d['ra'] ))
+        mask = np.ones(nrows)!=0
+    else:
+        mask = (np.array( d['tilename'] ).astype('str') == patch_id)
+        nrows = len(np.array( d['ra'] )[mask])
+    formats = []
+    for key in keys:
+        if key == 'mdet_step':
+            formats.append('object')
+        elif key == 'slice_id':
+            formats.append('int16')
+        else:
+            formats.append('f4')
+
+    data = np.recarray(shape=(nrows,), formats=formats, names=keys)
+    mags = {'g':0, 'r':1, 'i':2, 'z':3}
+    for key in keys:  
+        if key == 'w':
+            data['w'] = _get_shear_weights(d, mask, gal_weight_file)
+        elif key in ('g1', 'g2'):
+            data[key] = np.array(d['gauss_'+key[0]+'_'+key[1]])[mask]
+        elif key == 'gauss_T':
+            data[key] = np.array(d['gauss_psf_T'])[mask] * np.array(d['gauss_T_ratio'])[mask]
+        elif key == 'gmi':
+            mag_g = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_g"])[mask], 0)
+            mag_i = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_i"])[mask], 2)
+            data[key] = mag_g - mag_i
+        elif key in ['mag_g', 'mag_r', 'mag_i', 'mag_z']:
+            mag = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_"+key[-1]])[mask], mags[key[-1]])
+            data[key] = mag
+        elif key == 'mdet_step':
+            data[key] = np.array([mdet_step for i in range(nrows)])
+        else:
+            data[key] = np.array(d[key])[mask]
+    # print('made recarray with hdf5 file')
+    
+    # response correction
+    if response:
+        d_2p = f.get('/mdet/2p')
+        d_1p = f.get('/mdet/1p')
+        d_2m = f.get('/mdet/2m')
+        d_1m = f.get('/mdet/1m')
+        # compute response with weights
+        g1p = _wmean(np.array(d_1p["gauss_g_1"]), _get_shear_weights(d_1p, gal_weight_file))                                     
+        g1m = _wmean(np.array(d_1m["gauss_g_1"]), _get_shear_weights(d_1m, gal_weight_file))
+        R11 = (g1p - g1m) / 0.02
+
+        g2p = _wmean(np.array(d_2p["gauss_g_2"]), _get_shear_weights(d_2p, gal_weight_file))
+        g2m = _wmean(np.array(d_2m["gauss_g_2"]), _get_shear_weights(d_2m, gal_weight_file))
+        R22 = (g2p - g2m) / 0.02
+
+        R = (R11 + R22)/2.
+        data['g1'] /= R
+        data['g2'] /= R
+
+        mean_g1 = _wmean(data['g1'], data['w'])
+        mean_g2 = _wmean(data['g2'], data['w'])
+        std_g1 = np.var(data['g1'])
+        std_g2 = np.var(data['g2'])
+        mean_shear = [mean_g1, mean_g2, std_g1, std_g2]
+        # mean shear subtraction
+        if subtract_mean_shear:
+            print('subtracting mean shear')
+            print('mean g1 g2 =(%1.8f,%1.8f)'%(mean_g1, mean_g2))          
+            data['g1'] -= mean_g1
+            data['g2'] -= mean_g2
+
+    return data
+
 
 def _get_ccd_num(image_path):
     return int(image_path.split('/')[1].split('_')[2][1:])
@@ -346,6 +463,7 @@ def find_objects_in_ccd_and_sum_shears(ccdres, objloc, mdet_obj, coadd_files, cc
             if iid not in objloc.keys():
                 objloc[iid] = {}
             msk_im = np.where(image_info['image_id'] == iid)
+            # gs_wcs = eu.wcsutil.WCS(json.loads(image_info['wcs'][msk_im][0])) 
             gs_wcs = galsim.FitsWCS(header=json.loads(image_info['wcs'][msk_im][0]))
             position_offset = image_info['position_offset'][msk_im][0]
 
@@ -359,19 +477,16 @@ def find_objects_in_ccd_and_sum_shears(ccdres, objloc, mdet_obj, coadd_files, cc
                 continue
         
             n = len(msk_obj)
-            ra_obj = mdet_obj['ra'][msk_obj]
-            dec_obj = mdet_obj['dec'][msk_obj]
-            mdet_step = mdet_obj["mdet_step"][msk_obj]
-
-            # pos_x, pos_y = wcs.sky2image(ra_obj, dec_obj)
-            pos_x, pos_y = gs_wcs.radecToxy(ra_obj, dec_obj, units="degrees")
+            # pos_x, pos_y = gs_wcs.sky2image(mdet_obj['ra'][msk_obj], mdet_obj['dec'][msk_obj])
+            pos_x, pos_y = gs_wcs.toImage(mdet_obj['ra'][msk_obj], mdet_obj['dec'][msk_obj], units="degrees")
             pos_x = pos_x - position_offset
             pos_y = pos_y - position_offset
             # save coordinates along with shear
-            objloc[iid]['x'] = pos_x; objloc[iid]['y'] = pos_y
-            objloc[iid]['g1'] = mdet_obj[mdet_mom+"_g_1"]
-            objloc[iid]['g2'] = mdet_obj[mdet_mom+"_g_2"]
-            objloc[iid]['mdet_step'] = mdet_obj["mdet_step"]
+            # objloc[iid]['x'] = pos_x; objloc[iid]['y'] = pos_y
+            # objloc[iid]['g1'] = mdet_obj[mdet_mom+"_g_1"]
+            # objloc[iid]['g2'] = mdet_obj[mdet_mom+"_g_2"]
+            # objloc[iid]['mdet_step'] = mdet_obj["mdet_step"]
+            # objloc[iid]['w'] = mdet_obj["w"]
 
             ccdnum = _get_ccd_num(image_info['image_path'][msk_im][0])
             xind, yind, msk_obj = _categorize_obj_in_ccd(piece_side, x_side, y_side, ccd_x_min, ccd_y_min, pos_x, pos_y, msk_obj)
@@ -385,19 +500,13 @@ def find_objects_in_ccd_and_sum_shears(ccdres, objloc, mdet_obj, coadd_files, cc
                 ccdres[ccdnum] = {}
 
             mdet_step = mdet_obj["mdet_step"][msk_obj]
-
-            # Weights
-            with open(wgt_filepath, 'rb') as handle:
-                wgt_dict = pickle.load(handle)
-            shear_wgt = _find_shear_weight(mdet_obj, wgt_dict, wgt_dict['xedges'][0], wgt_dict['xedges'][-1], wgt_dict['yedges'][0], wgt_dict['yedges'][-1], len(wgt_dict['xedges'])-1, mdet_mom)
-            objloc[iid]['w'] = shear_wgt
         
-            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], shear_wgt[msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj],shear_wgt[msk_obj],  x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], shear_wgt[msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], shear_wgt[msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], shear_wgt[msk_obj], x_side, y_side)
-            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], shear_wgt[msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1", "noshear", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], mdet_obj['w'][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2", "noshear", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj],mdet_obj['w'][msk_obj],  x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1p", "1p", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], mdet_obj['w'][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g1m", "1m", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_1"][msk_obj], mdet_obj['w'][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2p", "2p", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], mdet_obj['w'][msk_obj], x_side, y_side)
+            ccdres = _accum_shear(ccdres, ccdnum, "g2m", "2m", mdet_step, xind, yind, mdet_obj[mdet_mom+"_g_2"][msk_obj], mdet_obj['w'][msk_obj], x_side, y_side)
 
     return ccdres, objloc
 
@@ -511,16 +620,22 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
     ccd_x_max = 2048 # 2000
     ccd_y_min = 0 #48
     ccd_y_max = 4096 #4048
-    cell_side = 128
+    cell_side = 512 # 128 # 32
     x_side = int(np.ceil((ccd_x_max - ccd_x_min)/cell_side))
     y_side = int(np.ceil((ccd_y_max - ccd_y_min)/cell_side))
     num_ccd = 62
 
+    # for master hdf5 catalog
+    import h5py as h5
+    f = h5.File(mdet_input_filepaths, 'r')
+    d_noshear = f.get('/mdet/noshear')
+    tilenames_full = np.array(d_noshear['tilename'])
+    tilenames = np.unique(tilenames_full).astype('str')
     # for individual catalogs
-    mdet_f = open(mdet_tilename_filepath, 'r')
-    mdet_fs = mdet_f.read().split('\n')[:-1]
-    mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
-    tilenames = [d.split('_')[0] for d in mdet_filenames]
+    # mdet_f = open(mdet_tilename_filepath, 'r')
+    # mdet_fs = mdet_f.read().split('\n')[:-1]
+    # mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
+    # tilenames = [d.split('_')[0] for d in mdet_filenames]
     # for patch catalogs
     # mdet_fs = glob.glob(mdet_input_filepaths)
     # mdet_filenames = [fname.split('/')[-1] for fname in mdet_fs]
@@ -550,23 +665,23 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
             objloc = {}
             obj_num = 0
             if not os.path.exists(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle')):
-                try:
-                    d = fio.read(os.path.join(mdet_input_filepaths, mdet_filenames[np.where(np.in1d(tilenames, t))[0][0]]))
-                    msk = mdet.make_mdet_cuts(d, mdet_cuts)
-                    d = d[msk]
-                    # d = d[_make_color_cut(d, 1.49, 4.00)]
-                except:
-                    print(t, " does not exist. skipping")
-                    continue
+                keys = ['slice_id', 'ra', 'dec', 'gauss_g_1', 'gauss_g_2', 'w', 'mdet_step']
+                d_noshear = read_mdet_h5(mdet_input_filepaths, wgt_filepath, keys, 'noshear', patch_id=t, response=False, subtract_mean_shear=True, add_step=True)
+                d_1p = read_mdet_h5(mdet_input_filepaths, wgt_filepath, keys, '1p', patch_id=t, response=False, subtract_mean_shear=True, add_step=True)
+                d_1m = read_mdet_h5(mdet_input_filepaths, wgt_filepath, keys, '1m', patch_id=t, response=False, subtract_mean_shear=True, add_step=True)
+                d_2p = read_mdet_h5(mdet_input_filepaths, wgt_filepath, keys, '2p', patch_id=t, response=False, subtract_mean_shear=True, add_step=True)
+                d_2m = read_mdet_h5(mdet_input_filepaths, wgt_filepath, keys, '2m', patch_id=t, response=False, subtract_mean_shear=True, add_step=True)
+                mdet_obj = np.concatenate([d_noshear, d_1p, d_1m, d_2p, d_2m])
+
                 # msk = if additional cuts are necessary. 
-                ccdres,objloc = find_objects_in_ccd_and_sum_shears(ccdres, objloc, d, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, mdet_mom, wgt_filepath)
+                ccdres,objloc = find_objects_in_ccd_and_sum_shears(ccdres, objloc, mdet_obj, coadd_files[t], ccd_x_min, ccd_y_min, x_side, y_side, cell_side, mdet_mom, wgt_filepath)
                 for c in list(ccdres.keys()):
                     obj_num += np.sum(ccdres[c]['num_g1'])
                 print('number of objects in this tile, ', obj_num)
                 with open(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_'+t+'.pickle'), 'wb') as raw:
                     pickle.dump(ccdres, raw, protocol=pickle.HIGHEST_PROTOCOL)
-                with open(os.path.join(shear_variations_path, 'focal_plane_coords_'+t+'.pickle'), 'wb') as raw:
-                    pickle.dump(objloc, raw, protocol=pickle.HIGHEST_PROTOCOL)
+                # with open(os.path.join(shear_variations_path, 'focal_plane_coords_'+t+'.pickle'), 'wb') as raw:
+                #     pickle.dump(objloc, raw, protocol=pickle.HIGHEST_PROTOCOL)
             else:
                 print('Already made this tile.', t)
         comm.Barrier()
@@ -596,7 +711,7 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
                     pickle.dump(ccdres_all_ccd, raw, protocol=pickle.HIGHEST_PROTOCOL)
             comm.Barrier()
 
-        if True:
+        if not os.path.exists(os.path.join(shear_variations_path, 'mdet_shear_focal_plane_ccd_62_jk_cov.pickle')):
             from mpi4py import MPI
             comm = MPI.COMM_WORLD
             rank = comm.Get_rank()
@@ -649,10 +764,12 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
                 ccdres_all = pickle.load(raw) 
         
         # Saves accumulated pickle file for north/south and all, and then compute the mean shear for x-stack and y-stack.
-        bin_num = 15
+        bin_num = 8
         d_shear = compute_shear_stack_CCDs(ccdres_all, x_side, y_side, shear_variations_path, stack_north_south=True, block=True)
         mean_row_g1, mean_row_g2 = comb_rows(d_shear, bin_num)
         mean_col_g1, mean_col_g2 = comb_cols(d_shear, bin_num)
+        print('row', mean_row_g1, mean_row_g2)
+        print('col', mean_row_g1, mean_row_g2)
 
     # Compute jackknife error estimate. 
     if compute_jk_errors:
@@ -712,7 +829,6 @@ def compute_mean_shear_variations(mdet_input_filepaths, mdet_tilename_filepath, 
 
         jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2 = _compute_jackknife_cov(jk_x_g1, jk_y_g1, jk_x_g2, jk_y_g2, len(tilenames))
         print('jackknife error estimate', jc_x_g1, jc_y_g1, jc_x_g2, jc_y_g2)
-        print(mean_row_g1)
         print('the number of unused tile', unused_tile)
         jk_dict = {'x_g1': mean_row_g1, 'y_g1': mean_col_g1, 'x_g2': mean_row_g2, 'y_g2': mean_col_g2, 
                     'jc_x_g1': jc_x_g1, 'jc_y_g1': jc_y_g1, 'jc_x_g2': jc_x_g2, 'jc_y_g2': jc_y_g2}

@@ -124,8 +124,8 @@ def read_mdet_h5(datafile, keys, wgt_type, wgt_filepath, response=False, subtrac
         print('splitting color samples')
         # color splits: blue-[-2.00, 0.76], mid-[0.76, 1.49], red-[1.49, 4.00]
         gmi =  mdet._compute_asinh_mags(data["pgauss_band_flux_g"], 0) - mdet._compute_asinh_mags(data["pgauss_band_flux_i"], 2)
-        dmin = 0.76
-        dmax = 1.49
+        dmin = 1.49
+        dmax = 4.00
         msk_color = ((gmi > dmin) & (gmi <= dmax))
         data = data[msk_color]
     
@@ -196,16 +196,16 @@ def stellar_location_contamination(mdet_response_filepath, mdet_input_filepath, 
     R = (float(R11) + float(R22))/2
 
     bin_config = dict(
-        sep_units = 'arcmin',
-        bin_slop = 0.1,
+                sep_units = 'arcmin',
+                bin_slop = 0.01,
 
-        min_sep = 1.0,
-        max_sep = 200,
-        nbins = 20,
+                min_sep = 2.5,
+                max_sep = 250,
+                nbins = 20,
 
-        var_method = 'jackknife', 
-        output_dots = False,
-    )
+                var_method = 'bootstrap',
+                output_dots = False,
+                )
 
     cat1_file = fits.open('/project/projectdirs/des/schutt20/catalogs/y6a2_piff_v3_allres_v3_collated.fits')
     f_pc = '/global/cfs/cdirs/des/y6-shear-catalogs/patches-centers-altrem-npatch200-seed8888.fits'
@@ -299,16 +299,16 @@ def shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, pif
     R = (float(R11) + float(R22))/2
 
     bin_config = dict(
-        sep_units = 'arcmin',
-        bin_slop = 0.1,
+                sep_units = 'arcmin',
+                bin_slop = 0.01,
 
-        min_sep = 1.0,
-        max_sep = 200,
-        nbins = 20,
+                min_sep = 2.5,
+                max_sep = 250,
+                nbins = 20,
 
-        var_method = 'bootstrap', 
-        output_dots = False,
-    )
+                var_method = 'bootstrap',
+                output_dots = False,
+                )
     # gal_data = fio.read('/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/v5/metadetection_v5_flat_shape_err.fits')
     star_weight_map = healsparse.HealSparseMap.read(star_weight_map)
     f_pc = '/global/cfs/cdirs/des/y6-shear-catalogs/patches-centers-altrem-npatch200-seed8888.fits'
@@ -340,7 +340,7 @@ def shear_stellar_contamination(mdet_response_filepath, mdet_input_filepath, pif
                 continue
             else:
                 if not (os.path.exists(os.path.join(out_path, 'sims/bright_stars_cross_correlation_seed_'+str(seed)+'.fits')) & os.path.exists(os.path.join(out_path, 'sims/faint_stars_cross_correlation_seed_'+str(seed)+'.fits'))):
-                    with open('/pscratch/sd/m/myamamot/sample_variance/v5_catalog/seed__fid_'+str(seed)+'.pkl', 'rb') as f:
+                    with open('/pscratch/sd/m/myamamot/sample_variance/v6_UNBLINDED/seed__fid_cosmogrid_'+str(seed)+'.pkl', 'rb') as f:
                         d_sim = pickle.load(f)['sources'][0]
                     cat2 = treecorr.Catalog(ra=d_sim['ra'], dec=d_sim['dec'], ra_units='deg', dec_units='deg', g1=d_sim['e1'], g2=d_sim['e2'], patch_centers=f_pc)
                     ng_bright.process(cat1_bright, cat2, low_mem=True)
@@ -396,27 +396,29 @@ def shear_stellar_contamination_hdf5(mdet_input_filepath, piff_input, mdet_mom, 
         return zero_pt - 2.5 * np.log10(flux)
     
     bin_config = dict(
-        sep_units = 'arcmin',
-        bin_slop = 0.1,
+                sep_units = 'arcmin',
+                bin_slop = 0.01,
 
-        min_sep = 1.0,
-        max_sep = 200,
-        nbins = 20,
+                min_sep = 2.5,
+                max_sep = 250,
+                nbins = 20,
 
-        var_method = var_method, 
-        output_dots = False,
-    )
+                var_method = 'bootstrap',
+                output_dots = False,
+                )
 
     star_weight_map = healsparse.HealSparseMap.read(star_weight_map)
     f_pc = '/global/cfs/cdirs/des/y6-shear-catalogs/patches-centers-altrem-npatch200-seed8888.fits'
     d_piff = fio.read(piff_input)
-    ra_piff = d_piff['RA']
-    dec_piff = d_piff['DEC']
-    flux_piff = d_piff['FLUX']
+    star_mask_map = healsparse.HealSparseMap.read('/global/cfs/cdirs/des/y6-shear-catalogs/y6-combined-foreground-hsmap131k-v2.hsp')
+    in_footprint_star = star_mask_map.get_values_pos(d_piff['RA'], d_piff['DEC'], valid_mask=True)
+    ra_piff = d_piff['RA'][in_footprint_star]
+    dec_piff = d_piff['DEC'][in_footprint_star]
+    rmag_piff = d_piff['R_MAG'][in_footprint_star]
     weight_stars = star_weight_map.get_values_pos(ra_piff, dec_piff, lonlat=True)
     
-    mask_bright = (flux2mag(flux_piff) < 16.5)
-    mask_faint = (flux2mag(flux_piff) > 16.5)
+    mask_bright = (rmag_piff < 16.5)
+    mask_faint = (rmag_piff > 16.5)
     cat1_bright = treecorr.Catalog(ra=ra_piff[mask_bright], dec=dec_piff[mask_bright], w=weight_stars[mask_bright], ra_units='deg', dec_units='deg', patch_centers=f_pc)
     cat1_faint = treecorr.Catalog(ra=ra_piff[mask_faint], dec=dec_piff[mask_faint], w=weight_stars[mask_faint], ra_units='deg', dec_units='deg', patch_centers=f_pc)
 
@@ -427,7 +429,8 @@ def shear_stellar_contamination_hdf5(mdet_input_filepath, piff_input, mdet_mom, 
     
     # mdet file
     keys = ['ra', 'dec', 'g1', 'g2', 'w']
-    gal_data = read_mdet_h5(mdet_input_filepath, keys, weight_scheme, wgt_filepath, response=True, subtract_mean_shear=True, mask='/global/cfs/cdirs/des/y6-shear-catalogs/y6a2_foreground_mask_v1.3.hs')
+    gal_data = read_mdet_h5(mdet_input_filepath, keys, weight_scheme, wgt_filepath, response=True, subtract_mean_shear=True, mask='/global/cfs/cdirs/des/y6-shear-catalogs/y6a2_foreground_mask_healsparse_nside16384.fits.gz')
+    # old run: '/global/cfs/cdirs/des/y6-shear-catalogs/y6a2_foreground_mask_v1.3.hs'
     cat2 = treecorr.Catalog(ra=gal_data['ra'], dec=gal_data['dec'], ra_units='deg', dec_units='deg', g1=gal_data['g1'], g2=gal_data['g2'], w=gal_data['w'], patch_centers=f_pc)
     ng_bright = treecorr.NGCorrelation(bin_config, verbose=2)
     ng_faint = treecorr.NGCorrelation(bin_config, verbose=2)
@@ -555,7 +558,7 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
         #     for l in ccd_exp_num:
         #         f.write(str(l[0])+', '+str(l[1]))
         #         f.write('\n')
-        with open('/pscratch/sd/m/myamamot/pizza-slice/ccd_exp_num.txt', 'w') as f:
+        with open('/global/cfs/cdirs/des/myamamot/pizza-slice/ccd_exp_num.txt', 'w') as f:
             for l in exp_num:
                 f.write(str(l))
                 f.write('\n')
@@ -577,27 +580,27 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
     f_pc = '/global/cfs/cdirs/des/y6-shear-catalogs/patches-centers-altrem-npatch200-seed8888.fits'
 
     # Create ccdnum and expnum text file if it has not been created yet, and query from DESDM table. Should only be done once. 
-    if not os.path.exists('/pscratch/sd/m/myamamot/pizza-slice/ccd_exp_num.txt'):
+    if not os.path.exists('/global/cfs/cdirs/des/myamamot/pizza-slice/ccd_exp_num.txt'):
         find_exposure_numbers(fs)
-        query_field_centers('/pscratch/sd/m/myamamot/pizza-slice/ccd_exp_num.txt', 300)
+        query_field_centers('/global/cfs/cdirs/des/myamamot/pizza-slice/ccd_exp_num.txt', 300)
         print('done making ccd num file')
     
-    expnum_field_centers = fio.read('/pscratch/sd/m/myamamot/pizza-slice/exposure_field_centers.fits')
+    expnum_field_centers = fio.read('/global/cfs/cdirs/des/myamamot/pizza-slice/exposure_field_centers.fits')
     print('number of field centers', len(expnum_field_centers))
 
     bin_config = dict(
                 sep_units = 'arcmin',
                 bin_slop = 0.01,
 
-                min_sep = 0.5,
-                max_sep = 150,
+                min_sep = 2.5,
+                max_sep = 250,
                 nbins = 20,
 
                 var_method = 'bootstrap',
                 output_dots = False,
                 )
 
-    cat1_file = '/pscratch/sd/m/myamamot/pizza-slice/exposure_field_centers.fits'
+    cat1_file = '/global/cfs/cdirs/des/myamamot/pizza-slice/exposure_field_centers.fits'
     cat1 = treecorr.Catalog(cat1_file, ra_col='RA_CENT', dec_col='DEC_CENT', ra_units='deg', dec_units='deg', patch_centers=f_pc)
     # random point subtraction. 
     cat1r_file = random_point_map
@@ -615,7 +618,7 @@ def tangential_shear_field_center(fs, mdet_response_filepath, mdet_input_filepat
                     print('seed ', seed, ' skipping')
                     continue
                 print('seed ', seed, ' running')
-                with open('/pscratch/sd/m/myamamot/sample_variance/v5_catalog_cosmogrid/seed__fid_cosmogrid_'+str(seed)+'.pkl', 'rb') as f:
+                with open('/pscratch/sd/m/myamamot/sample_variance/v6_UNBLINDED/seed__fid_cosmogrid_'+str(seed)+'.pkl', 'rb') as f:
                     d_sim = pickle.load(f)['sources'][0]
                 cat2 = treecorr.Catalog(ra=d_sim['ra'], dec=d_sim['dec'], ra_units='deg', dec_units='deg', g1=d_sim['e1'], g2=d_sim['e2'], patch_centers=f_pc)
                 ng.process(cat1, cat2, low_mem=True)
@@ -657,21 +660,21 @@ def _measure_tangential_shear_hdf5(mdet_input_filepath, mdet_mom, out_path, rand
     print(rank)
 
     f_pc = '/global/cfs/cdirs/des/y6-shear-catalogs/patches-centers-altrem-npatch200-seed8888.fits'
-    expnum_field_centers = fio.read('/pscratch/sd/m/myamamot/pizza-slice/exposure_field_centers.fits')
+    expnum_field_centers = fio.read('/global/cfs/cdirs/des/myamamot/pizza-slice/exposure_field_centers.fits')
     print('number of field centers', len(expnum_field_centers))
 
     bin_config = dict(
                 sep_units = 'arcmin',
                 bin_slop = 0.01,
 
-                min_sep = 0.5,
-                max_sep = 150,
+                min_sep = 2.5,
+                max_sep = 250,
                 nbins = 20,
 
-                var_method = var_method,
+                var_method = 'bootstrap',
                 output_dots = False,
                 )
-    cat1_file = '/pscratch/sd/m/myamamot/pizza-slice/exposure_field_centers.fits'
+    cat1_file = '/global/cfs/cdirs/des/myamamot/pizza-slice/exposure_field_centers.fits'
     cat1 = treecorr.Catalog(cat1_file, ra_col='RA_CENT', dec_col='DEC_CENT', ra_units='deg', dec_units='deg', patch_centers=f_pc)
     # random point subtraction. 
     cat1r_file = random_point_map
@@ -687,12 +690,12 @@ def _measure_tangential_shear_hdf5(mdet_input_filepath, mdet_mom, out_path, rand
     ng_rand.process(cat1r, cat2, low_mem=True, comm=comm)
 
     if rank==0:
-        ng.write(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output_'+var_method+'_bins0.01_min0.5_max150_hdf5_norand.fits'))
-        ng_rand.write(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output_'+var_method+'_bins0.01_min0.5_max150_hdf5_randonly.fits'))
-        ng.write(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output_'+var_method+'_bins0.01_min0.5_max150_hdf5.fits'), rg=ng_rand)
+        ng.write(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output_'+var_method+'_bins0.01_min2.5_max250_hdf5_norand.fits'))
+        ng_rand.write(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output_'+var_method+'_bins0.01_min2.5_max250_hdf5_randonly.fits'))
+        ng.write(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output_'+var_method+'_bins0.01_min2.5_max250_hdf5.fits'), rg=ng_rand)
         ng.calculateXi(rg=ng_rand)
         ng_cov = ng.cov
-        np.save(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output_'+var_method+'_bins0.01_min0.5_max150_cov_hdf5.npy'), ng_cov)
+        np.save(os.path.join(out_path, mdet_mom+'_field_centers_cross_correlation_final_output_'+var_method+'_bins0.01_min2.5_max250_cov_hdf5.npy'), ng_cov)
 
 
 def mean_shear_tomoz(gold_f, fs):

@@ -307,6 +307,7 @@ def read_mdet_h5_tomobin(t, datafile, keys, patch_id=None, response=False, subtr
     import h5py as h5
     f = h5.File(datafile, 'r')
     for mdet_step in mdet_steps:
+        # d = f.get(mdet_step+'/'+t)
         d = f.get(mdet_step+'/'+t)
         nrows = len(np.array( d['ra'] ))
         formats = []

@@ -526,11 +526,11 @@ def mean_shear_in_cell_grid(mdet_input_filepath, outpath, weight_scheme, wgt_pat
     gal_data = read_mdet_h5(d, d_1p, d_2p, d_1m, d_2m, keys, weight_scheme, wgt_path, cell=True)
 
     # Define grids first. 
-    ccd_x_min = 25
-    ccd_x_max = 175
-    ccd_y_min = 25
-    ccd_y_max = 175
-    cell_side = 15
+    ccd_x_min = 50 # 25
+    ccd_x_max = 150 # 175
+    ccd_y_min = 50 # 25
+    ccd_y_max = 150 # 175
+    cell_side = 10 # 15
     x_side = int(np.ceil((ccd_x_max - ccd_x_min)/cell_side))
     y_side = int(np.ceil((ccd_y_max - ccd_y_min)/cell_side))
 
@@ -563,7 +563,7 @@ def mean_shear_in_cell_grid(mdet_input_filepath, outpath, weight_scheme, wgt_pat
     mean_shear['e1_cov'] = jk_cov['e1']
     mean_shear['e2_cov'] = jk_cov['e2']
 
-    with open(os.path.join(outpath, 'mean_shear_around_cell_coordinates_grid_side15.pickle'), 'wb') as raw:
+    with open(os.path.join(outpath, 'mean_shear_around_cell_coordinates_grid_side10.pickle'), 'wb') as raw:
         pickle.dump(mean_shear, raw, protocol=pickle.HIGHEST_PROTOCOL)
 
 def mean_shear_in_coadd_grid(mdet_input_filepath, outpath, weight_scheme, wgt_path):
@@ -737,7 +737,7 @@ def tan_shear_around_cell_coords(mdet_input_filepath, outpath, weight_scheme, wg
     tnames = coadd_cent['TILENAME']
     destile_cent = coadd_cent[np.in1d(tnames, gal_data['tilename'])]
     cell_cent = _get_cell_center(destile_cent)
-    print('number of centers ', len(cell_cent))
+    print('number of cell centers ', len(cell_cent))
     
     # set up treecorr call
     bin_config = dict(
@@ -790,6 +790,7 @@ def tan_shear_around_coadd_coords(mdet_input_filepath, outpath, weight_scheme, w
     coadd_cent = fio.read('/pscratch/sd/m/myamamot/coadd_tile.fits')
     tnames = coadd_cent['TILENAME']
     destile_cent = coadd_cent[np.in1d(tnames, gal_data['tilename'])]
+    print('number of coadd centers ', len(destile_cent))
     
     # set up treecorr call
     bin_config = dict(

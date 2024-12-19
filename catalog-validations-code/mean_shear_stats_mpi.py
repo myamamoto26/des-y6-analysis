@@ -32,17 +32,20 @@ def read_mdet_h5(datafile, gal_weight_file, keys, mdet_step, patch_id=None, resp
     def assign_grid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
         # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
         
-        stepx = (xmax/xmin)/xsteps
-        stepy = (ymax/ymin)/ysteps
-        
-        indexx = ((x/xmin)/stepx).astype(int)
-        indexy = ((y/ymin)/stepy).astype(int)
-        
+        xbins=np.linspace(xmin, xmax, xsteps+1)
+        ybins=np.linspace(ymin, ymax, ysteps+1)
+
+        indexx=np.digitize(x, xbins, right=True)
+        indexy=np.digitize(y, ybins, right=True)
+
+        indexx = indexx - 1
+        indexy = indexy - 1
+
         indexx = np.maximum(indexx,0)
         indexx = np.minimum(indexx, xsteps-1)
         indexy = np.maximum(indexy,0)
         indexy = np.minimum(indexy, ysteps-1)
-        
+
         return indexx,indexy
 
     def _find_shear_weight(dat, mask, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_mom):
@@ -107,10 +110,10 @@ def read_mdet_h5(datafile, gal_weight_file, keys, mdet_step, patch_id=None, resp
             mag_g = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_g"])[mask], 0)
             mag_i = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_i"])[mask], 2)
             data[key] = mag_g - mag_i
-        elif key == 'rmz':
-            mag_r = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_r"])[mask], 1)
+        elif key == 'imz':
+            mag_i = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_i"])[mask], 2)
             mag_z = mdet._compute_asinh_mags(np.array(d["pgauss_band_flux_z"])[mask], 3)
-            data[key] = mag_r - mag_z
+            data[key] = mag_i - mag_z
         else:
             data[key] = np.array(d[key])[mask]
     # print('made recarray with hdf5 file')
@@ -147,13 +150,13 @@ def read_mdet_h5(datafile, gal_weight_file, keys, mdet_step, patch_id=None, resp
             data['g2'] -= mean_g2
     
     # option to subtract mean shear based on per-object color.
-    if subtract_shear_color:
-        with open("/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/v6/color_grid.pickle", "rb") as f:
+    if ((mdet_step == 'noshear') & subtract_shear_color):
+        with open("/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/v6/color_grid_gmi_imz.pickle", "rb") as f:
             color_grid = pickle.load(f)
             g1_color = color_grid['e1']/color_grid['count']
             g2_color = color_grid['e2']/color_grid['count']
-        gmimin = -2.0; gmimax = 4.0; rmzmin = -2.0; rmzmax = 4.0; steps=20
-        indexx, indexy = assign_grid(data['gmi'], data['rmz'], gmimin, gmimax, steps, rmzmin, rmzmax, steps)
+        gmimin = -2.0; gmimax = 4.0; imzmin = -2.0; imzmax = 2.0; steps=20
+        indexx, indexy = assign_grid(data['gmi'], data['imz'], gmimin, gmimax, steps, imzmin, imzmax, steps)
         mean_g1_color = np.array([g1_color[x, y] for x, y in zip(indexx, indexy)])
         mean_g2_color = np.array([g2_color[x, y] for x, y in zip(indexx, indexy)])
         data['g1'] -= mean_g1_color
@@ -458,17 +461,18 @@ def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps, mdet_
 
 
 
-def function(input_, mdet_files, mdet_cuts, binnum, mdet_mom, wgt_file, bins, outpath, weights='shape_err'):
+def function(input_, mdet_files, mdet_cuts, mdet_mom, wgt_file, outpath, weights='shape_err'):
 
     [key,pname,bins,binnum] = input_
     
-    if key == 'gmi':
-        keys = ['g1', 'g2', 'w', 'rmz', key]
-    elif key == 'rmz':
-        keys = ['g1', 'g2', 'w', 'gmi', key]
-    else:
-        keys = ['g1', 'g2', 'w', 'gmi', 'rmz', key]
-    subtract_color = True # option to subtract mean shear from color grid
+    # if key == 'gmi':
+    #     keys = ['g1', 'g2', 'w', 'imz', key]
+    # elif key == 'imz':
+    #     keys = ['g1', 'g2', 'w', 'gmi', key]
+    # else:
+    #     keys = ['g1', 'g2', 'w', 'gmi', 'imz', key]
+    keys = ['g1', 'g2', 'w', 'gmi', key]
+    subtract_color = False # option to subtract mean shear from color grid
     d = read_mdet_h5(mdet_files, wgt_file, keys, 'noshear', patch_id=pname, response=False, subtract_mean_shear=True, subtract_shear_color=subtract_color)
     d_1p = read_mdet_h5(mdet_files, wgt_file, keys, '1p', patch_id=pname, response=False, subtract_mean_shear=True, subtract_shear_color=subtract_color)
     d_1m = read_mdet_h5(mdet_files, wgt_file, keys, '1m', patch_id=pname, response=False, subtract_mean_shear=True, subtract_shear_color=subtract_color)
@@ -476,7 +480,7 @@ def function(input_, mdet_files, mdet_cuts, binnum, mdet_mom, wgt_file, bins, ou
     d_2m = read_mdet_h5(mdet_files, wgt_file, keys, '2m', patch_id=pname, response=False, subtract_mean_shear=True, subtract_shear_color=subtract_color)
     d_all = [d, d_1p, d_1m, d_2p, d_2m]
     # msk = mdet._make_mdet_cuts_gauss(d, n_terr=3) # if you need max_t cut, add it here. max_t = 0.689 (top 25% cut) for gauss, 0.466 for pgauss. 
-    """
+    
     ## ADD ADDITIONAL CUTS HERE. (e.g., size, color selections)
     # color splits: blue-[-2.00, 0.76], mid-[0.76, 1.49], red-[1.49, 4.00]
     # size splits: small-[0.095, 0.301], midsize-[0.301, 0.455], large-[0.454, 8000]
@@ -486,9 +490,9 @@ def function(input_, mdet_files, mdet_cuts, binnum, mdet_mom, wgt_file, bins, ou
     # dcut2 = (d['gauss_T_ratio'] * d["gauss_psf_T"])/d['gauss_T_err']
     dmin = 1.49
     dmax = 4.00
-    for cat in d_all:
-        cat = cat[((cat['gmi'] > dmin) & (cat['gmi'] < dmax))] 
-    """
+    for i,cat in enumerate(d_all):
+        d_all[i] = cat[((cat['gmi'] > dmin) & (cat['gmi'] < dmax))] 
+    
     
     res = {'noshear': np.zeros((binnum, 2)), 'num_noshear': np.zeros((binnum, 2)), 
             '1p': np.zeros((binnum, 2)), 'num_1p': np.zeros((binnum, 2)), 
@@ -518,12 +522,13 @@ def main(argv):
     wgt_file=sys.argv[8]
     mdet_cuts = int(sys.argv[9])
     weight_scheme = sys.argv[10]
+    color_split = sys.argv[11]
 
     mdet_files = sys.argv[1]
     if not os.path.exists(os.path.join(outpath, bin_file)):
         if rank == 0:
             print('creating flat and bin file. ')
-            keys = ['ra', 'psfrec_g_1', 'psfrec_g_2', 'psfrec_T', 'pgauss_T', 'gauss_psf_T', 'gauss_s2n', 'gauss_T_ratio', 'gauss_T', 'gmi', 'rmz', 'mfrac']
+            keys = ['ra', 'psfrec_g_1', 'psfrec_g_2', 'psfrec_T', 'pgauss_T', 'gauss_psf_T', 'gauss_s2n', 'gauss_T_ratio', 'gauss_T', 'gmi', 'imz', 'mfrac']
             gal_data = read_mdet_h5(mdet_files, wgt_file, keys, 'noshear', response=False, subtract_mean_shear=True)
             bin_dict = _compute_bins_from_h5(gal_data, outpath, bin_file, nperbin)
             # _save_measurement_info(mdet_files, outpath, stats_file, mdet_cuts, mdet_mom) 
@@ -540,7 +545,11 @@ def main(argv):
         fids = [fname.split('/')[-1][6:10] for fname in mdet_files]
     
     runs = []
-    for key in list(bin_dict.keys()):
+    if color_split:
+        keys = ['psfrec_g_1', 'psfrec_g_2']
+    else:
+        keys = bin_dict.keys()
+    for key in keys:
         for pname in fids:
             bins = bin_dict[key]
             binnum = len(bins['hist'])
@@ -556,7 +565,7 @@ def main(argv):
             continue
         if i % 100 == 0:
             print('made it to ', i)
-        function(runs[i], mdet_files, mdet_cuts, binnum, mdet_mom, wgt_file, bins, outpath2, weights=weight_scheme)
+        function(runs[i], mdet_files, mdet_cuts, mdet_mom, wgt_file, outpath2, weights=weight_scheme)
     comm.Barrier()
 
     # compute jackknife errors by leaving one tile/patch out for each rank. 
