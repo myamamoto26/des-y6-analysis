@@ -41,8 +41,8 @@ def measure_tangential_shear(d, mask, cname, name, var_method, fpatch, ffcent, f
                 sep_units = 'arcmin',
                 bin_slop = 0.01,
 
-                min_sep = 0.5,
-                max_sep = 150,
+                min_sep = 2.5,
+                max_sep = 250,
                 nbins = 20,
 
                 var_method = var_method,
@@ -65,20 +65,20 @@ def measure_tangential_shear(d, mask, cname, name, var_method, fpatch, ffcent, f
     ng.process(cat1, cat2, low_mem=True)
     ng_rand.process(cat1r, cat2, low_mem=True)
 
-    ng.write(os.path.join(out_path, 'psf_'+name+'_'+cname+'_star_color_field_centers_'+var_method+'_bins0.01_min0.5_max150.fits'), rg=ng_rand)
+    ng.write(os.path.join(out_path, 'psf_'+name+'_'+cname+'_star_color_field_centers_'+var_method+'_bins0.01_min2.5_max250.fits'), rg=ng_rand)
     ng.calculateXi(rg=ng_rand)
     ng_cov = ng.cov
-    np.save(os.path.join(out_path, 'psf_'+name+'_'+cname+'_star_color_field_centers_'+var_method+'_bins0.01_min0.5_max150_cov.npy'), ng_cov)
+    np.save(os.path.join(out_path, 'psf_'+name+'_'+cname+'_star_color_field_centers_'+var_method+'_bins0.01_min2.5_max250_cov.npy'), ng_cov)
 
 
 def main(argv):
-    # piff_cat = "/global/cfs/cdirs/des/schutt20/catalogs/y6a2_piff/v3_HOM_mdet/y6a2_piff_v3_HOMs_v1_hsmask-v3_mdet-v5b_w-v4.4_riz_rhotau_input_v2.fits"
-    piff_cat = "/global/cfs/cdirs/des/schutt20/catalogs/y6a2_piff/v3_HOM_mdet/y6a2_piff_v3_HOMs_v1_STAR-COLORS_hsmask-v3_mdet-v5b_w-v4.4_riz_rhotau_input.fits"
+    piff_cat = "/global/cfs/cdirs/des/schutt20/catalogs/y6a2_piff/v3_HOM_mdet/y6a2_piff-v3_mdet-v6_foot+fg-131k-v2_goodexp_riz_rhotau-input_v1.fits"
+    # piff_cat = "/global/cfs/cdirs/des/schutt20/catalogs/y6a2_piff/v3_HOM_bfd/y6a2_piff_v3_HOMs_BFD_foot+fg-131k-v2_goodexp_griz_rhotau-input_v1.fits"
     # band = "r"
-    outpath = '/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/v5b_paper/field_centers/'
+    outpath = '/pscratch/sd/m/myamamot/des-y6-analysis/y6_measurement/v6_UNBLINDED/field_centers/'
     fpatch = '/global/cfs/cdirs/des/y6-shear-catalogs/patches-centers-altrem-npatch200-seed8888.fits'
-    ffcent = '/pscratch/sd/m/myamamot/pizza-slice/exposure_field_centers.fits'
-    frand = "/global/cfs/cdirs/des/y6-shear-catalogs/y6-combined-hsmap_random_v3_fcenters.fits"
+    ffcent = '/global/cfs/cdirs/des/myamamot/pizza-slice/exposure_field_centers.fits'
+    frand = "/global/cfs/cdirs/des/y6-shear-catalogs/randoms/y6-hsmap131k-v2-extra-masks_random_fcenters.fits"
 
     print('reading in piff cat...')
     dat = {}
@@ -94,8 +94,8 @@ def main(argv):
     dat['w'] = piffcat['STARGAL_COLOR_WEIGHT_W_OUTLIERS']
 
     print('measuring tangential projection of PSF shapes...')
-    colors = [(-2.00, 0.76), (0.76, 1.49), (1.49, 4.00)]
-    cnames = ['blue', 'mid', 'red']
+    colors = [(-2.00, 0.76), (1.49, 4.00)]# [(-2.00, 0.76), (0.76, 1.49), (1.49, 4.00)]
+    cnames = ['blue', 'red'] # ['blue', 'mid', 'red']
     for i,color in tqdm(enumerate(colors)):
         cmin = color[0]; cmax = color[1]
         msk = ((piffcat['GI_COLOR'] > cmin) & (piffcat['GI_COLOR'] <= cmax))
